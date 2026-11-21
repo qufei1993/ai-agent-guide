@@ -1,72 +1,110 @@
-# AI Agent Full-Stack Development Roadmap
+# AI Agent Guide
 
-[![License: CC BY 4.0](https://img.shields.io/badge/License-CC_BY_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md) [![Stars](https://img.shields.io/github/stars/qufei1993/ai-agent-fullstack-roadmap?style=social)](https://github.com/qufei1993/ai-agent-fullstack-roadmap)
+**English** | [简体中文](README.zh.md)
 
-A comprehensive capability map for **Node.js & frontend developers** transitioning into AI Agent full-stack development. Covers the complete learning path from AI-assisted programming to Agent application engineering and production operations.
+An open-source, zero-build **interactive engineering guide** to LLMs, Agents, and RAG. Every chapter pairs concise engineering mental models with browser labs where you can tune parameters, inspect live payloads, and test failure boundaries—backed by runnable reference code in the same repository.
 
-> By **五月君**, creator of the WeChat public account "Nodejs技术栈"　|　[中文版](./README.zh.md)
+- **Online Reading (GitHub Pages)**: [English Edition](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/index.html) · [中文版](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/index.html)
+- **Language-Agnostic Mechanics**: Reference examples use TypeScript, while all engineering patterns apply directly to Python, Go, Java, or any stack.
+- **Focused Scope**: Covers LLM control, Agent execution mechanics, and grounded RAG pipelines—intentionally excluding heavyweight SaaS boilerplate, post-training (SFT/RL), and complex multi-agent orchestration.
 
----
+## Learning Roadmap
 
-## Roadmap Overview
+```mermaid
+flowchart LR
+  O["Overview<br/>Architecture & Glossary"] --> M1["Module 1 · Ready (4/4)<br/>LLM Foundations"]
+  M1 --> M2["Module 2 · In Progress (0/9)<br/>Agent Core Mechanics"]
+  M1 --> M3["Module 3 · Ready (5/5)<br/>RAG Retrieval & Grounding"]
+  M2 --> E["Reliable AI Systems<br/>Eval · Guardrails · Grounding"]
+  M3 --> E
+```
 
-![AI Agent Fullstack Roadmap](./assets/roadmap.png)
+> **Design Principle**: Build a working minimal Agent early—full RAG is not a prerequisite for understanding tool calling, loops, and execution boundaries. Security, evaluation, observability, and cost control run through every module.
 
----
+## Curriculum (19 Chapters · 9 Bilingual Ready)
 
-## How to Read This Roadmap
+Catalog metadata and language availability are maintained in [`docs/chapters.json`](docs/chapters.json).
 
-The 7 stages are designed to be followed **in order**, but you don't need to dive deep into everything. Use these tags to prioritize:
+### Overview · Architecture & Glossary
 
-- 🟢 **Core Path** — AI-assisted development, LLM API, structured output, RAG, Agent Loop, full-stack deployment
-- 🔵 **Engineering Throughline** — Security · Evaluation · Observability · Cost — runs through every stage
-- 🟡 **Advanced Elective** — MCP development, Skills, sub-agents, multi-agent, local inference, minimal agent runtimes
+| # | Chapter | Focus | Status |
+| --- | --- | --- | --- |
+| 1 | AI Agent Engineering Architecture Map | End-to-end task walkthrough of LLM, context, tools, memory, RAG, and harness collaboration, plus a quick glossary of easily confused concepts. | Planned |
 
----
+### Module 1 · LLM Engineering Foundations
 
-## Stage Navigation
+| # | Chapter | Focus | Edition |
+| --- | --- | --- | --- |
+| 2 | **Prompt Engineering** | Model calls, sampling parameters, task constraints, few-shot, and prompt boundaries. | [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/prompt-engineering.html) · [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/prompt-engineering.html) |
+| 3 | **Structured Output & Schema Validation** | Output contracts with JSON Schema and Zod, handling format/business errors and bounded retries. | [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/structured-output.html) · [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/structured-output.html) |
+| 4 | **Context Engineering** | Context sources, information placement, token budgets, and Just-In-Time loading. | [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/context-engineering.html) · [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/context-engineering.html) |
+| 5 | **Prompt Regression & Evaluation Gates** | Evaluation suites, assertion rules, and version gates to catch regressions. | [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/prompt-regression.html) · [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/prompt-regression.html) |
 
-| # | Stage | Key Topics |
-|:---:|-------|-------------|
-| 1 | [AI-Assisted Development Workflow](./ROADMAP.md#stage-1-ai-assisted-development-workflow) | AI tools · methodologies · project rules · MCP & Skills · debugging & testing |
-| 2 | [LLM API & Structured Interaction](./ROADMAP.md#stage-2-llm-api--structured-interaction) | LLM fundamentals · API integration · Prompt Engineering · structured output · SDKs |
-| 3 | [RAG Knowledge Base Applications](./ROADMAP.md#stage-3-rag-knowledge-base-applications) | Embeddings · vector databases · RAG pipeline · failure modes · evaluation |
-| 4 | [Tool Calling & Mini Agent Loop](./ROADMAP.md#stage-4-tool-calling--mini-agent-loop) | Agent fundamentals · ReAct · tool systems · permission models · comparative study |
-| 5 | [Agent Application Engineering](./ROADMAP.md#stage-5-agent-application-engineering) | Workflow vs Agent · memory management · security · MCP server · Skills · frameworks |
-| 6 | [AI Full-Stack Productionization](./ROADMAP.md#stage-6-ai-full-stack-productionization) | Frontend AI · full-stack & data layer · AI security · deployment & runtime |
-| 7 | [Production Operations](./ROADMAP.md#stage-7-production-operations) | Observability · evaluation · cost optimization · reliability |
+### Module 2 · Agent Core Mechanics
 
-👉 **[Read the full Roadmap →](./ROADMAP.md)**
+| # | Chapter | Focus | Status |
+| --- | --- | --- | --- |
+| 6 | Tool Calling & the Mini Agent Loop | Tool declarations, schema validation, dispatch, and stopping conditions for a minimal Agent. | Planned |
+| 7 | Workflows vs. Autonomous Agents | Comparing chaining, routing, parallelization, and dynamic loops to decide code vs. model control. | Planned |
+| 8 | Task Planning & Feedback Correction | Task decomposition, dynamic replanning, and self-correction using tests and tool feedback. | Planned |
+| 9 | Harness & Execution Guardrails | Permission checks, human-in-the-loop approval, isolation, and resource budgets. | Planned |
+| 10 | Memory Management & Context Compaction | Working vs. long-term memory, write/retrieve/update/forget flows, and history compaction. | Planned |
+| 11 | Task State, Checkpoints & Recovery | Checkpoints, execution logs, and idempotency for timeouts, retries, and crash recovery. | Planned |
+| 12 | Streaming Interaction & Execution State UI | Mapping streaming tokens, tool calls, and approval events to UI with cancel and reconnect support. | Planned |
+| 13 | MCP & Skills Extension Mechanics | Protocol integration vs. task knowledge packaging, external tool servers, and on-demand Skills. | Planned |
+| 14 | Agent Evaluation & Trajectory Diagnosis | Evaluating end-state, execution trajectories, constraint adherence, cost, latency, and root causes. | Planned |
 
----
+### Module 3 · RAG Retrieval & Grounding
 
-## Design Philosophy
+| # | Chapter | Focus | Edition |
+| --- | --- | --- | --- |
+| 15 | **Document Parsing & Chunking Strategies** | Converting raw documents into structure- and source-preserving chunks and comparing splitting strategies. | [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/document-parsing-chunking.html) · [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/document-parsing-chunking.html) |
+| 16 | **Embeddings & Vector Search** | Semantic vectors, similarity metrics, recall boundaries, metadata filtering, and index updates. | [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/embedding-vector-search.html) · [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/embedding-vector-search.html) |
+| 17 | **Hybrid Search, Query Rewriting & Reranking** | Combining BM25 and dense recall with query rewriting, RRF fusion, and Reranker. | [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/hybrid-search-reranking.html) · [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/hybrid-search-reranking.html) |
+| 18 | **Citations & Evidence Verification** | Grounding claims to sources, detecting unsupported statements, and handling conflicts or abstention. | [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/citation-hallucination.html) · [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/citation-hallucination.html) |
+| 19 | **RAG Evaluation & Agentic RAG** | Evaluating retrieval vs. generation quality and comparing fixed pipelines with Agentic RAG. | [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/rag-evaluation-agentic-rag.html) · [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/rag-evaluation-agentic-rag.html) |
 
-- **Not a course syllabus** — no step-by-step tutorials
-- **Not a tool ranking** — prioritizes stable concepts over hyped tools
-- **A capability map** — shows what skills you need and their dependency relationships
-- **For experienced Node.js/frontend developers** — assumes you already know databases, Redis, OAuth, Docker; focuses on the AI-specific additions
+## Repository Structure
 
----
+```text
+.
+├── docs/                           # Zero-build static site (GitHub Pages root)
+│   ├── index.html                  # Language auto-router
+│   ├── chapters.json               # Single source of truth for catalog & siteUrl
+│   ├── sitemap.xml                 # Auto-generated bilingual sitemap
+│   ├── robots.txt                  # Auto-generated robots.txt
+│   ├── shared/
+│   │   ├── tokens.css              # Design tokens, dark mode & shared lab styles
+│   │   └── site.js                 # Global nav, floating TOC, bilingual switcher
+│   ├── en/                         # English interactive chapters
+│   └── zh/                         # Chinese interactive chapters
+├── examples/                       # Runnable TypeScript examples for chapters
+├── scripts/
+│   └── generate-seo.mjs            # Syncs page SEO metadata, sitemap.xml & robots.txt
+└── skills/
+    └── interactive-book-chapter/   # Reusable Agent Skill for authoring chapters
+```
 
-## Contributing
+## Local Preview & Running Examples
 
-Issues and PRs are welcome!
+Preview the interactive guide locally (zero-build, no install required):
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
+```bash
+npm run preview
+```
 
----
+Open [English Edition](http://localhost:8766/en/index.html) or [Chinese Edition](http://localhost:8766/zh/index.html) (override port via `PORT=4173 npm run preview`).
 
-## License
+Run the companion examples (Node.js `>= 22.0.0`):
 
-[![CC BY 4.0](https://licensebuttons.net/l/by/4.0/88x31.png)](https://creativecommons.org/licenses/by/4.0/)
+```bash
+cp .env.example .env
+npm install
+npx tsx --env-file=.env examples/ai-coding/prompt-engineering/01-temperature.ts
+```
 
-This work is licensed under [Creative Commons Attribution 4.0 International](https://creativecommons.org/licenses/by/4.0/). You are free to share and adapt, even commercially, as long as you give appropriate credit (WeChat account "Nodejs技术栈" or the original repository).
+Refresh SEO tags, `sitemap.xml`, and `robots.txt` after updating chapters:
 
----
-
-## Author
-
-**五月君** — WeChat "Nodejs技术栈"
-
-- 🐙 GitHub: [qufei1993](https://github.com/qufei1993)
+```bash
+npm run seo:sync
+```

@@ -1,0 +1,235 @@
+{
+  "siteUrl": "https://qufei1993.github.io/ai-agent-fullstack-roadmap",
+  "title": "AI Agent Guide",
+  "titleEn": "AI Agent Guide",
+  "subtitle": "通过交互实验理解 LLM、Agent 与 RAG 的核心工程机制",
+  "subtitleEn": "An interactive engineering guide to LLMs, Agents, and RAG",
+  "parts": [
+    {
+      "id": "overview",
+      "name": "导览 · 全局坐标与术语",
+      "nameEn": "Overview · Architecture & Glossary",
+      "chapters": [
+        {
+          "slug": "agent-architecture-map",
+          "title": "AI Agent 工程全景图",
+          "titleEn": "AI Agent Engineering Architecture Map",
+          "summary": "通过一次完整任务说明 LLM、上下文、工具、记忆、RAG 与 Harness 的协作关系，并提供术语速查与易混概念对照",
+          "summaryEn": "End-to-end walkthrough of LLM, context, tools, memory, RAG, and harness collaboration with a quick glossary",
+          "status": "planned",
+          "langs": []
+        }
+      ]
+    },
+    {
+      "id": "llm-foundations",
+      "name": "模块一 · LLM 工程基础",
+      "nameEn": "Module 1 · LLM Engineering Foundations",
+      "chapters": [
+        {
+          "slug": "prompt-engineering",
+          "title": "Prompt Engineering",
+          "titleEn": "Prompt Engineering: From Asking to Constraining",
+          "summary": "讲清模型调用、采样参数、任务约束与 Few-shot，理解 Prompt 能解决什么、不能解决什么",
+          "summaryEn": "Model calls, sampling parameters, task constraints, Few-shot, and Prompt boundaries",
+          "status": "ready",
+          "langs": [
+            "zh",
+            "en"
+          ]
+        },
+        {
+          "slug": "structured-output",
+          "title": "结构化输出与结果校验",
+          "titleEn": "Structured Output & Schema Validation",
+          "summary": "使用 JSON Schema 与 Zod 建立输出契约，处理格式错误、业务校验失败与有限重试",
+          "summaryEn": "Enforcing output contracts with JSON Schema and Zod, handling format/business errors and retries",
+          "status": "ready",
+          "langs": [
+            "zh",
+            "en"
+          ]
+        },
+        {
+          "slug": "context-engineering",
+          "title": "Context Engineering",
+          "titleEn": "Context Engineering: Why More Context Hurts",
+          "summary": "理解上下文来源、信息位置与预算，通过筛选、组织和按需加载提高有效信息比例",
+          "summaryEn": "Context sources, information placement, token budgets, and Just-In-Time loading",
+          "status": "ready",
+          "langs": [
+            "zh",
+            "en"
+          ]
+        },
+        {
+          "slug": "prompt-regression",
+          "title": "Prompt 回归评测",
+          "titleEn": "Prompt Regression & Evaluation Gates",
+          "summary": "建立用例集、评分规则与版本门禁，验证 Prompt、模型和参数改动是否带来退步",
+          "summaryEn": "Evaluation suites, scoring rules, and version gates to catch regressions",
+          "status": "ready",
+          "langs": [
+            "zh",
+            "en"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "agent-core",
+      "name": "模块二 · Agent 核心机制",
+      "nameEn": "Module 2 · Agent Core Mechanics",
+      "chapters": [
+        {
+          "slug": "tool-calling-loop",
+          "title": "Tool Calling 与 Mini Agent Loop",
+          "titleEn": "Tool Calling & the Mini Agent Loop",
+          "summary": "从工具声明、参数校验、执行分发到结果回传，逐步实现一个具有停止条件的最小 Agent",
+          "summaryEn": "Tool declarations, schema validation, dispatch, and stopping conditions for a minimal Agent",
+          "status": "planned",
+          "langs": []
+        },
+        {
+          "slug": "workflow-vs-agent",
+          "title": "Workflow 与 Agent 的架构选择",
+          "titleEn": "Workflows vs. Autonomous Agents",
+          "summary": "比较顺序、路由、并行和动态循环，判断哪些步骤交给代码、哪些交给模型",
+          "summaryEn": "Comparing chaining, routing, parallelization, and dynamic loops to decide code vs. model control",
+          "status": "planned",
+          "langs": []
+        },
+        {
+          "slug": "planning-feedback-loop",
+          "title": "任务规划与反馈修正",
+          "titleEn": "Task Planning & Feedback Correction",
+          "summary": "实现任务拆解、计划执行与动态调整，利用测试和工具反馈修正结果，并验证收益",
+          "summaryEn": "Task decomposition, dynamic replanning, and self-correction using tests and tool feedback",
+          "status": "planned",
+          "langs": []
+        },
+        {
+          "slug": "harness-engineering",
+          "title": "Harness 与执行边界",
+          "titleEn": "Harness & Execution Guardrails",
+          "summary": "通过权限校验、人工审批、执行隔离和资源预算，控制 Agent 可以做什么以及何时必须停止",
+          "summaryEn": "Permission checks, human-in-the-loop approval, isolation, and resource budgets",
+          "status": "planned",
+          "langs": []
+        },
+        {
+          "slug": "memory-and-compaction",
+          "title": "记忆管理与上下文压缩",
+          "titleEn": "Memory Management & Context Compaction",
+          "summary": "区分工作记忆与长期记忆，处理信息的写入、检索、更新、遗忘及历史压缩",
+          "summaryEn": "Working vs. long-term memory, write/retrieve/update/forget flows, and history compaction",
+          "status": "planned",
+          "langs": []
+        },
+        {
+          "slug": "state-checkpoint-recovery",
+          "title": "任务状态与中断恢复",
+          "titleEn": "Task State, Checkpoints & Recovery",
+          "summary": "使用检查点、操作记录和幂等机制，处理超时、重试、进程中断及重复执行",
+          "summaryEn": "Checkpoints, execution logs, and idempotency for timeouts, retries, and crash recovery",
+          "status": "planned",
+          "langs": []
+        },
+        {
+          "slug": "streaming-execution-ui",
+          "title": "流式交互与执行状态展示",
+          "titleEn": "Streaming Interaction & Execution State UI",
+          "summary": "将文本生成、工具执行和审批事件映射到界面，处理取消、断线与恢复后的状态同步",
+          "summaryEn": "Mapping streaming tokens, tool calls, and approval events to UI with cancel and reconnect support",
+          "status": "planned",
+          "langs": []
+        },
+        {
+          "slug": "mcp-and-skills",
+          "title": "MCP 与 Skills 扩展机制",
+          "titleEn": "MCP & Skills Extension Mechanics",
+          "summary": "理解协议接入与任务知识封装的区别，实现外部工具连接和 Skills 按需加载",
+          "summaryEn": "Protocol integration vs. task knowledge packaging, external tool servers, and on-demand Skills",
+          "status": "planned",
+          "langs": []
+        },
+        {
+          "slug": "agent-eval-tracing",
+          "title": "Agent 评测与轨迹诊断",
+          "titleEn": "Agent Evaluation & Trajectory Diagnosis",
+          "summary": "结合最终环境状态和执行轨迹，评估任务成功率、约束遵守、成本与延迟，并定位失败原因",
+          "summaryEn": "Evaluating end-state, execution trajectories, constraint adherence, cost, latency, and failure root causes",
+          "status": "planned",
+          "langs": []
+        }
+      ]
+    },
+    {
+      "id": "rag-evidence",
+      "name": "模块三 · RAG 检索与证据",
+      "nameEn": "Module 3 · RAG Retrieval & Grounding",
+      "chapters": [
+        {
+          "slug": "document-parsing-chunking",
+          "title": "文档解析与分块策略",
+          "titleEn": "Document Parsing & Chunking Strategies",
+          "summary": "将原始文档转为保留结构和来源的检索单元，对比不同分块方式对证据完整性的影响",
+          "summaryEn": "Converting raw documents into structure- and source-preserving chunks and comparing splitting strategies",
+          "status": "ready",
+          "langs": [
+            "zh",
+            "en"
+          ]
+        },
+        {
+          "slug": "embedding-vector-search",
+          "title": "Embedding 与向量检索",
+          "titleEn": "Embeddings & Vector Search",
+          "summary": "理解语义向量、相似度与召回边界，跑通索引、查询、元数据过滤和内容更新",
+          "summaryEn": "Semantic vectors, similarity metrics, recall boundaries, metadata filtering, and index updates",
+          "status": "ready",
+          "langs": [
+            "zh",
+            "en"
+          ]
+        },
+        {
+          "slug": "hybrid-search-reranking",
+          "title": "混合检索、查询改写与重排",
+          "titleEn": "Hybrid Search, Query Rewriting & Reranking",
+          "summary": "组合关键词与向量召回，通过查询改写、RRF 和 Reranker 改善候选证据的覆盖与排序",
+          "summaryEn": "Combining BM25 and dense recall with query rewriting, RRF fusion, and Reranker",
+          "status": "ready",
+          "langs": [
+            "zh",
+            "en"
+          ]
+        },
+        {
+          "slug": "citation-hallucination",
+          "title": "引用溯源与证据校验",
+          "titleEn": "Citations & Evidence Verification",
+          "summary": "将回答中的论断绑定到来源，识别不受证据支持的内容，并处理证据冲突、不足和拒答",
+          "summaryEn": "Grounding claims to sources, detecting unsupported statements, and handling conflicts or abstention",
+          "status": "ready",
+          "langs": [
+            "zh",
+            "en"
+          ]
+        },
+        {
+          "slug": "rag-evaluation-agentic-rag",
+          "title": "RAG 评测与 Agentic RAG",
+          "titleEn": "RAG Evaluation & Agentic RAG",
+          "summary": "分别评估检索和回答质量，对比固定检索流程与 Agent 自主检索，判断动态检索是否值得引入",
+          "summaryEn": "Evaluating retrieval vs. generation quality and comparing fixed pipelines with Agentic RAG",
+          "status": "ready",
+          "langs": [
+            "zh",
+            "en"
+          ]
+        }
+      ]
+    }
+  ]
+}

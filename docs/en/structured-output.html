@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prompt Engineering in Practice: Structured Outputs &amp; Validation · AI Agent Guide</title>
+  <!-- SEO:START (auto-synced by scripts/generate-seo.mjs) -->
+  <meta name="description" content="Enforcing output contracts with JSON Schema and Zod, handling format/business errors and retries" />
+  <link rel="canonical" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/structured-output.html" />
+  <link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/structured-output.html" />
+  <link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/structured-output.html" />
+  <link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/structured-output.html" />
+  <meta property="og:type" content="article" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:locale:alternate" content="zh_CN" />
+  <meta property="og:title" content="Structured Output &amp; Schema Validation" />
+  <meta property="og:description" content="Enforcing output contracts with JSON Schema and Zod, handling format/business errors and retries" />
+  <meta property="og:url" content="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/structured-output.html" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "Structured Output & Schema Validation",
+    "description": "Enforcing output contracts with JSON Schema and Zod, handling format/business errors and retries",
+    "inLanguage": "en",
+    "url": "https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/structured-output.html",
+    "isPartOf": {
+      "@type": "Book",
+      "name": "AI Agent Guide"
+    }
+  }
+  </script>
+  <!-- SEO:END -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css" />
+  <link rel="stylesheet" href="../shared/tokens.css" />
+  <style>
+    /* Chapter-specific components */
+    .wide-block { margin: 24px 0 28px; }
+
+    .callout {
+      margin: 22px 0;
+      padding: 15px 18px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      font-size: 14.5px;
+      color: var(--text-secondary);
+    }
+    .callout.note { border-left: 4px solid var(--teal); background: var(--teal-soft); }
+    .callout.warn { border-left: 4px solid var(--accent); background: var(--accent-soft); }
+    .callout-title {
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+
+    .failure-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin: 22px 0 26px;
+    }
+    @media (max-width: 780px) { .failure-grid { grid-template-columns: 1fr; } }
+
+    .failure-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .failure-tag {
+      display: inline-block;
+      align-self: flex-start;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--rose-soft);
+      color: var(--rose);
+    }
+    .failure-title { font-size: 15.5px; font-weight: 700; color: var(--text); }
+    .failure-desc { font-size: 13.5px; color: var(--text-secondary); line-height: 1.6; margin: 0; }
+    .failure-sample {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      color: var(--text);
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .defense-flow {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 12px;
+      align-items: stretch;
+      margin: 22px 0 28px;
+    }
+    @media (max-width: 720px) {
+      .defense-flow { grid-template-columns: 1fr; }
+      .defense-arrow { transform: rotate(90deg); justify-self: center; }
+    }
+    .defense-box {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+    }
+    .defense-box.primary { border-color: var(--teal); background: var(--teal-soft); }
+    .defense-kicker {
+      font-size: 11.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .defense-box.primary .defense-kicker { color: var(--teal); }
+    .defense-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+    .defense-desc { font-size: 13.5px; color: var(--text-secondary); margin: 0; }
+    .defense-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-muted);
+      padding: 0 4px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      margin: 18px 0 26px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg-elevated);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      text-align: left;
+    }
+    th, td {
+      padding: 11px 15px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    th {
+      background: var(--bg-muted);
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--text);
+    }
+    tr:last-child td { border-bottom: none; }
+
+    /* Lab 1 styles */
+    .preset-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+      align-items: center;
+    }
+    .preset-label {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-right: 4px;
+    }
+
+    .lab1-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.15fr;
+      gap: 18px;
+      align-items: start;
+    }
+    @media (max-width: 820px) { .lab1-grid { grid-template-columns: 1fr; } }
+
+    .raw-editor-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+    .raw-textarea {
+      width: 100%;
+      min-height: 250px;
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      line-height: 1.55;
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-strong);
+      background: var(--bg-code);
+      color: #e5e7eb;
+      resize: vertical;
+    }
+    .raw-textarea:focus { outline: 2px solid var(--teal); border-color: transparent; }
+
+    .mode-switch {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 2px;
+      background: var(--bg-muted);
+      gap: 2px;
+    }
+    .mode-pill {
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+    .mode-pill.active {
+      background: var(--bg-elevated);
+      color: var(--text);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .pipeline-stages {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .stage-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      background: var(--bg);
+    }
+    .stage-card.pass { border-color: rgba(21, 128, 61, 0.35); background: var(--green-soft); }
+    .stage-card.fail { border-color: rgba(225, 29, 72, 0.35); background: var(--rose-soft); }
+    .stage-card.skip { opacity: 0.55; }
+    .stage-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .stage-name { font-size: 13px; font-weight: 700; color: var(--text); }
+    .stage-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+    .stage-badge.pass { background: var(--green); color: #fff; }
+    .stage-badge.fail { background: var(--rose); color: #fff; }
+    .stage-badge.skip { background: var(--border-strong); color: var(--text-secondary); }
+    .stage-body {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 120px;
+      overflow-y: auto;
+    }
+
+    /* Lab 2 styles */
+    .lab2-controls {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 16px;
+      margin-bottom: 18px;
+      padding: 14px 16px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+    }
+    @media (max-width: 760px) { .lab2-controls { grid-template-columns: 1fr; } }
+
+    .ctrl-group-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 8px;
+    }
+
+    .trace-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .trace-step {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      background: var(--bg);
+    }
+    .trace-step.ok { border-left: 4px solid var(--green); }
+    .trace-step.err { border-left: 4px solid var(--rose); }
+    .trace-step.fb { border-left: 4px solid var(--accent); background: var(--accent-soft); }
+    .trace-step-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .trace-step-title { font-size: 13.5px; font-weight: 700; color: var(--text); }
+    .trace-step-meta { font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); }
+    .trace-code {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.55;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: var(--text-secondary);
+    }
+
+    .lab-metrics {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    .metric-pill {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-weight: 600;
+    }
+
+    /* Lab 3 styles */
+    .stream-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 14px;
+    }
+    @media (max-width: 780px) { .stream-grid { grid-template-columns: 1fr; } }
+
+    .stream-pane {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .stream-pane-head {
+      padding: 10px 14px;
+      background: var(--bg-muted);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12.5px;
+      font-weight: 700;
+    }
+    .stream-raw-box {
+      padding: 12px 14px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.55;
+      min-height: 220px;
+      max-height: 260px;
+      overflow-y: auto;
+      background: var(--bg-code);
+      color: #e5e7eb;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .stream-parsed-box {
+      padding: 12px 14px;
+      min-height: 220px;
+      max-height: 260px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .issue-item {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 12px;
+      background: var(--bg-elevated);
+      font-size: 13px;
+      animation: fadeSlide 0.25s ease-out;
+    }
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .issue-item-top {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+      font-size: 12px;
+    }
+    .issue-type {
+      font-weight: 700;
+      padding: 1px 7px;
+      border-radius: 999px;
+      font-size: 11px;
+      text-transform: uppercase;
+    }
+    .issue-type.bug { background: var(--rose-soft); color: var(--rose); }
+    .issue-type.security { background: var(--purple-soft); color: var(--purple); }
+    .issue-type.performance { background: var(--accent-soft); color: var(--accent); }
+    .issue-type.style { background: var(--blue-soft); color: var(--blue); }
+    .stream-wait {
+      color: var(--text-muted);
+      font-size: 13px;
+      margin: auto;
+      text-align: center;
+      padding: 20px;
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./index.html">
+        <span>AI Agent Guide</span>
+        <span class="brand-badge">Interactive</span>
+      </a>
+      <nav class="topbar-nav">
+        <a href="#why-prompt-fails">Two Defenses</a>
+        <a href="#lab-1">Lab 01 · Zod Validation</a>
+        <a href="#lab-2">Lab 02 · Endpoints &amp; Retries</a>
+        <a href="#lab-3">Lab 03 · Streaming</a>
+        <a href="#decision">Decision Matrix</a>
+      </nav>
+      <button class="theme-btn" id="themeToggle" type="button" aria-label="Toggle theme">
+        <span id="themeIcon">☀</span>
+        <span id="themeText">Light</span>
+      </button>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-meta">
+      <span class="hero-pill">Part 1 · LLM Engineering Foundations</span>
+      <span>3 interactive labs · Zod schemas, native constraints &amp; retry pipelines</span>
+    </div>
+    <h1>Prompt Engineering in Practice: Structured Outputs &amp; Validation</h1>
+    <p class="hero-lead">
+      In the previous chapter we asked the model to "output JSON only." That helps, but it hits a hard limit: <strong>prompts are probabilistic nudges, not deterministic guarantees</strong>. In production, your code needs its own defense layer to detect, repair, and retry bad outputs.
+    </p>
+  </section>
+
+  <section class="tldr" aria-label="30-Second Summary">
+    <div class="tldr-card">
+      <div class="tldr-head">
+        <span class="tldr-kicker">30-Second Version · 3 Takeaways</span>
+        <span class="sim-tag">Labs simulate classic LLM failure modes</span>
+      </div>
+      <ol class="tldr-list">
+        <li class="tldr-item">
+          <span class="tldr-num">01</span>
+          <span class="tldr-claim">Prompting alone for JSON will eventually break in production; always back it up with schema validation.</span>
+          <button class="tldr-go" type="button" onclick="bookJumpToLab('lab-1')">Trigger 3 classic failures →</button>
+        </li>
+        <li class="tldr-item">
+          <span class="tldr-num">02</span>
+          <span class="tldr-claim">Define one Zod schema as your single source of truth for TypeScript types, runtime checks, and field-level errors.</span>
+          <button class="tldr-go" type="button" onclick="bookJumpToLab('lab-2')">Run validation &amp; retries →</button>
+        </li>
+        <li class="tldr-item">
+          <span class="tldr-num">03</span>
+          <span class="tldr-claim">Verify endpoint support before relying on <code>output_config.format</code>; fall back to Tool Use or local retries when unsupported.</span>
+          <button class="tldr-go" type="button" onclick="bookJumpToLab('lab-3')">Compare streaming &amp; fallbacks →</button>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2 id="why-prompt-fails">Why Prompting Alone Always Breaks</h2>
+    <p class="key">
+      LLMs sample tokens probabilistically. Telling the model to "return only a JSON array" works most of the time because it matches patterns in training data, not because the model obeys hard syntax rules. Any of these three failure modes can crash an unguarded parser:
+    </p>
+
+    <div class="failure-grid wide-block">
+      <div class="failure-card">
+        <span class="failure-tag">Drift 01 · Chatty Preamble</span>
+        <div class="failure-title">Conversational filler before JSON</div>
+        <p class="failure-desc">The model opens with a polite acknowledgment or wraps output in Markdown fences, causing <code>JSON.parse</code> to fail on character zero.</p>
+        <div class="failure-sample">Sure, here is the code review:
+```json
+{"summary":"..."}
+```</div>
+      </div>
+      <div class="failure-card">
+        <span class="failure-tag">Drift 02 · Schema Drift</span>
+        <div class="failure-title">Silent field or type mutations</div>
+        <p class="failure-desc">You asked for a positive integer <code>line</code>, but the model emits <code>line_number</code> or an out-of-range score, breaking downstream assumptions.</p>
+        <div class="failure-sample">{"line_number": 12, "score": 120}</div>
+      </div>
+      <div class="failure-card">
+        <span class="failure-tag">Drift 03 · Truncated Output</span>
+        <div class="failure-title">Long payloads hit max_tokens</div>
+        <p class="failure-desc">Generation stops mid-array at the token ceiling, leaving unclosed brackets <code>]}</code> and an unparseable payload.</p>
+        <div class="failure-sample">{"issues":[{"type":"bug","line":49</div>
+      </div>
+    </div>
+
+    <p>
+      Endless prompt tweaking will not eliminate these failures. The reliable architecture is <strong>two lines of defense</strong>: reduce the odds of drift at the prompt or API layer, and enforce deterministic extraction, validation, and retries in application code. Drop either layer and your pipeline stays brittle.
+      <button class="inline-trigger" id="triggerFailPresetBtn" type="button">▶ Reproduce "schema drift" interception in Lab 01</button>
+    </p>
+
+    <div class="defense-flow wide-block">
+      <div class="defense-box">
+        <div class="defense-kicker">Defense 1 · Prompt / Native Constraints</div>
+        <div class="defense-title">Lower the probability of format drift</div>
+        <p class="defense-desc">Push format constraints upstream using system instructions, few-shot examples, or server-side <code>output_config.format</code>.</p>
+      </div>
+      <div class="defense-arrow">→</div>
+      <div class="defense-box primary">
+        <div class="defense-kicker">Defense 2 · Code-Level Schema Validation</div>
+        <div class="defense-title">Deterministically catch, repair, and retry</div>
+        <p class="defense-desc">Chain <code>extractJson()</code> + <code>JSON.parse()</code> + <code>Zod safeParse()</code> to turn noisy text back into type-safe objects.</p>
+      </div>
+    </div>
+
+    <h2>Make the Contract Explicit: Zod Schema</h2>
+    <p class="key">
+      Before writing any parser or retry loop, codify the expected output shape. In TypeScript, Zod gives you compile-time types, runtime validation, and field-level error diagnostics from a single schema. Prefer <code>safeParse()</code> over <code>parse()</code> in production so malformed responses become structured errors rather than uncaught exceptions.
+    </p>
+
+    <div class="table-wrap wide-block">
+      <table>
+        <thead>
+          <tr>
+            <th>Zod Method</th>
+            <th>Purpose</th>
+            <th>Example</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>z.object({})</code></td>
+            <td>Define object shape and required keys</td>
+            <td><code>z.object({ summary: z.string() })</code></td>
+          </tr>
+          <tr>
+            <td><code>z.enum([...])</code></td>
+            <td>Restrict a string to a closed set of values</td>
+            <td><code>z.enum(["bug", "style", "performance", "security"])</code></td>
+          </tr>
+          <tr>
+            <td><code>z.number().int().positive()</code></td>
+            <td>Enforce a positive integer (&gt; 0)</td>
+            <td>Ideal for source line numbers <code>line</code>; blocks negatives and floats</td>
+          </tr>
+          <tr>
+            <td><code>z.optional()</code> / <code>z.catch()</code></td>
+            <td>Allow missing fields or fall back to safe defaults on failure</td>
+            <td><code>z.array(ReviewIssue).catch([])</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <details class="code-fold">
+      <summary>Inspect ReviewResult schema definition &amp; safeParse usage</summary>
+      <div class="code-fold-body">
+        <div class="code-card">
+          <div class="code-header">
+            <span>review-schema.ts</span>
+            <button class="copy-btn" type="button">Copy</button>
+          </div>
+          <pre><code>import { z } from "zod";
+
+const ReviewIssue = z.object({
+  type: z.enum(["bug", "style", "performance", "security"]),
+  line: z.number().int().positive(),
+  message: z.string().min(1),
+  suggestion: z.string().optional(),
+});
+
+const ReviewResult = z.object({
+  summary: z.string(),
+  issues: z.array(ReviewIssue),
+  score: z.number().min(0).max(100),
+});
+
+type ReviewResult = z.infer&lt;typeof ReviewResult&gt;;
+
+// Prefer safeParse() in production: returns structured issues instead of throwing
+const parsed = ReviewResult.safeParse(rawOutput);
+if (!parsed.success) {
+  console.error("Validation failed:", parsed.error.issues);
+} else {
+  const result: ReviewResult = parsed.data;
+}</code></pre>
+        </div>
+      </div>
+    </details>
+  </main>
+
+  <!-- LAB 1 -->
+  <section class="lab-wrap" id="lab-1">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <span class="lab-eyebrow">Interactive Lab 01 · Code-Layer Defense X-Ray</span>
+          <h3 class="lab-title">JSON Extraction, Syntax Parsing &amp; Zod Validation</h3>
+          <p class="lab-desc">Pick a failure preset or edit the raw model output on the left to watch <code>extractJson</code> → <code>JSON.parse</code> → <code>safeParse</code> catch issues stage by stage.</p>
+        </div>
+        <div class="mode-switch" role="group" aria-label="Validation strictness">
+          <button class="mode-pill active" data-mode="strict" type="button">Strict Schema</button>
+          <button class="mode-pill" data-mode="lenient" type="button">.catch() Fallback</button>
+        </div>
+      </div>
+      <div class="lab-body">
+        <div class="preset-row">
+          <span class="preset-label">Presets:</span>
+          <button class="chip-btn active" data-preset="valid" type="button">Clean JSON</button>
+          <button class="chip-btn" data-preset="prefix" type="button">Preamble + Fence</button>
+          <button class="chip-btn" data-preset="drift" type="button">Key Drift (line_number)</button>
+          <button class="chip-btn" data-preset="range" type="button">Out of Range (score: 120)</button>
+          <button class="chip-btn" data-preset="truncated" type="button">max_tokens Truncated</button>
+        </div>
+
+        <div class="lab1-grid">
+          <div>
+            <div class="raw-editor-label">
+              <span>Raw Model Output (editable)</span>
+              <span id="lab1CharCount">0 chars</span>
+            </div>
+            <textarea class="raw-textarea" id="lab1RawInput" spellcheck="false"></textarea>
+          </div>
+          <div class="pipeline-stages">
+            <div class="stage-card" id="stageExtract">
+              <div class="stage-head">
+                <span class="stage-name">1. extractJson(raw) Extraction</span>
+                <span class="stage-badge" id="badgeExtract">—</span>
+              </div>
+              <div class="stage-body" id="bodyExtract"></div>
+            </div>
+            <div class="stage-card" id="stageParse">
+              <div class="stage-head">
+                <span class="stage-name">2. JSON.parse(jsonStr) Syntax Check</span>
+                <span class="stage-badge" id="badgeParse">—</span>
+              </div>
+              <div class="stage-body" id="bodyParse"></div>
+            </div>
+            <div class="stage-card" id="stageZod">
+              <div class="stage-head">
+                <span class="stage-name" id="zodStageTitle">3. ReviewResult.safeParse() Schema Check</span>
+                <span class="stage-badge" id="badgeZod">—</span>
+              </div>
+              <div class="stage-body" id="bodyZod"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2 id="native-format">Going Further: <code>output_config.format</code> &amp; Compatible Endpoints</h2>
+    <p class="key">
+      Zod validates data after generation. When your provider supports native structured outputs, you can pass <code>output_config.format</code> via the Anthropic SDK's <code>client.messages.parse()</code> so the server enforces your JSON Schema during decoding (<a href="https://platform.claude.com/docs/en/build-with-claude/structured-outputs" target="_blank" rel="noopener">Anthropic Structured Outputs docs</a>).
+    </p>
+    <p>
+      Follow a clear priority order: <strong>use native strict response formats whenever the provider genuinely supports them</strong>, and treat manual parsing plus retries as the portable safety net. Watch out for one subtle trap: <strong>being "Anthropic API compatible" does not mean every advanced parameter is honored</strong>.
+    </p>
+    <p>
+      Take Alibaba Cloud Model Studio's Anthropic-compatible endpoint as an example. Its <a href="https://help.aliyun.com/zh/model-studio/anthropic-api-messages" target="_blank" rel="noopener">official documentation</a> separates behavior by model: DeepSeek and GLM strictly enforce the JSON Schema, while Qwen silently downgrades to plain JSON mode—guaranteeing valid JSON syntax without enforcing schema constraints. Likewise, <a href="https://api-docs.deepseek.com/guides/anthropic_api" target="_blank" rel="noopener">DeepSeek's Anthropic-compatible API docs</a> note that <code>output_config</code> only supports the <code>effort</code> parameter.
+    </p>
+
+    <div class="callout warn">
+      <div class="callout-title">Rule for Compatible Endpoints</div>
+      Never assume the server enforced your schema just because the request did not return HTTP 400. Whenever you route across multiple models or third-party compatible endpoints, keep local Zod validation and retries in place.
+      <button class="inline-trigger" id="triggerRetryBtn" type="button">▶ Compare blind retries vs. error-feedback retries in Lab 02</button>
+    </div>
+
+    <details class="code-fold">
+      <summary>Inspect full examples: bailian-output-format.ts &amp; parseOutput() retry wrapper</summary>
+      <div class="code-fold-body">
+        <div class="code-card">
+          <div class="code-header">
+            <span>structured-output-sync.ts (live-synced with Lab 02 controls)</span>
+            <button class="copy-btn" type="button">Copy</button>
+          </div>
+          <pre><code id="lab2SyncedCode">import Anthropic from "@anthropic-ai/sdk";
+import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+
+const client = new Anthropic();
+const MODEL = process.env.MODEL ?? "qwen-plus";
+
+// 1. Native output_config.format (first choice when strict schema is supported)
+const response = await client.messages.parse({
+  model: MODEL,
+  max_tokens: 2048,
+  messages: [{ role: "user", content: `Review the following code:\n${code}` }],
+  output_config: {
+    format: zodOutputFormat(ReviewResult),
+  },
+});
+
+// 2. Portable fallback: extract + Zod validation + retry (works on any text model)
+const result = await parseOutput(
+  [{ role: "user", content: `Review this code: ${code}` }],
+  ReviewResult,
+  { maxRetries: 2, withFeedback: true }
+);</code></pre>
+        </div>
+        <p style="font-size: 13.5px; color: var(--text-secondary); margin: 10px 0 0;">
+          Runnable source code: <a href="https://github.com/qufei1993/ai-agent-fullstack-roadmap/blob/main/examples/core-methods/structured-output/bailian-output-format.ts" target="_blank" rel="noopener">bailian-output-format.ts</a> · <a href="https://github.com/qufei1993/ai-agent-fullstack-roadmap/blob/main/examples/core-methods/structured-output/parse-with-retry.ts" target="_blank" rel="noopener">parse-with-retry.ts</a>
+        </p>
+      </div>
+    </details>
+  </main>
+
+  <!-- LAB 2 -->
+  <section class="lab-wrap" id="lab-2">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <span class="lab-eyebrow">Interactive Lab 02 · Endpoint Quirks &amp; Retry Pipeline</span>
+          <h3 class="lab-title">Compatible Endpoint Simulation &amp; Feedback-Driven Retries</h3>
+          <p class="lab-desc">Make a quick prediction first, then toggle providers and retry settings to see how <code>parseOutput()</code> feeds Zod errors back into the model for self-repair.</p>
+        </div>
+        <button class="btn btn-primary" id="lab2RunBtn" type="button">▶ Run Simulation</button>
+      </div>
+      <div class="lab-body">
+        <div class="predict-hook" id="predictHook1">
+          <div class="predict-q">
+            <span class="predict-badge">Predict First</span>
+            <span>You call <code>qwen-plus</code> through Model Studio's Anthropic-compatible endpoint with <code>output_config.format</code>, and the model omits the required <code>score</code> field. What happens?</span>
+          </div>
+          <div class="predict-opts">
+            <button class="predict-opt" data-ans="a" type="button">A. The server strictly enforces the schema—fields can never be missing</button>
+            <button class="predict-opt" data-ans="b" type="button">B. The server only guarantees valid JSON; local SDK validation fails</button>
+            <button class="predict-opt" data-ans="c" type="button">C. The API immediately rejects the request with HTTP 400</button>
+          </div>
+          <div class="predict-feedback" id="predictFeedback1"></div>
+        <button class="predict-verify" type="button" onclick="bookJumpToLab('lab-2')">Inspect the failure &amp; auto-retry trace in Lab 02 →</button>
+        </div>
+
+        <div class="lab2-controls">
+          <div>
+            <div class="ctrl-group-title">Provider &amp; Endpoint Capability</div>
+            <div class="preset-row" style="margin-bottom: 0;">
+              <button class="chip-btn" data-provider="strict" type="button">Strict Schema Endpoint</button>
+              <button class="chip-btn active" data-provider="qwen" type="button">DashScope Qwen (JSON Fallback)</button>
+              <button class="chip-btn" data-provider="deepseek" type="button">DeepSeek Compat (No format)</button>
+            </div>
+          </div>
+          <div>
+            <div class="ctrl-group-title">Local Retry Policy (syncs code above)</div>
+            <div class="preset-row" style="margin-bottom: 0;">
+              <button class="chip-btn teal-active" id="toggleFeedbackBtn" type="button">withFeedback: true</button>
+              <button class="chip-btn" data-retries="0" type="button">maxRetries: 0</button>
+              <button class="chip-btn" data-retries="1" type="button">maxRetries: 1</button>
+              <button class="chip-btn active" data-retries="2" type="button">maxRetries: 2</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="trace-list" id="lab2Trace"></div>
+        <div class="lab-metrics" id="lab2Metrics"></div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2 id="streaming-and-tools">Streaming JSON &amp; Tool Use as an Alternative</h2>
+    <p class="key">
+      Waiting for a full code review to finish before showing anything leaves users staring at a blank screen. The Anthropic SDK supports passing <code>output_config.format</code> into <code>messages.stream()</code>: stream text deltas to the UI for live progress, then read the validated <code>parsed_output</code> from <code>stream.finalMessage()</code> once the stream closes.
+    </p>
+    <p>
+      Keep one boundary in mind: <code>parsed_output</code> is only available <strong>after the entire stream completes</strong>. If your UI must render an interactive card the instant each individual issue is found, consider <strong>NDJSON (Newline Delimited JSON)</strong>—instruct the model to emit one standalone JSON object per line, then split on newlines and <code>JSON.parse()</code> incrementally. Because NDJSON is more sensitive to prompt phrasing, reserve it for true item-by-item streaming.
+    </p>
+    <p>
+      Before native structured outputs became widespread, teams relied on <strong>Tool Use / Function Calling</strong> to enforce structure (<a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/define-tools" target="_blank" rel="noopener">Anthropic Define Tools</a> · <a href="https://openai.com/index/introducing-structured-outputs-in-the-api/" target="_blank" rel="noopener">OpenAI Structured Outputs</a>): define a virtual tool such as <code>submit_review</code>, force its invocation with <code>tool_choice</code>, and validate <code>tool_use.input</code> with Zod. That exact pattern remains a cornerstone when we build agents later in the book.
+    </p>
+
+    <details class="code-fold">
+      <summary>Inspect streaming output_config.format &amp; forced Tool Use examples</summary>
+      <div class="code-fold-body">
+        <div class="code-card">
+          <div class="code-header">
+            <span>streaming-and-tool-use.ts</span>
+            <button class="copy-btn" type="button">Copy</button>
+          </div>
+          <pre><code>// Option A: Streaming output_config.format (stream text to UI, read parsed_output at end)
+const stream = client.messages.stream({
+  model: MODEL,
+  max_tokens: 2048,
+  messages: [{ role: "user", content: prompt }],
+  output_config: { format: zodOutputFormat(ReviewResult) },
+});
+
+stream.on("text", (text) => process.stdout.write(text));
+const message = await stream.finalMessage();
+const finalResult = message.parsed_output;
+
+// Option B: Virtual tool to carry structured output
+const res = await client.messages.create({
+  model: MODEL,
+  max_tokens: 2048,
+  tools: [{
+    name: "submit_review",
+    description: "Submit structured code review findings",
+    input_schema: { type: "object", properties: { /* ... */ }, required: ["summary", "issues", "score"] },
+  }],
+  tool_choice: { type: "tool", name: "submit_review" },
+  messages: [{ role: "user", content: `Review this code: ${code}` }],
+});
+const toolUse = res.content.find((c) => c.type === "tool_use");
+if (toolUse?.type === "tool_use") {
+  const checked = ReviewResult.parse(toolUse.input);
+}</code></pre>
+        </div>
+        <p style="font-size: 13.5px; color: var(--text-secondary); margin: 10px 0 0;">
+          Full streaming source: <a href="https://github.com/qufei1993/ai-agent-fullstack-roadmap/blob/main/examples/core-methods/structured-output/bailian-streaming-output-format.ts" target="_blank" rel="noopener">bailian-streaming-output-format.ts</a>
+        </p>
+      </div>
+    </details>
+  </main>
+
+  <!-- LAB 3 -->
+  <section class="lab-wrap" id="lab-3">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <span class="lab-eyebrow">Interactive Lab 03 · Streaming Consumption</span>
+          <h3 class="lab-title">Whole-JSON Stream Wait vs. Incremental NDJSON Rendering</h3>
+          <p class="lab-desc">Start the simulated stream to compare when the client can turn incoming tokens into structured UI cards under each protocol.</p>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button class="chip-btn active" data-stream-mode="json" type="button">messages.stream() Whole JSON</button>
+          <button class="chip-btn" data-stream-mode="ndjson" type="button">NDJSON Line-by-Line</button>
+          <button class="btn btn-primary" id="lab3StartBtn" type="button">▶ Start Stream</button>
+        </div>
+      </div>
+      <div class="lab-body">
+        <div class="stream-grid">
+          <div class="stream-pane">
+            <div class="stream-pane-head">
+              <span>Raw Token Stream (SSE text delta)</span>
+              <span id="lab3TokenStat" style="font-family: var(--font-mono); color: var(--text-muted);">Ready</span>
+            </div>
+            <div class="stream-raw-box" id="lab3RawBox">Click "▶ Start Stream" to watch tokens arrive...</div>
+          </div>
+          <div class="stream-pane">
+            <div class="stream-pane-head">
+              <span id="lab3RightTitle">parsed_output Consumption Status</span>
+              <span id="lab3ParseStat" style="font-family: var(--font-mono); color: var(--text-muted);">0 items parsed</span>
+            </div>
+            <div class="stream-parsed-box" id="lab3ParsedBox">
+              <div class="stream-wait">Waiting for stream...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose" id="decision">
+    <h2>Which Path to Choose: Engineering Decision Matrix</h2>
+    <p class="key">
+      You do not need a single mechanism across every feature. Pick the strategy that matches your provider's capabilities and your UI's consumption pattern:
+    </p>
+
+    <div class="table-wrap wide-block">
+      <table>
+        <thead>
+          <tr>
+            <th>Provider &amp; Product Scenario</th>
+            <th>Recommended Approach</th>
+            <th>Why It Fits</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Provider strictly enforces <code>output_config.format</code> / <code>response_format</code></td>
+            <td><strong>Native Structured Outputs</strong></td>
+            <td>Enforces schema during server-side decoding for the highest first-pass success rate</td>
+          </tr>
+          <tr>
+            <td>No native format constraint, but Tool Use is supported</td>
+            <td><strong>Tool Use + Zod Validation</strong></td>
+            <td>Forces structured arguments via <code>tool_choice</code> and aligns with agent toolchains</td>
+          </tr>
+          <tr>
+            <td>Endpoint only guarantees valid JSON, or you switch models frequently</td>
+            <td><strong>JSON Extraction + Zod + Feedback Retries</strong></td>
+            <td>Most portable defense layer across any text-completion backend</td>
+          </tr>
+          <tr>
+            <td>Long generation where users want live progress and code needs one final object</td>
+            <td><strong>Streaming <code>output_config.format</code></strong></td>
+            <td>Combines responsive streaming UX with a type-safe final <code>parsed_output</code></td>
+          </tr>
+          <tr>
+            <td>Array output where the UI must render each item the moment it is generated</td>
+            <td><strong>Incremental NDJSON Parsing</strong></td>
+            <td>Lightweight protocol that enables zero-wait, item-by-item object consumption</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>
+      Once output determinism is locked down with native constraints, schema validation, and feedback retries, the next bottleneck shifts to the input side: what belongs in the prompt window, what should stay out, and how to stop multi-turn sessions from degrading. That is the focus of the next chapter, <strong>Context Engineering</strong>.
+    </p>
+  </main>
+
+  <footer></footer>
+
+  <script>
+
+    // 4. Prism highlight
+    function highlightAllCode() { window.bookHighlightCode && window.bookHighlightCode(); }
+
+    // Helpers
+    function pulseLabCard(labId) {
+      const card = document.querySelector(`#${labId} .lab-card`);
+      if (!card) return;
+      card.classList.remove("is-pulsing");
+      void card.offsetWidth;
+      card.classList.add("is-pulsing");
+      setTimeout(() => card.classList.remove("is-pulsing"), 950);
+    }
+    function scrollToLab(labId) {
+      const el = document.getElementById(labId);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      setTimeout(() => pulseLabCard(labId), 320);
+    }
+
+    // ==================== LAB 1: extractJson + JSON.parse + Zod ====================
+    const LAB1_PRESETS = {
+      valid: JSON.stringify({
+        summary: "Found 1 null-dereference risk and 1 minor cleanup opportunity",
+        issues: [
+          { type: "bug", line: 14, message: "user.profile may be undefined; use optional chaining", suggestion: "user.profile?.avatar" }
+        ],
+        score: 78
+      }, null, 2),
+      prefix: `Sure, here is the review for this TypeScript module:
+
+\`\`\`json
+{
+  "summary": "Clean structure overall, with 1 SQL injection vulnerability",
+  "issues": [
+    {
+      "type": "security",
+      "line": 22,
+      "message": "String interpolation with user input enables SQL injection"
+    }
+  ],
+  "score": 65
+}
+\`\`\`
+
+Let me know if you want a patched version.`,
+      drift: `{
+  "summary": "Example of silent key-name drift",
+  "issues": [
+    {
+      "type": "bug",
+      "line_number": 12,
+      "message": "Unhandled Promise rejection in async handler"
+    }
+  ],
+  "score": 82
+}`,
+      range: `{
+  "summary": "Nearly spotless, except score and line number are out of bounds",
+  "issues": [
+    {
+      "type": "style",
+      "line": -3,
+      "message": ""
+    }
+  ],
+  "score": 120
+}`,
+      truncated: `{
+  "summary": "Large file scan (cut off by max_tokens)",
+  "issues": [
+    {
+      "type": "performance",
+      "line": 49,
+      "message": "RegExp is recompiled inside the hot loop`
+    };
+
+    let lab1Mode = "strict";
+    const lab1Input = document.getElementById("lab1RawInput");
+    const lab1CharCount = document.getElementById("lab1CharCount");
+
+    function extractJson(text) {
+      const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (codeBlockMatch) return { jsonStr: codeBlockMatch[1].trim(), method: "Stripped Markdown fence" };
+      const jsonMatch = text.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+      if (jsonMatch) return { jsonStr: jsonMatch[1].trim(), method: "Sliced outer braces" };
+      return { jsonStr: text.trim(), method: "Passed as-is" };
+    }
+
+    function validateReviewSchema(obj, lenient) {
+      const errors = [];
+      const validTypes = ["bug", "style", "performance", "security"];
+      if (!obj || typeof obj !== "object" || Array.isArray(obj)) {
+        return { success: false, errors: ["root: Expected object, received " + typeof obj] };
+      }
+
+      let summary = obj.summary;
+      if (typeof summary !== "string") {
+        if (lenient) summary = "(Summary extraction failed)";
+        else errors.push("summary: Expected string, received " + typeof obj.summary);
+      }
+
+      let issues = obj.issues;
+      if (!Array.isArray(issues)) {
+        if (lenient) issues = [];
+        else errors.push("issues: Expected array, received " + typeof obj.issues);
+      } else {
+        const cleanIssues = [];
+        issues.forEach((item, idx) => {
+          const itemErrs = [];
+          if (!item || typeof item !== "object") {
+            itemErrs.push(`issues[${idx}]: Expected object`);
+          } else {
+            if (!validTypes.includes(item.type)) {
+              itemErrs.push(`issues[${idx}].type: Invalid enum value "${item.type}", expected bug|style|performance|security`);
+            }
+            if (typeof item.line !== "number" || !Number.isInteger(item.line) || item.line <= 0) {
+              itemErrs.push(`issues[${idx}].line: Expected positive integer, received ${JSON.stringify(item.line)} (found keys: ${Object.keys(item).join(", ")})`);
+            }
+            if (typeof item.message !== "string" || item.message.trim().length === 0) {
+              itemErrs.push(`issues[${idx}].message: String must contain at least 1 character(s)`);
+            }
+          }
+          if (itemErrs.length === 0) cleanIssues.push(item);
+          else errors.push(...itemErrs);
+        });
+        if (lenient) {
+          issues = cleanIssues;
+          // In lenient mode, .catch([]) replaces failed array
+          if (errors.some((e) => e.startsWith("issues"))) issues = [];
+        }
+      }
+
+      let score = obj.score;
+      if (typeof score !== "number" || score < 0 || score > 100) {
+        if (lenient) score = 0;
+        else errors.push(`score: Number must be between 0 and 100, received ${JSON.stringify(obj.score)}`);
+      }
+
+      if (lenient) {
+        return {
+          success: true,
+          degraded: errors.length > 0,
+          ignoredErrors: errors,
+          data: { summary, issues, score }
+        };
+      }
+      if (errors.length > 0) return { success: false, errors };
+      return { success: true, data: { summary, issues, score } };
+    }
+
+    function setStage(cardId, badgeId, bodyId, state, badgeText, bodyText) {
+      const card = document.getElementById(cardId);
+      const badge = document.getElementById(badgeId);
+      const body = document.getElementById(bodyId);
+      card.className = "stage-card " + state;
+      badge.className = "stage-badge " + state;
+      badge.textContent = badgeText;
+      body.textContent = bodyText;
+    }
+
+    function runLab1() {
+      const raw = lab1Input.value;
+      lab1CharCount.textContent = `${raw.length} chars`;
+
+      const { jsonStr, method } = extractJson(raw);
+      setStage("stageExtract", "badgeExtract", "bodyExtract", "pass", method, jsonStr || "(empty)");
+
+      let parsedObj = null;
+      try {
+        parsedObj = JSON.parse(jsonStr);
+        setStage("stageParse", "badgeParse", "bodyParse", "pass", "Valid JSON", `Parsed successfully. Top-level keys: [${Object.keys(parsedObj).join(", ")}]`);
+      } catch (err) {
+        setStage("stageParse", "badgeParse", "bodyParse", "fail", "SyntaxError", `JSON.parse failed: ${err.message}`);
+        setStage("stageZod", "badgeZod", "bodyZod", "skip", "Skipped", "Upstream JSON.parse failed—cannot run Zod validation. Trigger a retry.");
+        return;
+      }
+
+      const zodRes = validateReviewSchema(parsedObj, lab1Mode === "lenient");
+      document.getElementById("zodStageTitle").textContent =
+        lab1Mode === "lenient" ? "3. LenientReviewResult.safeParse() (.catch fallback)" : "3. ReviewResult.safeParse() Strict Check";
+
+      if (zodRes.success) {
+        const badgeLabel = zodRes.degraded ? "Degraded Pass" : "Passed ✓";
+        const note = zodRes.degraded
+          ? `Caught ${zodRes.ignoredErrors.length} invalid field(s) and substituted defaults via .catch():\n${JSON.stringify(zodRes.data, null, 2)}`
+          : `Type-safe result (ReviewResult):\n${JSON.stringify(zodRes.data, null, 2)}`;
+        setStage("stageZod", "badgeZod", "bodyZod", "pass", badgeLabel, note);
+      } else {
+        setStage("stageZod", "badgeZod", "bodyZod", "fail", `${zodRes.errors.length} error(s)`, zodRes.errors.join("\n"));
+      }
+    }
+
+    function applyLab1Preset(key) {
+      document.querySelectorAll("#lab-1 [data-preset]").forEach((b) => {
+        b.classList.toggle("active", b.dataset.preset === key);
+      });
+      lab1Input.value = LAB1_PRESETS[key];
+      runLab1();
+    }
+
+    document.querySelectorAll("#lab-1 [data-preset]").forEach((btn) => {
+      btn.addEventListener("click", () => applyLab1Preset(btn.dataset.preset));
+    });
+    document.querySelectorAll("#lab-1 [data-mode]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        lab1Mode = btn.dataset.mode;
+        document.querySelectorAll("#lab-1 [data-mode]").forEach((b) => b.classList.toggle("active", b === btn));
+        runLab1();
+      });
+    });
+    lab1Input.addEventListener("input", runLab1);
+    document.getElementById("triggerFailPresetBtn")?.addEventListener("click", () => {
+      scrollToLab("lab-1");
+      applyLab1Preset("drift");
+    });
+    applyLab1Preset("valid");
+
+    // ==================== LAB 2: Provider + Retry Pipeline + Code Sync ====================
+    let lab2Provider = "qwen";
+    let lab2Feedback = true;
+    let lab2Retries = 2;
+
+    document.querySelectorAll("#predictHook1 .predict-opt").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const ans = btn.dataset.ans;
+        document.querySelectorAll("#predictHook1 .predict-opt").forEach((b) => {
+          b.classList.remove("is-right", "is-wrong");
+          if (b.dataset.ans === "b") b.classList.add("is-right");
+          else if (b === btn) b.classList.add("is-wrong");
+        });
+        const fb = document.getElementById("predictFeedback1");
+        fb.classList.add("show");
+        fb.innerHTML = ans === "b"
+          ? "<strong>Spot on.</strong> Per Model Studio's docs, Qwen downgrades to plain JSON mode—valid JSON syntax is preserved, but missing fields like <code>score</code> slip past the server until local Zod validation catches them. That is why you never skip local validation and retries."
+          : "<strong>Actually, it is B.</strong> Under <code>output_config.format</code>, Model Studio downgrades Qwen to plain JSON mode: the response is syntactically valid JSON, but required schema fields are not enforced server-side, so the error surfaces during local SDK validation.";
+      });
+    });
+
+    function syncLab2Code() {
+      const codeEl = document.getElementById("lab2SyncedCode");
+      if (!codeEl) return;
+      codeEl.textContent = codeEl.textContent.replace(
+        /\{ maxRetries: \d+, withFeedback: (true|false) \}/,
+        `{ maxRetries: ${lab2Retries}, withFeedback: ${lab2Feedback} }`
+      );
+      if (window.Prism && Prism.highlightElement) {
+        Prism.highlightElement(codeEl);
+      }
+    }
+
+    function runLab2Simulation() {
+      const traceEl = document.getElementById("lab2Trace");
+      const metricsEl = document.getElementById("lab2Metrics");
+      const steps = [];
+      let totalTokens = 0;
+      let finalSuccess = false;
+
+      if (lab2Provider === "strict") {
+        totalTokens = 410;
+        finalSuccess = true;
+        steps.push({
+          cls: "ok",
+          title: "Attempt 1 · Server-Side Strict Schema Decoding (output_config.format)",
+          meta: "410 tokens · ~1.1s",
+          body: `The server constrains token sampling to the JSON Schema and returns a complete, valid payload.\nSDK parsed_output passed: { summary: "Found 1 edge-case issue", issues: [...], score: 85 }`
+        });
+      } else if (lab2Provider === "qwen") {
+        totalTokens += 430;
+        steps.push({
+          cls: "err",
+          title: "Attempt 1 · DashScope Qwen (downgraded to plain JSON mode)",
+          meta: "430 tokens · Zod safeParse failed",
+          body: `Valid JSON returned, but with key drift and a missing score:\n{"summary": "Potential null dereference", "issues": [{"type": "bug", "line_number": 14, "message": "Missing null guard"}]}\n\nZod intercepted:\n- issues[0].line: Required (received line_number)\n- score: Required`
+        });
+
+        if (lab2Retries >= 1) {
+          if (lab2Feedback) {
+            steps.push({
+              cls: "fb",
+              title: "Build Error Feedback Message (formatZodError)",
+              meta: "append assistant + user feedback",
+              body: `Your output failed schema validation with the following errors:\nissues[0].line: Required; score: Required\nFix these fields and return valid JSON only.`
+            });
+            totalTokens += 520;
+            finalSuccess = true;
+            steps.push({
+              cls: "ok",
+              title: "Attempt 2 · Model Self-Repairs from Field Errors",
+              meta: "520 tokens · Validation passed ✓",
+              body: `{"summary": "Potential null dereference", "issues": [{"type": "bug", "line": 14, "message": "Missing null guard"}], "score": 76}`
+            });
+          } else {
+            totalTokens += 430;
+            steps.push({
+              cls: "err",
+              title: "Attempt 2 · Blind Retry (no error feedback)",
+              meta: "430 tokens · Same mistake repeated",
+              body: `Without knowing what failed, the model defaults to "line_number" again and fails Zod validation a second time.`
+            });
+            if (lab2Retries >= 2) {
+              totalTokens += 430;
+              finalSuccess = true;
+              steps.push({
+                cls: "ok",
+                title: "Attempt 3 · Lucky Sample Hits Correct Keys",
+                meta: "430 tokens · Validation passed ✓",
+                body: `The third attempt happens to emit "line" and "score", but at the cost of an extra round-trip.`
+              });
+            }
+          }
+        }
+      } else {
+        // deepseek without format
+        totalTokens += 460;
+        steps.push({
+          cls: "err",
+          title: "Attempt 1 · DeepSeek Compatible Endpoint (no format support)",
+          meta: "460 tokens · Preamble + invalid enum",
+          body: `Model emits explanatory text plus an out-of-enum value "warning":\nHere is the review:\`\`\`json\n{"summary": "Error handling gap", "issues": [{"type": "warning", "line": 8, "message": "Uncaught exception"}], "score": 80}\n\`\`\`\nextractJson stripped the preamble, but Zod caught: issues[0].type invalid enum "warning"`
+        });
+
+        if (lab2Retries >= 1) {
+          if (lab2Feedback) {
+            steps.push({
+              cls: "fb",
+              title: "Build Error Feedback Message (formatZodError)",
+              meta: "append assistant + user feedback",
+              body: `issues[0].type: Invalid enum value "warning", expected "bug" | "style" | "performance" | "security"`
+            });
+            totalTokens += 540;
+            finalSuccess = true;
+            steps.push({
+              cls: "ok",
+              title: "Attempt 2 · Enum Fixed, Zod Passed",
+              meta: "540 tokens · Validation passed ✓",
+              body: `{"summary": "Error handling gap", "issues": [{"type": "bug", "line": 8, "message": "Uncaught exception"}], "score": 80}`
+            });
+          } else {
+            totalTokens += 460;
+            steps.push({
+              cls: "err",
+              title: "Attempt 2 · Blind Retry Still Outputs \"warning\"",
+              meta: "460 tokens · Validation failed",
+              body: `With no hint that "warning" is disallowed, the model repeats the exact same enum value.`
+            });
+            if (lab2Retries >= 2) {
+              totalTokens += 460;
+              steps.push({
+                cls: "err",
+                title: "Attempt 3 · maxRetries Exhausted, Throwing Error",
+                meta: "460 tokens · Task failed ✗",
+                body: `Exceeded maxRetries (2). Application layer catches the error and routes to fallback or alerting.`
+              });
+            }
+          }
+        }
+      }
+
+      traceEl.innerHTML = steps.map((s) => `
+        <div class="trace-step ${s.cls}">
+          <div class="trace-step-head">
+            <span class="trace-step-title">${s.title}</span>
+            <span class="trace-step-meta">${s.meta}</span>
+          </div>
+          <div class="trace-code">${s.body.replace(/</g, "&lt;")}</div>
+        </div>
+      `).join("");
+
+      metricsEl.innerHTML = `
+        <span class="metric-pill">Simulated Trace · Outcome: ${finalSuccess ? "✓ Type-safe result obtained" : "✗ Failed (retries exhausted)"}</span>
+        <span class="metric-pill">Simulated Tokens: ${totalTokens}</span>
+        <span class="metric-pill">Requests: ${steps.filter((s) => s.cls !== "fb").length}</span>
+      `;
+    }
+
+    document.querySelectorAll("#lab-2 [data-provider]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        lab2Provider = btn.dataset.provider;
+        document.querySelectorAll("#lab-2 [data-provider]").forEach((b) => b.classList.toggle("active", b === btn));
+        runLab2Simulation();
+      });
+    });
+    document.querySelectorAll("#lab-2 [data-retries]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        lab2Retries = Number(btn.dataset.retries);
+        document.querySelectorAll("#lab-2 [data-retries]").forEach((b) => b.classList.toggle("active", b === btn));
+        syncLab2Code();
+        runLab2Simulation();
+      });
+    });
+    document.getElementById("toggleFeedbackBtn")?.addEventListener("click", (e) => {
+      lab2Feedback = !lab2Feedback;
+      e.currentTarget.textContent = `withFeedback: ${lab2Feedback}`;
+      e.currentTarget.classList.toggle("teal-active", lab2Feedback);
+      syncLab2Code();
+      runLab2Simulation();
+    });
+    document.getElementById("lab2RunBtn")?.addEventListener("click", runLab2Simulation);
+    document.getElementById("triggerRetryBtn")?.addEventListener("click", () => {
+      scrollToLab("lab-2");
+      lab2Provider = "qwen";
+      lab2Feedback = true;
+      lab2Retries = 2;
+      syncLab2Code();
+      runLab2Simulation();
+    });
+    runLab2Simulation();
+
+    // ==================== LAB 3: Streaming JSON vs NDJSON ====================
+    let lab3Mode = "json";
+    let lab3Timer = null;
+
+    const STREAM_JSON_PAYLOAD = JSON.stringify({
+      summary: "Found 3 issues that need attention",
+      issues: [
+        { type: "security", line: 12, message: "Hardcoded third-party API key; move it to environment variables" },
+        { type: "bug", line: 27, message: "JSON.parse is not wrapped in try/catch; malformed input will crash the process" },
+        { type: "performance", line: 45, message: "Sequential await inside a loop; batch with Promise.all instead" }
+      ],
+      score: 68
+    }, null, 2);
+
+    const STREAM_NDJSON_PAYLOAD = [
+      JSON.stringify({ type: "security", line: 12, message: "Hardcoded third-party API key; move it to environment variables" }),
+      JSON.stringify({ type: "bug", line: 27, message: "JSON.parse is not wrapped in try/catch; malformed input will crash the process" }),
+      JSON.stringify({ type: "performance", line: 45, message: "Sequential await inside a loop; batch with Promise.all instead" })
+    ].join("\n") + "\n";
+
+    function renderIssueCard(issue) {
+      return `
+        <div class="issue-item">
+          <div class="issue-item-top">
+            <span class="issue-type ${issue.type}">${issue.type}</span>
+            <span style="font-family: var(--font-mono); color: var(--text-muted);">Line ${issue.line}</span>
+          </div>
+          <div>${issue.message}</div>
+        </div>
+      `;
+    }
+
+    function stopLab3Stream() {
+      if (lab3Timer) {
+        clearInterval(lab3Timer);
+        lab3Timer = null;
+      }
+    }
+
+    function startLab3Stream() {
+      stopLab3Stream();
+      const rawBox = document.getElementById("lab3RawBox");
+      const parsedBox = document.getElementById("lab3ParsedBox");
+      const tokenStat = document.getElementById("lab3TokenStat");
+      const parseStat = document.getElementById("lab3ParseStat");
+      const rightTitle = document.getElementById("lab3RightTitle");
+
+      const source = lab3Mode === "json" ? STREAM_JSON_PAYLOAD : STREAM_NDJSON_PAYLOAD;
+      rightTitle.textContent = lab3Mode === "json"
+        ? "finalMessage().parsed_output Status"
+        : "NDJSON Incremental Card Stream";
+
+      rawBox.textContent = "";
+      parsedBox.innerHTML = `<div class="stream-wait">${lab3Mode === "json" ? "Streaming… parsed_output stays unavailable until the final } closes" : "Waiting for the first newline (\\n) delimiter…"}</div>`;
+      parseStat.textContent = "0 items parsed";
+
+      let cursor = 0;
+      let ndjsonBuffer = "";
+      let renderedCount = 0;
+
+      lab3Timer = setInterval(() => {
+        const chunk = source.slice(cursor, cursor + 6);
+        cursor += 6;
+        rawBox.textContent += chunk;
+        rawBox.scrollTop = rawBox.scrollHeight;
+        tokenStat.textContent = `Received ${Math.min(cursor, source.length)} / ${source.length} chars`;
+
+        if (lab3Mode === "ndjson") {
+          ndjsonBuffer += chunk;
+          const lines = ndjsonBuffer.split("\n");
+          ndjsonBuffer = lines.pop() || "";
+          lines.forEach((line) => {
+            const trimmed = line.trim();
+            if (!trimmed) return;
+            try {
+              const obj = JSON.parse(trimmed);
+              if (renderedCount === 0) parsedBox.innerHTML = "";
+              parsedBox.insertAdjacentHTML("beforeend", renderIssueCard(obj));
+              renderedCount += 1;
+              parseStat.textContent = `${renderedCount} item(s) rendered live`;
+            } catch { /* ignore */ }
+          });
+        }
+
+        if (cursor >= source.length) {
+          stopLab3Stream();
+          tokenStat.textContent = "Stream complete ✓";
+          if (lab3Mode === "json") {
+            const finalObj = JSON.parse(source);
+            parsedBox.innerHTML = finalObj.issues.map(renderIssueCard).join("");
+            parseStat.textContent = `Stream ended — parsed ${finalObj.issues.length} items at once ✓`;
+          }
+        }
+      }, 45);
+    }
+
+    document.querySelectorAll("#lab-3 [data-stream-mode]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        stopLab3Stream();
+        lab3Mode = btn.dataset.streamMode;
+        document.querySelectorAll("#lab-3 [data-stream-mode]").forEach((b) => b.classList.toggle("active", b === btn));
+        document.getElementById("lab3RawBox").textContent = "Mode switched. Click \"▶ Start Stream\" to compare.";
+        document.getElementById("lab3ParsedBox").innerHTML = `<div class="stream-wait">Waiting for stream...</div>`;
+        document.getElementById("lab3TokenStat").textContent = "Ready";
+        document.getElementById("lab3ParseStat").textContent = "0 items parsed";
+      });
+    });
+    document.getElementById("lab3StartBtn")?.addEventListener("click", startLab3Stream);
+  </script>
+  <script src="../shared/site.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-json.min.js"></script>
+</body>
+</html>

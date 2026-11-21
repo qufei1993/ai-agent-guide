@@ -1,0 +1,1569 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>引用溯源与证据校验：让 RAG 的每句回答都有据可查 · AI Agent Guide</title>
+  <!-- SEO:START (auto-synced by scripts/generate-seo.mjs) -->
+  <meta name="description" content="将回答中的论断绑定到来源，识别不受证据支持的内容，并处理证据冲突、不足和拒答" />
+  <link rel="canonical" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/citation-hallucination.html" />
+  <link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/citation-hallucination.html" />
+  <link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/citation-hallucination.html" />
+  <link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/citation-hallucination.html" />
+  <meta property="og:type" content="article" />
+  <meta property="og:locale" content="zh_CN" />
+  <meta property="og:locale:alternate" content="en_US" />
+  <meta property="og:title" content="引用溯源与证据校验" />
+  <meta property="og:description" content="将回答中的论断绑定到来源，识别不受证据支持的内容，并处理证据冲突、不足和拒答" />
+  <meta property="og:url" content="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/citation-hallucination.html" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "引用溯源与证据校验",
+    "description": "将回答中的论断绑定到来源，识别不受证据支持的内容，并处理证据冲突、不足和拒答",
+    "inLanguage": "zh-CN",
+    "url": "https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/citation-hallucination.html",
+    "isPartOf": {
+      "@type": "Book",
+      "name": "AI Agent Guide"
+    }
+  }
+  </script>
+  <!-- SEO:END -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css" />
+  <link rel="stylesheet" href="../shared/tokens.css" />
+  <style>
+    /* Chapter-specific components */
+    .lab-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 18px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .toolbar-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+    .toolbar-label {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-right: 2px;
+    }
+
+    .split-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+    @media (max-width: 820px) { .split-2 { grid-template-columns: 1fr; } }
+
+    .pane-box {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+    }
+    .pane-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      flex-wrap: wrap;
+    }
+
+    .c-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+    }
+    .c-badge.ok { background: var(--green-soft); color: var(--green); }
+    .c-badge.warn { background: var(--accent-soft); color: var(--accent); }
+    .c-badge.bad { background: var(--rose-soft); color: var(--rose); }
+    .c-badge.info { background: var(--blue-soft); color: var(--blue); }
+
+    .raw-stream {
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      line-height: 1.65;
+      background: var(--bg-code);
+      color: #e6edf3;
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin: 0;
+    }
+
+    /* Lab 01: Threshold slider & candidate cards */
+    .threshold-control {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      margin-bottom: 16px;
+    }
+    .threshold-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      flex-wrap: wrap;
+    }
+    .threshold-val {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      color: var(--teal);
+      background: var(--teal-soft);
+      padding: 2px 10px;
+      border-radius: 999px;
+    }
+    .threshold-control input[type="range"] {
+      width: 100%;
+      accent-color: var(--teal);
+      cursor: pointer;
+    }
+    .threshold-scale {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .cand-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .cand-item {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 11px 13px;
+      transition: opacity 0.18s, border-color 0.18s;
+    }
+    .cand-item.is-pass {
+      border-color: var(--teal);
+    }
+    .cand-item.is-drop {
+      opacity: 0.52;
+      border-style: dashed;
+    }
+    .cand-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 12px;
+      flex-wrap: wrap;
+    }
+    .cand-id {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--text);
+    }
+    .cand-source {
+      font-size: 11.5px;
+      color: var(--text-muted);
+    }
+    .cand-text {
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      line-height: 1.55;
+      margin: 0 0 8px 0;
+    }
+    .score-track {
+      position: relative;
+      height: 8px;
+      background: var(--bg-muted);
+      border-radius: 999px;
+      overflow: visible;
+    }
+    .score-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.2s ease;
+    }
+    .score-marker {
+      position: absolute;
+      top: -4px;
+      bottom: -4px;
+      width: 2px;
+      background: var(--rose);
+      border-radius: 1px;
+      pointer-events: none;
+    }
+
+    .stats-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .stat-pill {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 6px 12px;
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .stat-pill strong {
+      font-family: var(--font-mono);
+      color: var(--text);
+      font-size: 13.5px;
+    }
+    .stat-pill.is-good { border-color: var(--teal); background: var(--teal-soft); color: var(--teal); }
+    .stat-pill.is-good strong { color: var(--teal); }
+    .stat-pill.is-bad { border-color: var(--rose); background: var(--rose-soft); color: var(--rose); }
+    .stat-pill.is-bad strong { color: var(--rose); }
+
+    /* Lab 02: Citation & Faithfulness Verifier */
+    .answer-box {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      font-size: 14px;
+      line-height: 1.75;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+    .cite-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 0 6px;
+      margin: 0 2px;
+      border-radius: 4px;
+      background: var(--blue-soft);
+      color: var(--blue);
+      border: 1px solid color-mix(in srgb, var(--blue) 35%, transparent);
+      cursor: pointer;
+      vertical-align: baseline;
+      transition: all 0.15s;
+    }
+    .cite-pill:hover, .cite-pill.is-active {
+      background: var(--blue);
+      color: #fff;
+    }
+    .cite-pill.is-bad {
+      background: var(--rose-soft);
+      color: var(--rose);
+      border-color: color-mix(in srgb, var(--rose) 40%, transparent);
+    }
+    .cite-pill.is-bad:hover, .cite-pill.is-bad.is-active {
+      background: var(--rose);
+      color: #fff;
+    }
+
+    .evidence-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 11px 13px;
+      margin-bottom: 10px;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    }
+    .evidence-card:last-child { margin-bottom: 0; }
+    .evidence-card.is-hl {
+      border-color: var(--blue);
+      background: var(--blue-soft);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--blue) 18%, transparent);
+    }
+    .evidence-card.is-hl-bad {
+      border-color: var(--rose);
+      background: var(--rose-soft);
+    }
+
+    .claim-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .claim-row {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .claim-row:hover { border-color: var(--blue); }
+    .claim-row.is-supported { border-left-color: var(--green); }
+    .claim-row.is-unsupported { border-left-color: var(--rose); }
+    .claim-row.is-selected { background: var(--bg-muted); }
+    .claim-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 4px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .claim-body {
+      font-size: 13px;
+      color: var(--text);
+      margin: 0 0 4px 0;
+      line-height: 1.55;
+    }
+    .claim-note {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    .meter-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    @media (max-width: 600px) { .meter-grid { grid-template-columns: 1fr; } }
+    .meter-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+    }
+    .meter-label {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      font-weight: 700;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .meter-num {
+      font-family: var(--font-mono);
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .meter-num.good { color: var(--green); }
+    .meter-num.warn { color: var(--accent); }
+    .meter-num.bad { color: var(--rose); }
+    .meter-sub {
+      font-size: 11.5px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* Lab 03: Prompt-proof Hallucination Clinic */
+    .ctx-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .ctx-msg {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font-size: 12.5px;
+      line-height: 1.55;
+    }
+    .ctx-msg.is-poison {
+      border-color: var(--rose);
+      background: var(--rose-soft);
+    }
+    .ctx-msg.is-clean {
+      border-color: var(--teal);
+      background: var(--teal-soft);
+    }
+    .ctx-role {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .ctx-msg.is-poison .ctx-role { color: var(--rose); }
+    .ctx-msg.is-clean .ctx-role { color: var(--teal); }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./index.html">
+        <span>AI Agent Guide</span>
+        <span class="brand-badge">Interactive</span>
+      </a>
+      <nav class="topbar-nav">
+        <a href="#hallucination-sources">幻觉从哪来</a>
+        <a href="#lab-threshold">实验 01 · 阈值拦截</a>
+        <a href="#lab-faithfulness">实验 02 · 忠实度校验</a>
+        <a href="#lab-boundaries">实验 03 · 架构边界</a>
+        <a href="#decision">防线速查矩阵</a>
+      </nav>
+      <button class="theme-btn" id="themeToggle" type="button">
+        <span id="themeIcon">☀</span>
+        <span id="themeText">浅色</span>
+      </button>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-meta">
+      <span class="hero-pill">模块三 · RAG 检索与证据</span>
+      <span class="hero-pill">3 个交互实验台</span>
+      <span class="hero-pill">Node.js + TypeScript</span>
+    </div>
+    <h1>引用溯源与证据校验</h1>
+    <p class="hero-lead">
+      Reranker 已经把 <code>security-001</code> 排到了候选池第一位，但这只是检索片段，还不是用户能信任的回答。把证据交给 LLM 之后，模型依然可能悄悄补进训练数据里的“常识”、把相似接口张冠李戴，或拿过期文档当成现行规则。这一章补齐 Reranker 之后到可信回答的防幻觉闭环：事前拦截、编号注入、引用溯源、忠实度校验，以及单靠调 Prompt 救不了的架构边界。
+    </p>
+  </section>
+
+  <section class="tldr">
+    <div class="tldr-card">
+      <div class="tldr-head">
+        <span class="tldr-kicker">30 秒工程速览</span>
+        <span class="tldr-hint" style="font-size:12px;color:var(--text-muted);">先抓核心结论，再进实验台亲手验证</span>
+      </div>
+      <ol class="tldr-list">
+        <li class="tldr-item">
+          <span class="tldr-num">01</span>
+          <span class="tldr-claim">证据不足时不要让 LLM 硬答。用 <code>rerankScore</code> 阈值在调用模型前直接拒答，并给入围片段加上 <code>[1]</code> <code>[2]</code> 编号与明确禁止越界规则。</span>
+          <button class="tldr-go" type="button" onclick="window.bookJumpToLab('lab-threshold')">去实验 01 调阈值与证据注入 ↓</button>
+        </li>
+        <li class="tldr-item">
+          <span class="tldr-num">02</span>
+          <span class="tldr-claim">回答里带了 <code>[1]</code> 不代表内容真的来自片段 1。必须用 Faithfulness 把回答拆成独立事实逐条对照证据，同时警惕“忠实但答非所问”。</span>
+          <button class="tldr-go" type="button" onclick="window.bookJumpToLab('lab-faithfulness')">去实验 02 拆解忠实度校验 ↓</button>
+        </li>
+        <li class="tldr-item">
+          <span class="tldr-num">03</span>
+          <span class="tldr-claim">减少幻觉最有效的位置不是回答阶段的 Prompt，而是检索阶段的上下文质量。同名实体漂移、版本冲突与多轮旧证据残留，要靠元数据过滤和上下文隔离解决。</span>
+          <button class="tldr-go" type="button" onclick="window.bookJumpToLab('lab-boundaries')">去实验 03 诊断架构边界 ↓</button>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2 id="hallucination-sources">幻觉从哪来，以及防幻觉闭环怎么搭</h2>
+    <p class="key">
+      “RAG 能减少幻觉”有一个隐含前提：送进上下文的证据本身是对的，而且模型真的只用了这些证据。
+    </p>
+    <p>
+      在线上 RAG 系统里，读起来像模像样、实际上会误导用户的回答，大多来自三个源头：
+    </p>
+    <ol>
+      <li><strong>实体漂移（Entity Drift）</strong>：语义相近但实体不同的片段进了候选池。用户问 <code>deleteAccount API</code> 的错误码，向量检索召回了 <code>deleteUser API</code> 的文档，模型照着错误接口讲得头头是道。</li>
+      <li><strong>版本错位</strong>：知识库里同时存着新旧两版文档，旧版本被召回，关键变更没有体现在回答里，用户按过期流程执行操作。</li>
+      <li><strong>凭空编造</strong>：最难察觉的一类。证据只写了 <code>deleteAccount</code> 会检查外键引用，模型顺手补了一句“通常可以先调用 <code>cleanupReferences API</code> 解决”，而这个接口在系统里根本不存在。</li>
+    </ol>
+    <p>
+      凭空编造的根源在于 LLM 的生成目标是“写出听起来合理的答案”，而不是“严格复述证据”。要把候选片段变成可审计的回答，需要在 Reranker 之后补上四道防线：<strong>事前阈值拦截</strong>、<strong>编号化证据注入</strong>、<strong>引用编号提取</strong>和<strong>忠实度校验</strong>。
+    </p>
+
+    <figure class="diagram-figure">
+      <figcaption>
+        <span>RAG 从候选证据到可信回答的四道防幻觉闭环</span>
+        <span class="sim-tag">架构示意</span>
+      </figcaption>
+      <svg viewBox="0 0 880 215" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="RAG 从证据到可信回答的防幻觉闭环">
+        <defs>
+          <marker id="arr-main" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--text-muted)" />
+          </marker>
+          <marker id="arr-rose" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--rose)" />
+          </marker>
+          <marker id="arr-teal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--teal)" />
+          </marker>
+        </defs>
+
+        <!-- Step 0: Reranker output -->
+        <rect x="14" y="26" width="132" height="84" rx="12" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="1.6" />
+        <text x="80" y="56" text-anchor="middle" fill="var(--text)" font-size="13.5" font-weight="700">Reranker 候选</text>
+        <text x="80" y="77" text-anchor="middle" fill="var(--text-secondary)" font-size="11.5">Top-K 片段</text>
+        <text x="80" y="95" text-anchor="middle" fill="var(--text-muted)" font-size="11">附带 relevance_score</text>
+
+        <line x1="146" y1="68" x2="178" y2="68" stroke="var(--text-muted)" stroke-width="1.8" marker-end="url(#arr-main)" />
+
+        <!-- Step 1: Threshold Gate -->
+        <rect x="184" y="26" width="140" height="84" rx="12" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.6" />
+        <text x="254" y="56" text-anchor="middle" fill="var(--text)" font-size="13.5" font-weight="700">1. 阈值门禁</text>
+        <text x="254" y="77" text-anchor="middle" fill="var(--text-secondary)" font-size="11.5">score ≥ 阈值？</text>
+        <text x="254" y="95" text-anchor="middle" fill="var(--text-muted)" font-size="11">事前过滤低分噪音</text>
+
+        <!-- Abstain branch -->
+        <line x1="254" y1="110" x2="254" y2="146" stroke="var(--rose)" stroke-width="1.6" stroke-dasharray="4 3" marker-end="url(#arr-rose)" />
+        <text x="262" y="133" fill="var(--rose)" font-size="11" font-weight="700">全部低于阈值</text>
+        <rect x="174" y="152" width="160" height="46" rx="10" fill="var(--rose-soft)" stroke="var(--rose)" stroke-width="1.5" />
+        <text x="254" y="173" text-anchor="middle" fill="var(--rose)" font-size="12.5" font-weight="700">直接拒答（省去 LLM）</text>
+        <text x="254" y="190" text-anchor="middle" fill="var(--text-secondary)" font-size="11">说明缺什么与去哪查</text>
+
+        <line x1="324" y1="68" x2="360" y2="68" stroke="var(--teal)" stroke-width="1.8" marker-end="url(#arr-teal)" />
+        <text x="342" y="59" text-anchor="middle" fill="var(--teal)" font-size="11" font-weight="700">通过</text>
+
+        <!-- Step 2: Numbered Evidence Injection -->
+        <rect x="366" y="26" width="146" height="84" rx="12" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="1.6" />
+        <text x="439" y="56" text-anchor="middle" fill="var(--text)" font-size="13.5" font-weight="700">2. 编号证据注入</text>
+        <text x="439" y="77" text-anchor="middle" fill="var(--text-secondary)" font-size="11.5">[1] [2] 来源标注</text>
+        <text x="439" y="95" text-anchor="middle" fill="var(--text-muted)" font-size="11">禁止越界 + 拒答规则</text>
+
+        <line x1="512" y1="68" x2="544" y2="68" stroke="var(--text-muted)" stroke-width="1.8" marker-end="url(#arr-main)" />
+
+        <!-- Step 3: Cited Answer -->
+        <rect x="550" y="26" width="136" height="84" rx="12" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="1.6" />
+        <text x="618" y="56" text-anchor="middle" fill="var(--text)" font-size="13.5" font-weight="700">3. 带引用回答</text>
+        <text x="618" y="77" text-anchor="middle" fill="var(--text-secondary)" font-size="11.5">提取 [数字] 编号</text>
+        <text x="618" y="95" text-anchor="middle" fill="var(--text-muted)" font-size="11">定位实际引用片段</text>
+
+        <line x1="686" y1="68" x2="718" y2="68" stroke="var(--text-muted)" stroke-width="1.8" marker-end="url(#arr-main)" />
+
+        <!-- Step 4: Faithfulness Check -->
+        <rect x="724" y="26" width="142" height="84" rx="12" fill="var(--purple-soft)" stroke="var(--purple)" stroke-width="1.6" />
+        <text x="795" y="56" text-anchor="middle" fill="var(--text)" font-size="13.5" font-weight="700">4. 忠实度校验</text>
+        <text x="795" y="77" text-anchor="middle" fill="var(--text-secondary)" font-size="11.5">拆解事实逐条核对</text>
+        <text x="795" y="95" text-anchor="middle" fill="var(--text-muted)" font-size="11">Faithfulness 评分</text>
+
+        <!-- Feedback loop back to retrieval -->
+        <path d="M 795 110 L 795 175 L 368 175" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-dasharray="5 4" />
+        <text x="580" y="168" text-anchor="middle" fill="var(--text-muted)" font-size="11.5">低分样本回流诊断：是检索证据脏了，还是约束不够严？</text>
+      </svg>
+    </figure>
+
+    <h2 id="evidence-injection">事前拦截与编号化证据注入</h2>
+    <p class="key">
+      先用 <code>rerankScore</code> 挡掉没有足够依据的问题，再把入围片段编号交给模型，让每条结论都能追踪到原始出处。
+    </p>
+    <p>
+      很多系统在没有相关文档时依然把低分片段塞进 Prompt，结果模型为了完成任务强行拼出一个看似合理的答案。用 <code>EVIDENCE_THRESHOLD</code> 做事前拦截能同时拿到两个收益：省掉一次无效的 LLM 调用，并且给用户明确的“在哪里找不到、建议去哪里找”的反馈，而不是含糊地说“我不知道”。
+    </p>
+  </main>
+
+  <!-- LAB 01: Threshold Gate & Evidence Injection -->
+  <section class="lab-wrap" id="lab-threshold">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <span class="lab-eyebrow">实验 01 · 事前拦截与证据注入沙盒</span>
+          <h3 class="lab-title">拖动 Rerank 阈值滑块，看何时放行、何时误杀、何时触发拒答</h3>
+          <p class="lab-desc">
+            测试任务：对比“证据充足（409 排查）”与“知识库缺失（限流策略）”两个真实场景。调节 <code>EVIDENCE_THRESHOLD</code> 并切换证据格式，观察最终送进 LLM 的载荷或拒答行为。
+          </p>
+        </div>
+        <span class="sim-tag">模拟 Rerank 得分</span>
+      </div>
+      <div class="lab-body">
+        <div class="lab-toolbar">
+          <div class="toolbar-group">
+            <span class="toolbar-label">测试问题：</span>
+            <button class="chip-btn active" type="button" data-lab1-scene="409">场景一：deleteAccount 返回 409 怎么排查？</button>
+            <button class="chip-btn" type="button" data-lab1-scene="ratelimit">场景二：deleteAccount 限流策略是什么？</button>
+          </div>
+          <div class="toolbar-group">
+            <span class="toolbar-label">注入格式：</span>
+            <button class="chip-btn teal-active" type="button" data-lab1-fmt="numbered">编号化 + 拒答规则</button>
+            <button class="chip-btn" type="button" data-lab1-fmt="raw">无编号直接拼接</button>
+          </div>
+        </div>
+
+        <div class="threshold-control">
+          <div class="threshold-head">
+            <span>事前拦截阈值 <code>EVIDENCE_THRESHOLD</code>（仅放行 <code>rerankScore ≥ 阈值</code> 的片段）</span>
+            <span class="threshold-val" id="lab1ThresholdVal">0.40</span>
+          </div>
+          <input type="range" id="lab1Slider" min="0.05" max="0.95" step="0.05" value="0.40" />
+          <div class="threshold-scale">
+            <span>0.05（极宽松 · 易放进噪音）</span>
+            <span>0.40（示例起点）</span>
+            <span>0.95（极严格 · 易误杀）</span>
+          </div>
+        </div>
+
+        <div class="stats-row" id="lab1Stats"></div>
+
+        <div class="split-2">
+          <div class="pane-box">
+            <div class="pane-head">
+              <span>Reranker 候选池（红线为当前阈值）</span>
+              <span class="sim-tag">模拟分数 · 仅用于直觉演示</span>
+            </div>
+            <div class="cand-list" id="lab1Candidates"></div>
+          </div>
+
+          <div class="pane-box">
+            <div class="pane-head">
+              <span id="lab1OutputTitle">实际发送给 LLM 的 Prompt 载荷</span>
+              <span id="lab1OutputBadge" class="c-badge ok">正常放行</span>
+            </div>
+            <pre class="raw-stream" id="lab1Payload"></pre>
+          </div>
+        </div>
+
+        <div class="outcome good" id="lab1Outcome" style="margin-top: 14px;"></div>
+
+        <details class="code-fold" style="margin-top: 16px; margin-bottom: 0;">
+          <summary>查看与当前阈值同步的 TypeScript 实现（buildEvidenceBlock + 事前拦截）</summary>
+          <div class="code-fold-body">
+            <div class="code-card" style="margin: 0;">
+              <div class="code-header">
+                <span>answer-with-citation.ts · 随上方阈值滑块实时同步</span>
+                <button class="copy-btn" type="button">复制</button>
+              </div>
+              <pre><code class="language-typescript" id="lab1CodeSync"></code></pre>
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <div class="callout note">
+      <div class="callout-title">阈值 0.40 只是一个起点，且不能跨 Reranker 模型复用</div>
+      <strong>阈值的选取必须靠自己的评测集标定，不能照搬固定数字。</strong>有的业务知识库覆盖度一般，设 0.40 会漏掉本可回答的问题；对幻觉容忍度极低的合规场景，往往需要提到 0.60 以上。此外，不同 Reranker 服务的分数分布完全不同，换了模型就必须重新校准阈值。
+    </div>
+
+    <h2 id="citation-faithfulness">引用标注 ≠ 引用校验：为什么还要做 Faithfulness</h2>
+    <p class="key">
+      回答里带了 <code>[1]</code> <code>[2]</code>，只代表模型声称这句话来自对应片段，不代表片段里真的写了这件事。
+    </p>
+    <p>
+      把编号证据块传给模型后，可以通过正则把回答里出现的所有 <code>[数字]</code> 提取出来，映射回对应的原始 chunk。但生产环境里常见两类隐蔽故障：一类是模型在合法编号前混进了证据里根本没有的“常识”；另一类是张冠李戴，把片段 2 的事实标成了 <code>[1]</code>。
+    </p>
+
+    <div class="predict-hook" id="predictCitation">
+      <div class="predict-q">
+        <span class="predict-badge">先猜一下</span>
+        <span>如果一份 RAG 回答每句话末尾都标了 <code>[1]</code> 或 <code>[2]</code>，且编号全部在合法范围内，这能保证回答没有幻觉吗？</span>
+      </div>
+      <div class="predict-opts">
+        <button class="predict-opt" type="button" data-p1="a">A. 可以，只要编号合法，说明模型严格引用了证据</button>
+        <button class="predict-opt" type="button" data-p1="b">B. 不能，模型可能把凭空编造的细节挂在合法编号上，或标错编号</button>
+        <button class="predict-opt" type="button" data-p1="c">C. 只要 Prompt 里写了“禁止使用外部知识”就能 100% 避免</button>
+      </div>
+      <div class="predict-feedback" id="predictCitationFb">
+        <strong id="predictCitationLead">判断正确：引用编号只是格式约束，不是事实核验。</strong>
+        在 <a href="https://docs.ragas.io/en/stable/concepts/metrics/available_metrics/faithfulness/" target="_blank" rel="noopener">RAGAS 官方文档</a> 中，忠实度（Faithfulness）的定义是：把回答拆解为若干条独立事实陈述，逐条检查是否能从检索到的证据中推断出来，最后计算被支持陈述所占的比例。
+      </div>
+      <button class="predict-verify" type="button" id="verifyFabricationBtn">去实验 02 看“偷加常识”如何逃过编号检查 ↓</button>
+    </div>
+  </main>
+
+  <!-- LAB 02: Citation Tracing & Faithfulness Verifier -->
+  <section class="lab-wrap" id="lab-faithfulness">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <span class="lab-eyebrow">实验 02 · 引用溯源与 Faithfulness 逐条校验器</span>
+          <h3 class="lab-title">点击回答中的 <code>[1]</code> <code>[2]</code> 与事实陈述，看忠实度如何抓出“伪引用”</h3>
+          <p class="lab-desc">
+            测试问题：<code>deleteAccount API 返回 409 怎么排查？</code> 切换 4 种模型输出样本，对比“编号格式检查”、“Faithfulness（忠实度）”和“Answer Relevancy（切题度）”的差异。
+          </p>
+        </div>
+        <span class="src-tag">定义来源：RAGAS Faithfulness</span>
+      </div>
+      <div class="lab-body">
+        <div class="lab-toolbar">
+          <div class="toolbar-group">
+            <span class="toolbar-label">模型输出样本：</span>
+            <button class="chip-btn active" type="button" data-lab2-case="faithful">① 忠实回答（1.00）</button>
+            <button class="chip-btn" type="button" data-lab2-case="fabricated">② 偷加不存在的 API（0.67）</button>
+            <button class="chip-btn" type="button" data-lab2-case="miscited">③ 错挂引用编号（0.50）</button>
+            <button class="chip-btn" type="button" data-lab2-case="irrelevant">④ 忠实但答非所问（陷阱）</button>
+          </div>
+        </div>
+
+        <div class="split-2">
+          <div>
+            <div class="pane-box" style="margin-bottom: 14px;">
+              <div class="pane-head">
+                <span>模型生成的带引用回答（点击编号定位来源）</span>
+                <span id="lab2CiteCheckBadge" class="c-badge ok">编号格式合法</span>
+              </div>
+              <div class="answer-box" id="lab2AnswerBox"></div>
+              <div style="font-size: 12px; color: var(--text-muted);" id="lab2ExtractedSummary"></div>
+            </div>
+
+            <div class="pane-box">
+              <div class="pane-head">
+                <span>入围的原始证据片段（高亮表示当前选中引用）</span>
+                <span class="sim-tag">来自候选池 Top-2</span>
+              </div>
+              <div id="lab2EvidenceList"></div>
+            </div>
+          </div>
+
+          <div class="pane-box">
+            <div class="pane-head">
+              <span>Faithfulness 逐条事实核验结果</span>
+              <span class="sim-tag">模拟 LLM 校验器输出</span>
+            </div>
+            <div class="meter-grid" id="lab2Meters"></div>
+            <div class="claim-list" id="lab2Claims"></div>
+            <div class="outcome good" id="lab2Outcome" style="margin-top: 12px;"></div>
+          </div>
+        </div>
+
+        <details class="code-fold" style="margin-top: 16px; margin-bottom: 0;">
+          <summary>查看引用提取与 Faithfulness 校验的 TypeScript 代码</summary>
+          <div class="code-fold-body">
+            <div class="code-card" style="margin: 0;">
+              <div class="code-header">
+                <span>extractCitedChunks + checkFaithfulness · answer-with-citation.ts</span>
+                <button class="copy-btn" type="button">复制</button>
+              </div>
+              <pre><code class="language-typescript">function extractCitedChunks(answer: string, chunks: EvidenceChunk[]): EvidenceChunk[] {
+  const cited = new Set&lt;number&gt;();
+  for (const match of answer.matchAll(/\[(\d+)\]/g)) {
+    const idx = parseInt(match[1], 10) - 1;
+    if (idx &gt;= 0 &amp;&amp; idx &lt; chunks.length) cited.add(idx);
+  }
+  return [...cited].map((i) =&gt; chunks[i]);
+}
+
+async function checkFaithfulness(
+  answer: string,
+  citedChunks: EvidenceChunk[]
+): Promise&lt;{ score: number; reason: string }&gt; {
+  if (citedChunks.length === 0) {
+    return { score: 0, reason: "回答中没有引用任何证据片段" };
+  }
+
+  const evidenceText = citedChunks.map((c) =&gt; c.text).join("\n\n");
+  const response = await anthropic.messages.create({
+    model: llmModel,
+    max_tokens: 300,
+    messages: [
+      {
+        role: "user",
+        content: [
+          "判断下面的回答中，每个关键事实是否都能在证据片段里找到直接依据。",
+          "如果存在证据里没有的事实，判定为不忠实。",
+          "",
+          "证据片段：",
+          evidenceText,
+          "",
+          "回答：",
+          answer,
+          "",
+          '只输出 JSON：{"score": 0到1的数字, "reason": "一句话说明"}',
+        ].join("\n"),
+      },
+    ],
+  });
+
+  const textBlock = response.content.find((b) =&gt; b.type === "text");
+  const text = textBlock?.type === "text" ? textBlock.text : "";
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return { score: 0, reason: "无法解析校验结果" };
+
+  try {
+    return JSON.parse(jsonMatch[0]) as { score: number; reason: string };
+  } catch {
+    return { score: 0, reason: "解析失败" };
+  }
+}</code></pre>
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <div class="callout warn">
+      <div class="callout-title">两个容易忽略的校验局限</div>
+      1. <strong>用 LLM 校验 LLM 本身也可能出错</strong>：当证据和回答很长时，单次调用容易漏检。生产环境更稳的做法是像 RAGAS 一样，先拆解陈述，再逐条小任务核验后汇总比例。<br/>
+      2. <strong>Faithfulness 不是最终唯一指标</strong>：如实验 02 的案例 ④ 所示，一段严格忠于证据但完全答非所问的回答，Faithfulness 依然可以是 <code>1.00</code>。完整评测必须配合 Answer Relevancy（切题度）一起看。
+    </div>
+
+    <h2 id="prompt-boundaries">光靠调 Prompt 解决不了的四类幻觉</h2>
+    <p class="key">
+      Prompt 只能约束模型用什么口径说话，决定不了模型收到了什么证据。输入上下文脏了，再严厉的指令也挡不住幻觉。
+    </p>
+    <p>
+      在实际排障里，很多团队会把大量时间花在往系统提示词里加“绝对禁止编造”“仔细核对”这类语气词上，却忽略了上下文里本身就混进了错误实体、过期版本或上一轮对话的残留证据。下面这四类典型故障，必须回到检索层和上下文编排层解决。
+    </p>
+  </main>
+
+  <!-- LAB 03: Prompt-proof Hallucination Clinic -->
+  <section class="lab-wrap" id="lab-boundaries">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <span class="lab-eyebrow">实验 03 · 架构级幻觉诊所</span>
+          <h3 class="lab-title">四类调 Prompt 救不了的幻觉：看上下文怎么“投毒”以及架构怎么拆弹</h3>
+          <p class="lab-desc">
+            依次切换 4 类高频线上故障，对比“仅靠 Prompt 约束”与“检索/上下文架构修复”两种处理方式下，模型实际收到的上下文与最终回答后果。
+          </p>
+        </div>
+        <span class="sim-tag">Choice → Consequence → Fix</span>
+      </div>
+      <div class="lab-body">
+        <div class="lab-toolbar">
+          <div class="toolbar-group">
+            <span class="toolbar-label">故障类型：</span>
+            <button class="chip-btn active" type="button" data-lab3-case="entity">① 同名实体漂移</button>
+            <button class="chip-btn" type="button" data-lab3-case="version">② 新旧版本冲突</button>
+            <button class="chip-btn" type="button" data-lab3-case="multiturn">③ 多轮残留旧证据</button>
+            <button class="chip-btn" type="button" data-lab3-case="multihop">④ 跨片段多步推理</button>
+          </div>
+          <div class="toolbar-group">
+            <span class="toolbar-label">处理方式：</span>
+            <button class="chip-btn danger-active" type="button" data-lab3-mode="prompt">只调 Prompt（失效）</button>
+            <button class="chip-btn" type="button" data-lab3-mode="arch">架构层修复（推荐）</button>
+          </div>
+        </div>
+
+        <div class="split-2">
+          <div class="pane-box">
+            <div class="pane-head">
+              <span id="lab3CtxTitle">模型实际看到的上下文</span>
+              <span id="lab3CtxBadge" class="c-badge bad">存在上下文污染</span>
+            </div>
+            <div class="ctx-stack" id="lab3CtxStack"></div>
+          </div>
+
+          <div class="pane-box">
+            <div class="pane-head">
+              <span>生成的回答与工程诊断</span>
+              <span id="lab3AnsBadge" class="c-badge bad">隐蔽幻觉</span>
+            </div>
+            <div class="answer-box" id="lab3AnswerBox"></div>
+            <div class="outcome bad" id="lab3Outcome"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2 id="decision">防幻觉防线速查矩阵</h2>
+    <p class="key">
+      RAG 分检索和回答两段：表述层面的编造靠回答阶段防线挡住，实体漂移、版本错位和串轮污染靠检索与上下文质量解决。
+    </p>
+
+    <div class="filter-bar">
+      <button class="chip-btn active" type="button" data-filter="all">全部防线</button>
+      <button class="chip-btn" type="button" data-filter="pre">事前拦截与检索</button>
+      <button class="chip-btn" type="button" data-filter="prompt">证据注入与引用</button>
+      <button class="chip-btn" type="button" data-filter="verify">事后校验</button>
+      <button class="chip-btn" type="button" data-filter="context">多轮与版本治理</button>
+    </div>
+
+    <div class="decision-grid" id="decisionGrid">
+      <div class="decision-card" data-tags="pre">
+        <span class="decision-tag">事前拦截</span>
+        <div class="decision-title">Rerank 阈值门禁</div>
+        <p class="decision-desc">过滤 <code>rerankScore &lt; 阈值</code> 的弱相关片段；全部未达标时直接拒答并告知去哪查，省掉无效 LLM 调用。阈值必须用本业务评测集标定，不可跨模型照搬。</p>
+      </div>
+      <div class="decision-card" data-tags="prompt">
+        <span class="decision-tag">证据注入</span>
+        <div class="decision-title">编号化证据块 + 越界禁令</div>
+        <p class="decision-desc">把 Top-3 到 Top-5 高分片段按 <code>[1] 来源：...</code> 格式分隔注入，显式要求禁止补充外部业务细节，并定义证据不足时的标准拒答前缀。</p>
+      </div>
+      <div class="decision-card" data-tags="prompt verify">
+        <span class="decision-tag">引用溯源</span>
+        <div class="decision-title"><code>[数字]</code> 标注与来源提取</div>
+        <p class="decision-desc">要求关键事实句末标注编号，代码层通过 <code>extractCitedChunks</code> 回收实际引用片段，为前端展示出处和后续忠实度校验提供精确锚点。</p>
+      </div>
+      <div class="decision-card" data-tags="verify">
+        <span class="decision-tag">事后校验</span>
+        <div class="decision-title">Faithfulness 逐条核验</div>
+        <p class="decision-desc">高置信度场景（法律、医疗、金融、核心运维）不能把“带了编号”当成校验。按 RAGAS 思路拆解事实逐条核对，并与 Answer Relevancy 联合评估。</p>
+      </div>
+      <div class="decision-card" data-tags="pre context">
+        <span class="decision-tag">检索与元数据</span>
+        <div class="decision-title">实体过滤与版本时间戳</div>
+        <p class="decision-desc">入库时写入接口名、服务名、版本号和更新时间；召回阶段优先按元数据收窄范围并对过期文档降权，避免同名接口漂移和新旧规则打架。</p>
+      </div>
+      <div class="decision-card" data-tags="context">
+        <span class="decision-tag">多轮对话</span>
+        <div class="decision-title">每轮重置证据块</div>
+        <p class="decision-desc">不要把上一轮塞满证据块的 user message 原样留在历史数组里。历史消息只保留纯问答，每轮用新问题重新检索并只注入当前轮次的证据。</p>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>
+      减少幻觉最有效的位置不是回答阶段的 Prompt 约束，而是检索阶段的证据质量。把阈值拦截、编号引用和 Faithfulness 校验接起来后，一条完整的手写 RAG 链路就已经闭环：从文档解析切片、向量与混合检索、Rerank 精排，到有据可查的生成与校验。下一章我们会系统拆解 RAG 评测指标，并对比固定流水线与 Agentic RAG 的适用边界。
+    </p>
+  </footer>
+
+  <script>
+    (function () {
+      /* ============================================================
+         LAB 01: Threshold Gate & Evidence Injection
+         ============================================================ */
+      const lab1Scenes = {
+        '409': {
+          question: 'deleteAccount API 返回 409 怎么排查？',
+          abstainMsg: '当前知识库中没有找到达到相关性阈值的 409 排查文档。\n建议检查检索阈值是否设置过高，或核对 API 安全规范文档。',
+          candidates: [
+            {
+              id: 'security-001',
+              source: 'API 安全规范 / 错误码说明',
+              score: 0.92,
+              text: 'deleteAccount API 在删除用户前必须校验二次确认令牌。令牌过期会返回 401，数据库约束冲突会返回 409。删除前需检查外键引用，确认审计记录是否仍被其他服务占用。'
+            },
+            {
+              id: 'account-001',
+              source: '账号管理文档 / 注销流程',
+              score: 0.44,
+              text: '账号注销流程分为软删除和硬删除两个阶段。软删除标记账号为注销状态并保留 30 天，硬删除才会真正清理数据库记录。'
+            },
+            {
+              id: 'api-003',
+              source: 'API 通用规范 / 幂等性',
+              score: 0.19,
+              text: '所有写操作 API 在请求头中必须携带 X-Request-ID，用于链路追踪和幂等校验。重复的 X-Request-ID 会返回 200 并直接返回上次的响应结果。'
+            }
+          ]
+        },
+        ratelimit: {
+          question: 'deleteAccount API 的限流策略是什么？',
+          abstainMsg: '当前知识库中没有找到关于 deleteAccount 限流策略的相关文档。\n建议查阅 API 网关配置手册，或联系 API 团队确认。',
+          candidates: [
+            {
+              id: 'security-001',
+              source: 'API 安全规范 / 错误码说明',
+              score: 0.18,
+              text: 'deleteAccount API 在删除用户前必须校验二次确认令牌。令牌过期会返回 401，数据库约束冲突会返回 409。删除前需检查外键引用，确认审计记录是否仍被其他服务占用。'
+            },
+            {
+              id: 'api-003',
+              source: 'API 通用规范 / 幂等性',
+              score: 0.12,
+              text: '所有写操作 API 在请求头中必须携带 X-Request-ID，用于链路追踪和幂等校验。'
+            },
+            {
+              id: 'account-001',
+              source: '账号管理文档 / 注销流程',
+              score: 0.07,
+              text: '账号注销流程分为软删除和硬删除两个阶段。软删除标记账号为注销状态并保留 30 天，硬删除才会真正清理数据库记录。'
+            }
+          ]
+        }
+      };
+
+      const lab1State = { scene: '409', fmt: 'numbered', threshold: 0.40 };
+
+      function buildCodeSync(threshold, fmt) {
+        const blockFn = fmt === 'numbered'
+          ? `function buildEvidenceBlock(chunks: EvidenceChunk[]): string {\n  return chunks\n    .map((c, i) => \`[\${i + 1}] 来源：\${c.source}\\n\${c.text}\`)\n    .join("\\n\\n---\\n\\n");\n}`
+          : `// 反例：无编号直接拼接，模型无法标注来源，下游也无法追踪\nfunction buildEvidenceBlock(chunks: EvidenceChunk[]): string {\n  return chunks.map((c) => c.text).join("\\n");\n}`;
+
+        return `const EVIDENCE_THRESHOLD = ${threshold.toFixed(2)};
+
+${blockFn}
+
+const usableChunks = candidates.filter((c) => c.rerankScore >= EVIDENCE_THRESHOLD);
+
+if (usableChunks.length === 0) {
+  const maxScore = Math.max(...candidates.map((c) => c.rerankScore));
+  return {
+    abstained: true,
+    message: \`[拒答] 最高 rerank 分数 \${maxScore.toFixed(2)} 低于阈值 \${EVIDENCE_THRESHOLD.toFixed(2)}，跳过 LLM 调用。\`,
+  };
+}
+
+// 仅将通过阈值的 Top-K 片段注入 Prompt
+const evidenceText = buildEvidenceBlock(usableChunks);`;
+      }
+
+      function renderLab1() {
+        const scene = lab1Scenes[lab1State.scene];
+        const t = lab1State.threshold;
+        const usable = scene.candidates.filter((c) => c.score >= t);
+        const maxScore = Math.max(...scene.candidates.map((c) => c.score));
+
+        document.getElementById('lab1ThresholdVal').textContent = t.toFixed(2);
+
+        document.querySelectorAll('[data-lab1-scene]').forEach((b) => {
+          b.classList.toggle('active', b.dataset.lab1Scene === lab1State.scene);
+        });
+        document.querySelectorAll('[data-lab1-fmt]').forEach((b) => {
+          b.classList.remove('teal-active', 'danger-active');
+          if (b.dataset.lab1Fmt === lab1State.fmt) {
+            b.classList.add(lab1State.fmt === 'numbered' ? 'teal-active' : 'danger-active');
+          }
+        });
+
+        // Stats row
+        const llmCalled = usable.length > 0;
+        const statsEl = document.getElementById('lab1Stats');
+        statsEl.innerHTML = `
+          <span class="stat-pill">候选总数 <strong>${scene.candidates.length}</strong></span>
+          <span class="stat-pill ${usable.length > 0 ? 'is-good' : 'is-bad'}">入围片段 <strong>${usable.length}</strong></span>
+          <span class="stat-pill">最高得分 <strong>${maxScore.toFixed(2)}</strong></span>
+          <span class="stat-pill ${llmCalled ? '' : 'is-good'}">LLM 调用 <strong>${llmCalled ? '会触发 (1 次)' : '已跳过 (0 次)'}</strong></span>
+        `;
+
+        // Candidate cards
+        const candEl = document.getElementById('lab1Candidates');
+        let passIdx = 0;
+        candEl.innerHTML = scene.candidates.map((c) => {
+          const passed = c.score >= t;
+          if (passed) passIdx += 1;
+          const pct = Math.round(c.score * 100);
+          const markerPct = Math.round(t * 100);
+          const tag = passed
+            ? `<span class="c-badge ok">入围 ${lab1State.fmt === 'numbered' ? '[' + passIdx + ']' : ''}</span>`
+            : `<span class="c-badge bad">低于阈值 · 过滤</span>`;
+          return `
+            <div class="cand-item ${passed ? 'is-pass' : 'is-drop'}">
+              <div class="cand-top">
+                <div>
+                  <span class="cand-id">${c.id}</span>
+                  <span class="cand-source"> · ${c.source}</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <span style="font-family:var(--font-mono);font-weight:700;font-size:12px;">${c.score.toFixed(2)}</span>
+                  ${tag}
+                </div>
+              </div>
+              <p class="cand-text">${c.text}</p>
+              <div class="score-track">
+                <div class="score-fill bar-sim" style="width:${pct}%;"></div>
+                <div class="score-marker" style="left:${markerPct}%;" title="阈值 ${t.toFixed(2)}"></div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        // Payload / Abstain box
+        const titleEl = document.getElementById('lab1OutputTitle');
+        const badgeEl = document.getElementById('lab1OutputBadge');
+        const payloadEl = document.getElementById('lab1Payload');
+        const outcomeEl = document.getElementById('lab1Outcome');
+
+        if (usable.length === 0) {
+          titleEl.textContent = '事前拦截生效 · 直接返回给用户的拒答信息';
+          badgeEl.textContent = '已拒答（0 LLM 调用）';
+          badgeEl.className = 'c-badge warn';
+          payloadEl.textContent = `[事前拦截] 所有候选片段 rerank 分数均低于阈值 ${t.toFixed(2)}（最高 ${maxScore.toFixed(2)}）。\n\n返回用户：\n${scene.abstainMsg}`;
+
+          if (lab1State.scene === 'ratelimit') {
+            outcomeEl.className = 'outcome good';
+            outcomeEl.innerHTML = '<div class="outcome-title">正确拦截：知识库确实没有限流文档，系统在调用 LLM 前果断止损</div>省掉了 1 次 LLM 调用，也没有给模型凭空编造“默认 QPS=100”的机会，同时明确告诉用户去 API 网关手册或联系团队确认。';
+          } else {
+            outcomeEl.className = 'outcome bad';
+            outcomeEl.innerHTML = '<div class="outcome-title">阈值过高导致误杀（Recall 暴跌）</div><code>security-001</code> 得分高达 0.92，明明能直接回答 409 排查问题，却被 ' + t.toFixed(2) + ' 的高阈值一刀切掉了。生产中应把阈值调回评测集标定的合理区间。';
+          }
+        } else {
+          titleEl.textContent = '实际发送给 LLM 的 Prompt 载荷';
+          const evidenceStr = lab1State.fmt === 'numbered'
+            ? usable.map((c, i) => `[${i + 1}] 来源：${c.source}\n${c.text}`).join('\n\n---\n\n')
+            : usable.map((c) => c.text).join('\n');
+
+          if (lab1State.fmt === 'numbered') {
+            payloadEl.textContent = [
+              '你是一个企业知识库问答系统，必须严格基于所提供的证据片段回答问题，禁止使用证据之外的知识。',
+              '',
+              '规则：',
+              '1. 每处关键事实在句末用 [数字] 标注对应证据的编号。',
+              '2. 若所有证据都不能直接回答问题，回答必须以【当前证据不足以回答这个问题】开头。',
+              '3. 不允许在证据之外补充任何业务细节。',
+              '',
+              '证据片段：',
+              evidenceStr,
+              '',
+              `问题：${scene.question}`
+            ].join('\n');
+          } else {
+            payloadEl.textContent = [
+              '请根据以下参考资料回答问题：',
+              '',
+              evidenceStr,
+              '',
+              `问题：${scene.question}`
+            ].join('\n');
+          }
+
+          if (lab1State.scene === 'ratelimit') {
+            badgeEl.textContent = '噪音放行风险';
+            badgeEl.className = 'c-badge bad';
+            outcomeEl.className = 'outcome bad';
+            outcomeEl.innerHTML = '<div class="outcome-title">阈值过低：低分无关片段混入上下文，诱发强行作答</div>最高分只有 0.18，全部与“限流策略”无关。放行后不仅白花一次 LLM 费用，还极易让模型借题发挥编造限流数值。把阈值拉高到 0.20 以上即可事前拦住。';
+          } else if (lab1State.fmt === 'raw') {
+            badgeEl.textContent = '缺少溯源编号';
+            badgeEl.className = 'c-badge warn';
+            outcomeEl.className = 'outcome meh';
+            outcomeEl.innerHTML = '<div class="outcome-title">隐患：片段混在一起，后续无法做引用提取与忠实度校验</div>没有 <code>[1]</code> <code>[2]</code> 编号和显式拒答规则，用户看不出哪句话来自哪篇文档，程序也无法定位具体 chunk 做 Faithfulness 核验。';
+          } else if (t <= 0.19) {
+            badgeEl.textContent = '混入低分噪音';
+            badgeEl.className = 'c-badge warn';
+            outcomeEl.className = 'outcome meh';
+            outcomeEl.innerHTML = '<div class="outcome-title">偏宽松：不相关的幂等性文档（0.19）也进了上下文</div>虽然核心证据 <code>security-001</code> 在列，但低分噪音会稀释注意力。把阈值调到 0.40 左右，只保留高分 Top 片段效果更干净。';
+          } else {
+            badgeEl.textContent = '放行 ' + usable.length + ' 条高分证据';
+            badgeEl.className = 'c-badge ok';
+            outcomeEl.className = 'outcome good';
+            outcomeEl.innerHTML = '<div class="outcome-title">理想状态：只让高相关证据进入上下文，并绑定清晰编号</div><code>security-001</code>（0.92）与辅助上下文按编号注入，低分无关片段被拦在门外，模型可以稳定生成带 <code>[1]</code> <code>[2]</code> 标注的回答。';
+          }
+        }
+
+        // Sync code block
+        const codeEl = document.getElementById('lab1CodeSync');
+        codeEl.textContent = buildCodeSync(t, lab1State.fmt);
+        if (window.bookHighlightCode) {
+          window.bookHighlightCode(codeEl.closest('.code-card'));
+        }
+      }
+
+      document.querySelectorAll('[data-lab1-scene]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          lab1State.scene = btn.dataset.lab1Scene;
+          renderLab1();
+        });
+      });
+      document.querySelectorAll('[data-lab1-fmt]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          lab1State.fmt = btn.dataset.lab1Fmt;
+          renderLab1();
+        });
+      });
+      document.getElementById('lab1Slider').addEventListener('input', (e) => {
+        lab1State.threshold = parseFloat(e.target.value);
+        renderLab1();
+      });
+
+      /* ============================================================
+         PREDICT HOOK 01
+         ============================================================ */
+      document.querySelectorAll('[data-p1]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const val = btn.dataset.p1;
+          document.querySelectorAll('[data-p1]').forEach((b) => {
+            b.classList.remove('is-right', 'is-wrong');
+            if (b.dataset.p1 === 'b') b.classList.add('is-right');
+            else if (b === btn) b.classList.add('is-wrong');
+          });
+          const lead = document.getElementById('predictCitationLead');
+          if (lead) {
+            lead.textContent = val === 'b'
+              ? '判断正确：引用编号只是格式约束，不是事实核验。'
+              : '其实不能保证：引用编号只是格式约束，不是事实核验。';
+          }
+          document.getElementById('predictCitation').classList.add('answered');
+          document.getElementById('predictCitationFb').classList.add('show');
+        });
+      });
+
+      document.getElementById('verifyFabricationBtn').addEventListener('click', () => {
+        lab2State.caseKey = 'fabricated';
+        lab2State.activeCite = 1;
+        lab2State.selectedClaim = 2;
+        renderLab2();
+        if (window.bookJumpToLab) window.bookJumpToLab('lab-faithfulness');
+      });
+
+      /* ============================================================
+         LAB 02: Citation Tracing & Faithfulness Verifier
+         ============================================================ */
+      const lab2Evidence = [
+        {
+          num: 1,
+          id: 'security-001',
+          source: 'API 安全规范 / 错误码说明',
+          text: 'deleteAccount API 在删除用户前必须校验二次确认令牌。令牌过期会返回 401，数据库约束冲突会返回 409。删除前需检查外键引用，确认审计记录是否仍被其他服务占用。'
+        },
+        {
+          num: 2,
+          id: 'account-001',
+          source: '账号管理文档 / 注销流程',
+          text: '账号注销流程分为软删除和硬删除两个阶段。软删除标记账号为注销状态并保留 30 天，硬删除才会真正清理数据库记录。'
+        }
+      ];
+
+      const lab2Cases = {
+        faithful: {
+          citeBadge: '编号合法 · 全部命中',
+          citeBadgeCls: 'ok',
+          extracted: '提取到引用：[1] security-001、[2] account-001',
+          answerHtml:
+            '<code>deleteAccount API</code> 返回 409 是数据库约束冲突导致的 <button class="cite-pill" type="button" data-cite="1">[1]</button>，排查时需要检查外键引用，确认审计记录是否仍被其他服务占用 <button class="cite-pill" type="button" data-cite="1">[1]</button>。账号数据本身不会立即消失，软删除阶段会保留 30 天 <button class="cite-pill" type="button" data-cite="2">[2]</button>。',
+          faithScore: 1.0,
+          faithCls: 'good',
+          faithSub: '3 / 3 条陈述有直接依据',
+          relLabel: '高（切题）',
+          relCls: 'good',
+          relSub: '直接回答了 409 排查步骤',
+          claims: [
+            { text: 'deleteAccount 返回 409 是数据库约束冲突导致的。', cite: 1, ok: true, note: '在 [1] 中有原文依据：“数据库约束冲突会返回 409”。' },
+            { text: '排查需检查外键引用，确认审计记录是否仍被其他服务占用。', cite: 1, ok: true, note: '在 [1] 中有原文依据：“删除前需检查外键引用，确认审计记录是否仍被其他服务占用”。' },
+            { text: '软删除阶段账号数据会保留 30 天，不会立即清理。', cite: 2, ok: true, note: '在 [2] 中有原文依据：“软删除标记账号为注销状态并保留 30 天”。' }
+          ],
+          outcomeCls: 'good',
+          outcomeHtml: '<div class="outcome-title">通过校验：每条关键事实都能在对应编号的证据里找到原文依据</div>Faithfulness = 1.00，且直接回答了用户关心的 409 排查问题。'
+        },
+        fabricated: {
+          citeBadge: '编号合法 · 藏有编造',
+          citeBadgeCls: 'warn',
+          extracted: '提取到引用：[1] security-001（仅查编号格式完全看不出异常）',
+          answerHtml:
+            '<code>deleteAccount API</code> 返回 409 是数据库约束冲突导致的 <button class="cite-pill" type="button" data-cite="1">[1]</button>，需检查外键引用和审计记录占用 <button class="cite-pill" type="button" data-cite="1">[1]</button>。通常可以先调用 <code>cleanupReferences API</code> 解除占用后再重试 <button class="cite-pill is-bad" type="button" data-cite="1">[1]</button>。',
+          faithScore: 0.67,
+          faithCls: 'bad',
+          faithSub: '2 / 3 条陈述有依据（1 条编造）',
+          relLabel: '中（含误导操作）',
+          relCls: 'warn',
+          relSub: '给出了不存在的接口名',
+          claims: [
+            { text: 'deleteAccount 返回 409 是数据库约束冲突导致的。', cite: 1, ok: true, note: '在 [1] 中有直接依据。' },
+            { text: '排查需检查外键引用和审计记录占用。', cite: 1, ok: true, note: '在 [1] 中有直接依据。' },
+            { text: '可以先调用 cleanupReferences API 解除占用后再重试。', cite: 1, ok: false, note: '不忠实！[1] 里根本没有 cleanupReferences API，这是模型从训练常识里补全出来的虚构接口。' }
+          ],
+          outcomeCls: 'bad',
+          outcomeHtml: '<div class="outcome-title">抓获凭空编造：编号 [1] 合法，但第三句话是模型自己编的</div>如果只检查回答里有没有 <code>[1]</code>，这条幻觉会直接漏到线上。拆解成独立陈述做 Faithfulness 校验，才能精准标出不存在的 <code>cleanupReferences API</code>。'
+        },
+        miscited: {
+          citeBadge: '编号合法 · 来源错挂',
+          citeBadgeCls: 'warn',
+          extracted: '提取到引用：[1] security-001（[2] 未被标注，导致校验范围缺漏）',
+          answerHtml:
+            '<code>deleteAccount API</code> 返回 409 属于数据库约束冲突，需排查外键引用与审计记录占用 <button class="cite-pill" type="button" data-cite="1">[1]</button>。此外，软删除阶段会保留账号数据 30 天，硬删除才会真正清理记录 <button class="cite-pill is-bad" type="button" data-cite="1">[1]</button>。',
+          faithScore: 0.50,
+          faithCls: 'bad',
+          faithSub: '1 / 2 条陈述在所引片段中成立',
+          relLabel: '高（切题）',
+          relCls: 'good',
+          relSub: '内容本身没错，但溯源指错了文档',
+          claims: [
+            { text: '409 属于数据库约束冲突，需排查外键引用与审计记录占用。', cite: 1, ok: true, note: '在所标注的 [1] 中有直接依据。' },
+            { text: '软删除保留 30 天，硬删除才会清理记录（标注为 [1]）。', cite: 1, ok: false, note: '错挂引用！该内容实际出自 [2] 账号管理文档，但模型标成了 [1]。按引用提取去核对 [1] 时判定失配。' }
+          ],
+          outcomeCls: 'meh',
+          outcomeHtml: '<div class="outcome-title">溯源失真：审计或用户点开 [1] 根本找不到“30 天”的说明</div>在合规与客服场景里，引用指错位置同样会破坏信任。按 <code>extractCitedChunks</code> 定向校验所引片段，能及时暴露错挂编号。'
+        },
+        irrelevant: {
+          citeBadge: '编号合法 · 忠实但跑题',
+          citeBadgeCls: 'info',
+          extracted: '提取到引用：[2] account-001',
+          answerHtml:
+            '账号注销流程分为软删除和硬删除两个阶段 <button class="cite-pill" type="button" data-cite="2">[2]</button>。软删除会将账号标记为注销状态并保留 30 天，硬删除才会真正清理数据库记录 <button class="cite-pill" type="button" data-cite="2">[2]</button>。',
+          faithScore: 1.0,
+          faithCls: 'good',
+          faithSub: '2 / 2 条陈述完全忠于 [2]',
+          relLabel: '极低（答非所问）',
+          relCls: 'bad',
+          relSub: '完全没解释 409 怎么排查',
+          claims: [
+            { text: '账号注销流程分为软删除和硬删除两个阶段。', cite: 2, ok: true, note: '完全忠于 [2]，没有任何编造。' },
+            { text: '软删除保留 30 天，硬删除才会清理数据库记录。', cite: 2, ok: true, note: '完全忠于 [2]，没有任何编造。' }
+          ],
+          outcomeCls: 'meh',
+          outcomeHtml: '<div class="outcome-title">典型指标陷阱：Faithfulness = 1.00，但对用户毫无用处</div>Faithfulness 只衡量“回答有没有背叛证据”，不衡量“回答有没有解决问题”。线上评测必须把 Faithfulness 与 Answer Relevancy（切题度）配合使用。'
+        }
+      };
+
+      const lab2State = { caseKey: 'faithful', activeCite: 1, selectedClaim: 0 };
+
+      function renderLab2() {
+        const data = lab2Cases[lab2State.caseKey];
+
+        document.querySelectorAll('[data-lab2-case]').forEach((b) => {
+          b.classList.toggle('active', b.dataset.lab2Case === lab2State.caseKey);
+        });
+
+        const badgeEl = document.getElementById('lab2CiteCheckBadge');
+        badgeEl.textContent = data.citeBadge;
+        badgeEl.className = 'c-badge ' + data.citeBadgeCls;
+
+        document.getElementById('lab2AnswerBox').innerHTML = data.answerHtml;
+        document.getElementById('lab2ExtractedSummary').textContent = data.extracted;
+
+        // Bind cite pills
+        document.querySelectorAll('#lab2AnswerBox .cite-pill').forEach((pill) => {
+          const num = parseInt(pill.dataset.cite, 10);
+          pill.classList.toggle('is-active', num === lab2State.activeCite);
+          pill.addEventListener('click', () => {
+            lab2State.activeCite = num;
+            renderLab2();
+          });
+        });
+
+        // Evidence cards
+        const selectedClaimObj = data.claims[lab2State.selectedClaim] || data.claims[0];
+        const isBadSelected = selectedClaimObj && !selectedClaimObj.ok && selectedClaimObj.cite === lab2State.activeCite;
+
+        document.getElementById('lab2EvidenceList').innerHTML = lab2Evidence.map((ev) => {
+          const isHl = ev.num === lab2State.activeCite;
+          const hlCls = isHl ? (isBadSelected ? 'is-hl-bad' : 'is-hl') : '';
+          return `
+            <div class="evidence-card ${hlCls}">
+              <div class="cand-top" style="margin-bottom:4px;">
+                <span class="cand-id">[${ev.num}] ${ev.id}</span>
+                <span class="cand-source">${ev.source}</span>
+              </div>
+              <p class="cand-text" style="margin:0;">${ev.text}</p>
+            </div>
+          `;
+        }).join('');
+
+        // Meters
+        document.getElementById('lab2Meters').innerHTML = `
+          <div class="meter-card">
+            <div class="meter-label"><span>Faithfulness（忠实度）</span><span>支持 / 总数</span></div>
+            <div class="meter-num ${data.faithCls}">${data.faithScore.toFixed(2)}</div>
+            <div class="meter-sub">${data.faithSub}</div>
+          </div>
+          <div class="meter-card">
+            <div class="meter-label"><span>Answer Relevancy（切题度）</span><span>辅助维度</span></div>
+            <div class="meter-num ${data.relCls}" style="font-size:16px;padding-top:4px;">${data.relLabel}</div>
+            <div class="meter-sub">${data.relSub}</div>
+          </div>
+        `;
+
+        // Claims list
+        document.getElementById('lab2Claims').innerHTML = data.claims.map((cl, idx) => `
+          <div class="claim-row ${cl.ok ? 'is-supported' : 'is-unsupported'} ${idx === lab2State.selectedClaim ? 'is-selected' : ''}" data-claim-idx="${idx}">
+            <div class="claim-head">
+              <span>陈述 #${idx + 1} · 指向 [${cl.cite}]</span>
+              <span class="c-badge ${cl.ok ? 'ok' : 'bad'}">${cl.ok ? '✓ 有直接依据' : '✕ 证据不支持'}</span>
+            </div>
+            <p class="claim-body">${cl.text}</p>
+            <p class="claim-note">${cl.note}</p>
+          </div>
+        `).join('');
+
+        document.querySelectorAll('#lab2Claims .claim-row').forEach((row) => {
+          row.addEventListener('click', () => {
+            const idx = parseInt(row.dataset.claimIdx, 10);
+            lab2State.selectedClaim = idx;
+            lab2State.activeCite = data.claims[idx].cite;
+            renderLab2();
+          });
+        });
+
+        const outEl = document.getElementById('lab2Outcome');
+        outEl.className = 'outcome ' + data.outcomeCls;
+        outEl.innerHTML = data.outcomeHtml;
+      }
+
+      document.querySelectorAll('[data-lab2-case]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          lab2State.caseKey = btn.dataset.lab2Case;
+          lab2State.selectedClaim = 0;
+          lab2State.activeCite = lab2Cases[lab2State.caseKey].claims[0].cite;
+          renderLab2();
+        });
+      });
+
+      /* ============================================================
+         LAB 03: Prompt-proof Hallucination Clinic
+         ============================================================ */
+      const lab3Cases = {
+        entity: {
+          prompt: {
+            ctxBadge: '同名实体混入候选池',
+            ctxBadgeCls: 'bad',
+            ansBadge: '实体漂移幻觉',
+            ansBadgeCls: 'bad',
+            messages: [
+              { role: 'USER QUESTION', cls: '', body: 'deleteAccount API 删除失败返回 409 怎么处理？' },
+              { role: 'CHUNK [1] · deleteUser API（语义距离近，误召回）', cls: 'is-poison', body: 'deleteUser API 返回 409 表示用户仍有未结清账单，调用前需先结清账单并传入 force=true 参数。' }
+            ],
+            answer: '<code>deleteAccount API</code> 返回 409 表示用户仍有未结清账单，需要先结清账单并在请求中传入 <code>force=true</code> 参数 [1]。',
+            outcomeCls: 'bad',
+            outcomeHtml: '<div class="outcome-title">后果：Prompt 再严厉也救不了，模型只是忠实复述了错的接口文档</div>回答完全“忠实”于检索到的 <code>[1]</code>，Faithfulness 甚至接近 1.00，但用户照着传 <code>force=true</code> 给 <code>deleteAccount</code> 根本无效。'
+          },
+          arch: {
+            ctxBadge: '元数据过滤精准收窄',
+            ctxBadgeCls: 'ok',
+            ansBadge: '准确命中目标实体',
+            ansBadgeCls: 'ok',
+            messages: [
+              { role: 'RETRIEVAL FILTER', cls: 'is-clean', body: 'metadata.entity == "deleteAccount"（在向量召回阶段直接屏蔽 deleteUser / deleteProfile）' },
+              { role: 'CHUNK [1] · security-001（已匹配实体）', cls: 'is-clean', body: 'deleteAccount API 数据库约束冲突会返回 409。删除前需检查外键引用，确认审计记录是否仍被其他服务占用。' }
+            ],
+            answer: '<code>deleteAccount API</code> 返回 409 是数据库约束冲突导致的，排查时需检查外键引用，确认审计记录是否仍被其他服务占用 [1]。',
+            outcomeCls: 'good',
+            outcomeHtml: '<div class="outcome-title">修复：入库写入精确实体元数据，召回层提前拦截同名干扰</div>RAG 链路里越早把范围收窄，下游发生实体漂移的概率就越低。'
+          }
+        },
+        version: {
+          prompt: {
+            ctxBadge: '新旧两版同时入池',
+            ctxBadgeCls: 'bad',
+            ansBadge: '冲突乱选 / 混拼',
+            ansBadgeCls: 'bad',
+            messages: [
+              { role: 'CHUNK [1] · 文档（无版本字段，实为 v1 旧版）', cls: 'is-poison', body: 'deleteAccount API 返回 409 表示二次确认令牌验证失败。' },
+              { role: 'CHUNK [2] · 文档（无版本字段，实为 v2 新版）', cls: '', body: 'deleteAccount API 令牌过期返回 401，数据库约束冲突返回 409。' }
+            ],
+            answer: '<code>deleteAccount API</code> 返回 409 可能是二次确认令牌验证失败 [1]，也可能是数据库约束冲突 [2]。',
+            outcomeCls: 'bad',
+            outcomeHtml: '<div class="outcome-title">后果：两段都是知识库里的“真话”，模型不知道谁更新</div>没有时间戳和版本号，LLM 只能把两个互相矛盾的结论拼在一起，或者随机二选一，误导排障方向。'
+          },
+          arch: {
+            ctxBadge: '版本元数据过滤 + 冲突声明',
+            ctxBadgeCls: 'ok',
+            ansBadge: '仅依据现行版本',
+            ansBadgeCls: 'ok',
+            messages: [
+              { role: 'RETRIEVAL FILTER', cls: 'is-clean', body: 'metadata.version == "v2" 且按 updatedAt 对过期文档降权；Prompt 补充“若证据冲突须明确指出，不得自行取舍”。' },
+              { role: 'CHUNK [1] · v2 (updatedAt: 2026-04)', cls: 'is-clean', body: 'deleteAccount API 令牌过期会返回 401，数据库约束冲突会返回 409。' }
+            ],
+            answer: '按现行 v2 规范，<code>deleteAccount API</code> 返回 409 表示数据库约束冲突（令牌过期已改为返回 401）[1]。',
+            outcomeCls: 'good',
+            outcomeHtml: '<div class="outcome-title">修复：文档入库强制带版本号与更新时间</div>在检索层过滤或降权旧文档，并在无法避免多版本并存时要求模型显式提示存在版本冲突。'
+          }
+        },
+        multiturn: {
+          prompt: {
+            ctxBadge: '历史消息残留第 1 轮证据',
+            ctxBadgeCls: 'bad',
+            ansBadge: '跨轮串味幻觉',
+            ansBadgeCls: 'bad',
+            messages: [
+              { role: 'TURN 1 USER（残留证据块）', cls: 'is-poison', body: '[证据 1] deleteAccount 软删除保留 30 天...\n问题：deleteAccount 删完数据还在吗？' },
+              { role: 'TURN 1 ASSISTANT', cls: '', body: '软删除阶段会保留 30 天 [1]。' },
+              { role: 'TURN 2 USER', cls: '', body: '[证据 1] deleteOrg 会同步清理组织成员映射...\n问题：deleteOrg 删完数据保留几天？' }
+            ],
+            answer: '<code>deleteOrg</code> 删除后同样会在软删除阶段保留 30 天，之后再清理组织成员映射 [1]。',
+            outcomeCls: 'bad',
+            outcomeHtml: '<div class="outcome-title">后果：第 2 轮证据里根本没提保留天数，模型偷偷借用了第 1 轮的残留证据</div>这类串轮幻觉读起来完全流畅，极难察觉。问题出在把带证据块的 user message 原样追加进了 <code>messages</code> 历史。'
+          },
+          arch: {
+            ctxBadge: '历史只留问答，本轮独立注入',
+            ctxBadgeCls: 'ok',
+            ansBadge: '无依据时正确拒答',
+            ansBadgeCls: 'ok',
+            messages: [
+              { role: 'TURN 1 HISTORY（已剥离旧证据）', cls: 'is-clean', body: 'User: deleteAccount 删完数据还在吗？\nAssistant: 软删除阶段会保留 30 天。' },
+              { role: 'TURN 2 USER（仅注入本轮新检证据）', cls: 'is-clean', body: '[1] deleteOrg 会同步清理组织成员映射...\n问题：deleteOrg 删完数据保留几天？' }
+            ],
+            answer: '【当前证据不足以回答这个问题】当前检索到的 <code>deleteOrg</code> 文档仅说明会清理组织成员映射，未提及数据保留天数。',
+            outcomeCls: 'good',
+            outcomeHtml: '<div class="outcome-title">修复：每轮重新检索，历史对话里绝不保留上一轮的证据块</div>剥离旧证据后，上下文干净且节省 token，模型也不会把上一个话题的规则套到当前问题上。'
+          }
+        },
+        multihop: {
+          prompt: {
+            ctxBadge: '单次召回只拿到半截证据',
+            ctxBadgeCls: 'bad',
+            ansBadge: '推理断链与脑补',
+            ansBadgeCls: 'bad',
+            messages: [
+              { role: 'USER QUESTION', cls: '', body: 'deleteAccount 失败时，审计记录是否还能被普通管理员查询？' },
+              { role: 'CHUNK [1] · 仅召回接口规范', cls: 'is-poison', body: 'deleteAccount 删除前需检查外键引用，确认审计记录是否仍被其他服务占用。' }
+            ],
+            answer: '可以，因为删除失败时外键约束保护了审计记录，普通管理员仍可正常查询 [1]。',
+            outcomeCls: 'bad',
+            outcomeHtml: '<div class="outcome-title">后果：只拿到了“审计记录未被删除”，缺了“谁有查询权限”，模型自己脑补了后半句</div>单次向量检索很难同时覆盖两个分散主题的片段，靠 Prompt 逼模型推理只会诱发脑补。'
+          },
+          arch: {
+            ctxBadge: '子问题拆分 + 两次检索拼合',
+            ctxBadgeCls: 'ok',
+            ansBadge: '两段证据完整闭环',
+            ansBadgeCls: 'ok',
+            messages: [
+              { role: 'SUB-QUERY 1 → CHUNK [1]', cls: 'is-clean', body: 'deleteAccount 返回 409 失败时事务回滚，审计记录不会被删除。' },
+              { role: 'SUB-QUERY 2 → CHUNK [2]', cls: 'is-clean', body: '审计日志表仅对安全审计员（Auditor）开放查询，普通管理员无权读取。' }
+            ],
+            answer: '不能。虽然 <code>deleteAccount</code> 失败时审计记录不会被删除 [1]，但审计日志仅对安全审计员开放，普通管理员无权查询 [2]。',
+            outcomeCls: 'good',
+            outcomeHtml: '<div class="outcome-title">修复：识别多步推理需求，拆分子问题逐步检索（Agentic RAG）</div>把两跳证据都真实召回进上下文后，LLM 只需要做确定性的事实拼合，结论完全颠倒但准确无误。'
+          }
+        }
+      };
+
+      const lab3State = { caseKey: 'entity', mode: 'prompt' };
+
+      function renderLab3() {
+        const data = lab3Cases[lab3State.caseKey][lab3State.mode];
+
+        document.querySelectorAll('[data-lab3-case]').forEach((b) => {
+          b.classList.toggle('active', b.dataset.lab3Case === lab3State.caseKey);
+        });
+        document.querySelectorAll('[data-lab3-mode]').forEach((b) => {
+          b.classList.remove('danger-active', 'teal-active');
+          if (b.dataset.lab3Mode === lab3State.mode) {
+            b.classList.add(lab3State.mode === 'prompt' ? 'danger-active' : 'teal-active');
+          }
+        });
+
+        const ctxBadge = document.getElementById('lab3CtxBadge');
+        ctxBadge.textContent = data.ctxBadge;
+        ctxBadge.className = 'c-badge ' + data.ctxBadgeCls;
+
+        const ansBadge = document.getElementById('lab3AnsBadge');
+        ansBadge.textContent = data.ansBadge;
+        ansBadge.className = 'c-badge ' + data.ansBadgeCls;
+
+        document.getElementById('lab3CtxStack').innerHTML = data.messages.map((m) => `
+          <div class="ctx-msg ${m.cls}">
+            <div class="ctx-role"><span>${m.role}</span></div>
+            <div>${m.body.replace(/\n/g, '<br/>')}</div>
+          </div>
+        `).join('');
+
+        document.getElementById('lab3AnswerBox').innerHTML = data.answer;
+
+        const outEl = document.getElementById('lab3Outcome');
+        outEl.className = 'outcome ' + data.outcomeCls;
+        outEl.innerHTML = data.outcomeHtml;
+      }
+
+      document.querySelectorAll('[data-lab3-case]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          lab3State.caseKey = btn.dataset.lab3Case;
+          renderLab3();
+        });
+      });
+      document.querySelectorAll('[data-lab3-mode]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          lab3State.mode = btn.dataset.lab3Mode;
+          renderLab3();
+        });
+      });
+
+      // Initial renders
+      renderLab1();
+      renderLab2();
+      renderLab3();
+    })();
+  </script>
+  <script src="../shared/site.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-json.min.js"></script>
+</body>
+</html>

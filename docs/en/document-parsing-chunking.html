@@ -1,0 +1,1571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Document Parsing & Chunking Strategies: Why RAG Fails Before Embeddings · AI Agent Guide</title>
+  <!-- SEO:START (auto-synced by scripts/generate-seo.mjs) -->
+  <meta name="description" content="Converting raw documents into structure- and source-preserving chunks and comparing splitting strategies" />
+  <link rel="canonical" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/document-parsing-chunking.html" />
+  <link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/document-parsing-chunking.html" />
+  <link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/document-parsing-chunking.html" />
+  <link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/document-parsing-chunking.html" />
+  <meta property="og:type" content="article" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:locale:alternate" content="zh_CN" />
+  <meta property="og:title" content="Document Parsing &amp; Chunking Strategies" />
+  <meta property="og:description" content="Converting raw documents into structure- and source-preserving chunks and comparing splitting strategies" />
+  <meta property="og:url" content="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/document-parsing-chunking.html" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "Document Parsing & Chunking Strategies",
+    "description": "Converting raw documents into structure- and source-preserving chunks and comparing splitting strategies",
+    "inLanguage": "en",
+    "url": "https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/document-parsing-chunking.html",
+    "isPartOf": {
+      "@type": "Book",
+      "name": "AI Agent Guide"
+    }
+  }
+  </script>
+  <!-- SEO:END -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css" />
+  <link rel="stylesheet" href="../shared/tokens.css" />
+  <style>
+    /* Chapter-specific components (shared primitives live in ../shared/tokens.css) */
+    .pane-box > #lab1SourceVisual {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Lab 1: PDF pitfalls & Cleaner */
+    .pdf-page-mock {
+      flex: 1;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      font-size: 13px;
+      line-height: 1.65;
+      color: var(--text);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .pdf-two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .pdf-col {
+      border-left: 2px solid var(--border);
+      padding-left: 10px;
+    }
+    .pdf-col-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
+    .pdf-table-mock {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+      margin: 0;
+    }
+    .pdf-table-mock th, .pdf-table-mock td {
+      border: 1px solid var(--border-strong);
+      padding: 6px 10px;
+      text-align: left;
+    }
+    .pdf-table-mock th {
+      background: var(--bg-muted);
+      font-weight: 700;
+    }
+    .hl-bad {
+      background: rgba(244, 63, 94, 0.24);
+      color: #fecdd3;
+      border-bottom: 1.5px solid #fb7185;
+      border-radius: 3px;
+      padding: 1px 4px;
+    }
+    .hl-good {
+      background: rgba(16, 185, 129, 0.2);
+      color: #a7f3d0;
+      border-bottom: 1.5px solid #34d399;
+      border-radius: 3px;
+      padding: 1px 4px;
+    }
+    .hl-warn {
+      background: rgba(245, 158, 11, 0.24);
+      color: #fde68a;
+      border-bottom: 1.5px solid #fbbf24;
+      border-radius: 3px;
+      padding: 1px 4px;
+    }
+
+    .rule-toggles {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .rule-check {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 11px;
+      border-radius: 999px;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-elevated);
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.15s;
+    }
+    .rule-check input { accent-color: var(--teal); cursor: pointer; }
+    .rule-check.is-on {
+      border-color: var(--teal);
+      background: var(--teal-soft);
+      color: var(--text);
+    }
+
+    /* Lab 2: Chunking Sandbox */
+    .slider-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    @media (max-width: 720px) { .slider-grid { grid-template-columns: 1fr; } }
+
+    .slider-card {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 11px 14px;
+    }
+    .slider-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .slider-val {
+      font-family: var(--font-mono);
+      color: var(--teal);
+      font-size: 13px;
+    }
+    .slider-card input[type="range"] {
+      width: 100%;
+      accent-color: var(--teal);
+      cursor: pointer;
+    }
+
+    .chunk-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .stat-pill {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 6px 12px;
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .stat-pill strong {
+      font-family: var(--font-mono);
+      color: var(--text);
+      font-size: 13.5px;
+    }
+    .stat-pill.is-bad {
+      border-color: var(--rose);
+      background: var(--rose-soft);
+      color: var(--rose);
+    }
+    .stat-pill.is-bad strong { color: var(--rose); }
+
+    .chunk-list {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    @media (max-width: 760px) { .chunk-list { grid-template-columns: 1fr; } }
+
+    .chunk-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: border-color 0.15s;
+    }
+    .chunk-card.is-overflow { border-color: var(--rose); }
+    .chunk-card.is-broken { border-color: var(--accent); }
+    .chunk-card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12px;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+    }
+    .chunk-badges { display: flex; gap: 5px; flex-wrap: wrap; }
+    .c-badge {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 1px 7px;
+      border-radius: 999px;
+    }
+    .c-badge.bad { background: var(--rose-soft); color: var(--rose); }
+    .c-badge.warn { background: var(--accent-soft); color: var(--accent); }
+    .c-badge.ok { background: var(--green-soft); color: var(--green); }
+
+    .chunk-text {
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text);
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+    .overlap-mark {
+      background: var(--accent-soft);
+      border-bottom: 2px solid var(--accent);
+      border-radius: 2px;
+      padding: 1px 0;
+    }
+    .len-bar {
+      height: 5px;
+      border-radius: 999px;
+      background: var(--bg-muted);
+      overflow: hidden;
+    }
+    .len-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: var(--teal);
+      transition: width 0.2s;
+    }
+    .len-bar-fill.over { background: var(--rose); }
+
+    /* Lab 2 Inline Cut-Line Document Canvas */
+    .cut-canvas {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow-sm);
+    }
+    .cut-canvas-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px dashed var(--border);
+      font-size: 12.5px;
+      color: var(--text-secondary);
+    }
+    .cut-legend {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-size: 12px;
+      align-items: center;
+    }
+    .legend-dot { display: inline-flex; align-items: center; gap: 5px; }
+    .legend-swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+    .cut-doc-body {
+      font-size: 14px;
+      line-height: 2;
+      color: var(--text);
+      word-break: break-word;
+    }
+    .cut-seg { padding: 2px 3px; border-radius: 4px; }
+    .cut-seg.c0 { background: var(--teal-soft); }
+    .cut-seg.c1 { background: var(--blue-soft); }
+    .cut-seg.c2 { background: var(--purple-soft); }
+    .cut-seg.c3 { background: var(--green-soft); }
+    .cut-knife {
+      display: inline-flex;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 1px 6px;
+      margin: 0 3px;
+      border-radius: 999px;
+      vertical-align: middle;
+      user-select: none;
+    }
+    .cut-knife.clean { background: var(--teal); color: #fff; }
+    [data-theme="dark"] .cut-knife.clean { color: #0b1215; }
+    .cut-knife.broken { background: var(--rose); color: #fff; }
+    [data-theme="dark"] .cut-knife.broken { color: #16090c; }
+
+    .view-tabs { display: inline-flex; gap: 6px; margin-bottom: 12px; }
+
+    /* Lab 3: Metadata X-Ray */
+    .rank-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+    .rank-row {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+    .rank-row.hit { border-left: 3px solid var(--green); }
+    .rank-row.miss { border-left: 3px solid var(--rose); }
+    .rank-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .rank-score { font-family: var(--font-mono); font-weight: 700; color: var(--text); }
+    .filter-bar { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 12px; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./index.html">
+        <span>AI Agent Guide</span>
+        <span class="brand-badge">Interactive</span>
+      </a>
+      <nav class="topbar-nav">
+        <a href="#pdf-pitfalls">PDF Pitfalls</a>
+        <a href="#lab-cleaning">Lab 01: Parse & Clean</a>
+        <a href="#lab-chunking">Lab 02: Chunking Canvas</a>
+        <a href="#lab-metadata">Lab 03: Metadata Paths</a>
+        <a href="#decision">Decision Matrix</a>
+      </nav>
+      <button class="theme-btn" id="themeToggle" type="button">
+        <span id="themeIcon">☀</span>
+        <span id="themeText">Light</span>
+      </button>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-meta">
+      <span class="hero-pill">Module 3 · RAG Retrieval & Grounding</span>
+      <span>12 min read · 3 interactive labs</span>
+    </div>
+    <h1>Document Parsing & Chunking: Why RAG Fails Before Embeddings</h1>
+    <p class="hero-lead">
+      Most teams building their first RAG system spend all their energy tuning embedding models, vector indexes, and prompts—yet retrieval still returns noisy, half-baked answers. Trace the bug upstream and you usually find broken reading order, flattened tables, or mid-sentence cuts. Once upstream ingestion is corrupted, swapping models downstream is just polishing dirty data.
+    </p>
+  </section>
+
+  <section class="tldr">
+    <div class="tldr-card">
+      <div class="tldr-head">
+        <span class="tldr-kicker">30-Second TL;DR · 3 Engineering Takeaways</span>
+      </div>
+      <ol class="tldr-list">
+        <li class="tldr-item">
+          <span class="tldr-num">01</span>
+          <span class="tldr-claim">Chunkers and embeddings cannot fix broken reading order. Multi-column scrambling, flattened tables, and scanned PDFs must be solved at the parser stage.</span>
+          <button class="tldr-go" type="button" onclick="window.bookJumpToLab('lab-cleaning')">Inspect failures in Lab 01 ↓</button>
+        </li>
+        <li class="tldr-item">
+          <span class="tldr-num">02</span>
+          <span class="tldr-claim">There is no universal optimal chunk size. Start with a boundary-preserving Recursive baseline (with explicit punctuation preservation), then tune on your own queries.</span>
+          <button class="tldr-go" type="button" onclick="window.bookJumpToLab('lab-chunking')">Cut live text in Lab 02 ↓</button>
+        </li>
+        <li class="tldr-item">
+          <span class="tldr-num">03</span>
+          <span class="tldr-claim">Metadata has two distinct paths: payload fields power filtering and citations without altering vectors, while title prefixes enrich isolated semantics at a token cost.</span>
+          <button class="tldr-go" type="button" onclick="window.bookJumpToLab('lab-metadata')">Compare both paths in Lab 03 ↓</button>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2 id="pdf-pitfalls">Why Chunking Still Matters in the Long-Context Era</h2>
+    <p class="key">
+      Long context solves how much you <em>can</em> stuff into a prompt; RAG solves what you <em>should</em> put in. Upstream document processing determines what your retriever can actually see.
+    </p>
+    <p>
+      Context windows keep growing, and managed <a href="https://developers.openai.com/api/docs/guides/tools-file-search" target="_blank" rel="noopener">File Search</a> tools are now built straight into model platforms. Even so, dumping entire product manuals, HR policies, and historical tickets into every request wastes tokens and floods attention with irrelevant text. Whenever knowledge updates continuously, access permissions vary by user, or answers require verifiable citations, the system still needs to retrieve focused evidence first.
+    </p>
+    <p>
+      In modern AI systems, RAG acts as the knowledge layer for Agents: the Agent decides when to search, what to query, and whether to dig deeper, while the retrieval pipeline surfaces grounded <code>DocumentChunk</code> records.
+    </p>
+
+    <figure class="diagram-figure">
+      <figcaption>
+        <span>RAG Document Preprocessing Pipeline: 4 Stages & Upstream Failure Points</span>
+        <span class="sim-tag">Architecture diagram</span>
+      </figcaption>
+      <svg viewBox="0 0 880 226" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="RAG document preprocessing pipeline and failure points">
+        <defs>
+          <marker id="arrow-pipe" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--teal)" />
+          </marker>
+          <marker id="arrow-risk" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--rose)" />
+          </marker>
+        </defs>
+        <text x="14" y="20" fill="var(--teal)" font-size="11.5" font-weight="700">Main pipeline · Raw files to grounded chunks</text>
+
+        <rect x="14" y="34" width="128" height="86" rx="12" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="1.6" />
+        <text x="78" y="66" text-anchor="middle" fill="var(--text)" font-size="13.5" font-weight="700">Raw Docs</text>
+        <text x="78" y="90" text-anchor="middle" fill="var(--text-secondary)" font-size="11.5">PDF / Markdown</text>
+
+        <line x1="142" y1="77" x2="176" y2="77" stroke="var(--teal)" stroke-width="2" marker-end="url(#arrow-pipe)" />
+
+        <rect x="182" y="34" width="136" height="86" rx="12" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="1.6" />
+        <text x="250" y="66" text-anchor="middle" fill="var(--text)" font-size="13.5" font-weight="700">1. Parse</text>
+        <text x="250" y="90" text-anchor="middle" fill="var(--text-secondary)" font-size="11.5">Reading order</text>
+
+        <line x1="318" y1="77" x2="352" y2="77" stroke="var(--teal)" stroke-width="2" marker-end="url(#arrow-pipe)" />
+
+        <rect x="358" y="34" width="136" height="86" rx="12" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="1.6" />
+        <text x="426" y="66" text-anchor="middle" fill="var(--text)" font-size="13.5" font-weight="700">2. Clean</text>
+        <text x="426" y="90" text-anchor="middle" fill="var(--text-secondary)" font-size="11.5">Denoise & NFKC</text>
+
+        <line x1="494" y1="77" x2="528" y2="77" stroke="var(--teal)" stroke-width="2" marker-end="url(#arrow-pipe)" />
+
+        <rect x="534" y="34" width="136" height="86" rx="12" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="1.6" />
+        <text x="602" y="66" text-anchor="middle" fill="var(--text)" font-size="13.5" font-weight="700">3. Chunk</text>
+        <text x="602" y="90" text-anchor="middle" fill="var(--text-secondary)" font-size="11.5">Boundaries + overlap</text>
+
+        <line x1="670" y1="77" x2="704" y2="77" stroke="var(--teal)" stroke-width="2" marker-end="url(#arrow-pipe)" />
+
+        <rect x="710" y="34" width="156" height="86" rx="12" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.6" />
+        <text x="788" y="66" text-anchor="middle" fill="var(--text)" font-size="13.5" font-weight="700">4. Metadata</text>
+        <text x="788" y="90" text-anchor="middle" fill="var(--text-secondary)" font-size="11.5">DocumentChunk[]</text>
+
+        <text x="14" y="150" fill="var(--rose)" font-size="11.5" font-weight="700">High-frequency failure modes · Unrecoverable downstream</text>
+
+        <line x1="250" y1="120" x2="250" y2="160" stroke="var(--rose)" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#arrow-risk)" />
+        <rect x="182" y="166" width="136" height="44" rx="8" fill="var(--rose-soft)" stroke="var(--rose)" stroke-width="1.2" stroke-dasharray="4 3" />
+        <text x="250" y="193" text-anchor="middle" fill="var(--rose)" font-size="11.5" font-weight="600">Scrambled columns</text>
+
+        <line x1="426" y1="120" x2="426" y2="160" stroke="var(--rose)" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#arrow-risk)" />
+        <rect x="358" y="166" width="136" height="44" rx="8" fill="var(--rose-soft)" stroke="var(--rose)" stroke-width="1.2" stroke-dasharray="4 3" />
+        <text x="426" y="193" text-anchor="middle" fill="var(--rose)" font-size="11.5" font-weight="600">Regex eats headings</text>
+
+        <line x1="602" y1="120" x2="602" y2="160" stroke="var(--rose)" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#arrow-risk)" />
+        <rect x="534" y="166" width="136" height="44" rx="8" fill="var(--rose-soft)" stroke="var(--rose)" stroke-width="1.2" stroke-dasharray="4 3" />
+        <text x="602" y="193" text-anchor="middle" fill="var(--rose)" font-size="11.5" font-weight="600">Mid-sentence cuts</text>
+
+        <line x1="788" y1="120" x2="788" y2="160" stroke="var(--rose)" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#arrow-risk)" />
+        <rect x="710" y="166" width="156" height="44" rx="8" fill="var(--rose-soft)" stroke="var(--rose)" stroke-width="1.2" stroke-dasharray="4 3" />
+        <text x="788" y="193" text-anchor="middle" fill="var(--rose)" font-size="11.5" font-weight="600">No source / ACLs</text>
+      </svg>
+    </figure>
+
+    <h3>PDF Parsing Is About Layout Reconstruction, Not Just Reading Bytes</h3>
+    <p>
+      Markdown and plain text can be read directly. PDFs are designed for visual presentation—positioning glyphs at exact coordinates—not for preserving logical reading order. Ordinary PDFs force parsers to guess paragraphs, columns, and table cells from coordinates, and those guesses routinely break in three places: <strong>multi-column layouts</strong>, <strong>flattened tables</strong>, and <strong>scanned images without a text layer</strong>.
+    </p>
+  </main>
+
+  <!-- LAB 01: PDF Pitfalls & Text Cleaner -->
+  <section class="lab-wrap" id="lab-cleaning">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <span class="lab-eyebrow">Lab 01 · Upstream Parsing & Cleaning Clinic</span>
+          <h3 class="lab-title">See how PDF extraction breaks—and how a “universal” regex creates new dirty data</h3>
+          <p class="lab-desc">Inspect multi-column and table extraction failures, then toggle individual cleaning rules in Tab 3 to watch naive soft-wrap merging swallow headings and list items.</p>
+        </div>
+        <span class="sim-tag">Interactive diagnostic</span>
+      </div>
+      <div class="lab-body">
+        <div class="lab-toolbar">
+          <div class="toolbar-group">
+            <span class="toolbar-label">Failure Mode:</span>
+            <button class="chip-btn active" type="button" data-lab1-tab="multicol">① Multi-Column Scramble</button>
+            <button class="chip-btn" type="button" data-lab1-tab="table">② Flattened Table</button>
+            <button class="chip-btn" type="button" data-lab1-tab="cleaner">③ Text Cleaning & Regex Side Effects</button>
+          </div>
+          <div class="toolbar-group" id="lab1ParserToggle">
+            <span class="toolbar-label">Parser:</span>
+            <button class="chip-btn danger-active" type="button" data-lab1-mode="naive">Naive Coordinate Scan</button>
+            <button class="chip-btn" type="button" data-lab1-mode="layout">Layout-Aware Parser</button>
+          </div>
+        </div>
+
+        <div id="lab1ParseView">
+          <div class="split-2">
+            <div class="pane-box">
+              <div class="pane-head">
+                <span id="lab1SourceTitle">Original PDF Visual Layout</span>
+                <span class="sim-tag">Human view</span>
+              </div>
+              <div id="lab1SourceVisual"></div>
+            </div>
+            <div class="pane-box">
+              <div class="pane-head">
+                <span id="lab1OutputTitle">Extracted Text Stream</span>
+                <span id="lab1OutputBadge" class="c-badge bad">Corrupted order</span>
+              </div>
+              <pre class="raw-stream" id="lab1OutputStream"></pre>
+            </div>
+          </div>
+          <div class="outcome bad" id="lab1Outcome" style="margin-top: 14px;"></div>
+        </div>
+
+        <div id="lab1CleanerView" style="display: none;">
+          <div class="rule-toggles" id="cleanerRules">
+            <label class="rule-check is-on">
+              <input type="checkbox" id="ruleNfkc" checked />
+              <span>1. NFKC glyph normalization</span>
+            </label>
+            <label class="rule-check is-on">
+              <input type="checkbox" id="rulePageNum" checked />
+              <span>2. Strip page markers (-- 1 of 3 --)</span>
+            </label>
+            <label class="rule-check is-on">
+              <input type="checkbox" id="ruleSoftWrap" checked />
+              <span>3. Heuristic soft-wrap merge</span>
+            </label>
+            <label class="rule-check">
+              <input type="checkbox" id="ruleProtectStruct" />
+              <span>4. Protect headings & list items</span>
+            </label>
+          </div>
+          <div class="split-2">
+            <div class="pane-box">
+              <div class="pane-head">
+                <span>Raw PDF text (hard wraps, page numbers, heading & bullets)</span>
+                <span class="sim-tag">Before</span>
+              </div>
+              <pre class="raw-stream" id="cleanerBefore"></pre>
+            </div>
+            <div class="pane-box">
+              <div class="pane-head">
+                <span>Cleaned output under current rules</span>
+                <span id="cleanerStatusBadge" class="c-badge warn">Headings swallowed</span>
+              </div>
+              <pre class="raw-stream" id="cleanerAfter"></pre>
+            </div>
+          </div>
+          <div class="outcome meh" id="cleanerOutcome" style="margin-top: 14px;"></div>
+
+          <details class="code-fold" style="margin-top: 16px; margin-bottom: 0;">
+            <summary>Inspect cleanText() TypeScript synced with the toggles above</summary>
+            <div class="code-fold-body">
+              <div class="code-card" style="margin: 0;">
+                <div class="code-header">
+                  <span>clean-text.ts · synced with rules</span>
+                  <button class="copy-btn" type="button">Copy</button>
+                </div>
+                <pre><code class="language-typescript" id="cleanerCodeSync"></code></pre>
+              </div>
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <p>
+      In Node.js, <a href="https://www.npmjs.com/package/pdf-parse" target="_blank" rel="noopener"><code>pdf-parse</code></a> is a pragmatic starting point for clean, text-layered PDFs: it is written in TypeScript, ships built-in types, needs no native bindings, and includes basic table detection. When you need low-level glyph coordinates and font metadata, reach for Mozilla's <a href="https://www.npmjs.com/package/pdfjs-dist" target="_blank" rel="noopener"><code>pdfjs-dist</code></a>. For complex multi-column reports or table-heavy PDFs, evaluate a dedicated parser such as <a href="https://www.llamaindex.ai/llamaparse" target="_blank" rel="noopener">LlamaParse</a> (verify credit consumption on its <a href="https://www.llamaindex.ai/pricing" target="_blank" rel="noopener">pricing page</a> against your own sample documents first).
+    </p>
+    <div class="callout note">
+      <div class="callout-title">Quick Check for Scanned PDFs & OCR QA</div>
+      Try selecting text in a PDF viewer as a fast sanity check: if you cannot highlight text, you likely need OCR (though outlined fonts or copy restrictions can look similar). Always spot-check headings, numbers, proper nouns, and tables after OCR—your vector database will faithfully retrieve OCR typos without knowing they are wrong.
+    </div>
+
+    <h2 id="chunking-strategies">Three Chunking Strategies, Separators, and Overlap</h2>
+    <p class="key">
+      Good chunking balances two opposing forces: small enough for focused embeddings, yet large enough to answer a question without missing context.
+    </p>
+    <p>
+      Make chunks too large and one vector gets diluted across multiple topics. Make them too small and you index sentence fragments. Cut in the wrong spot and a key fact gets split across two chunks so neither can answer the query alone.
+    </p>
+
+    <div class="predict-hook" id="predictSemantic">
+      <div class="predict-q">
+        <span class="predict-badge">Predict First</span>
+        <span><strong>Semantic chunking</strong> embeds adjacent sentences to detect topic shifts. In published benchmarks, does it consistently beat Recursive or Page-level chunking?</span>
+      </div>
+      <div class="predict-opts">
+        <button class="predict-opt" type="button" data-answer="wrong">A. Yes—semantic chunking wins across the board and should be the default</button>
+        <button class="predict-opt" type="button" data-answer="right">B. No—it shows no consistent advantage and often fails to justify its extra compute</button>
+        <button class="predict-opt" type="button" data-answer="wrong">C. Only when chunk size is kept strictly under 128 tokens</button>
+      </div>
+      <div class="predict-feedback" id="predictSemanticFeedback">
+        <strong>Empirical findings:</strong> Vectara's NAACL 2025 evaluation <a class="src-tag" href="https://aclanthology.org/2025.findings-naacl.114/" target="_blank" rel="noopener">Source: Vectara NAACL 2025 ↗</a> found that semantic chunking did not deliver consistent gains across document retrieval, evidence retrieval, or grounded generation, leaving its extra embedding cost unsupported. NVIDIA's 2025 chunking study <a class="src-tag" href="https://developer.nvidia.com/blog/finding-the-best-chunking-strategy-for-accurate-ai-responses/" target="_blank" rel="noopener">Source: NVIDIA 2025 ↗</a> likewise showed that optimal chunk size varies by dataset, page-level chunking achieved the best overall average, and 15% overlap helped only in specific combinations.
+      </div>
+      <button class="predict-verify" type="button" onclick="window.applyLab2Preset('recursive-safe')">Compare Fixed-size vs Recursive in Lab 02 ↓</button>
+    </div>
+  </main>
+
+  <!-- LAB 02: Interactive Chunking & Overlap Cut-Line Canvas -->
+  <section class="lab-wrap" id="lab-chunking">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <span class="lab-eyebrow">Lab 02 · Live Chunking & Cut-Line Sandbox</span>
+          <h3 class="lab-title">Watch cut-lines move on real prose as you tune strategy, separators, size, and overlap</h3>
+          <p class="lab-desc">Runs the chapter's actual <code>fixedSizeChunk</code>, <code>splitRecursive</code>, and <code>addOverlap</code> algorithms in your browser. Switch strategies to spot mid-sentence cuts, dropped punctuation, and overlap overflow.</p>
+        </div>
+        <span class="sim-tag">Pedagogical sandbox · char-based</span>
+      </div>
+      <div class="lab-body">
+        <div class="lab-toolbar">
+          <div class="toolbar-group">
+            <span class="toolbar-label">Strategy:</span>
+            <button class="chip-btn" type="button" data-strategy="fixed">Fixed-size</button>
+            <button class="chip-btn" type="button" data-strategy="recursive-space">Recursive (Spaces only)</button>
+            <button class="chip-btn teal-active" type="button" data-strategy="recursive-safe">Recursive (Sentence + Keep Punct.)</button>
+            <button class="chip-btn" type="button" data-strategy="recursive-drop">Recursive (Drop Punct. Bug)</button>
+          </div>
+          <div class="toolbar-group">
+            <span class="toolbar-label">Overlap Budget:</span>
+            <button class="chip-btn active" type="button" data-reserve="yes">Reserve CHUNK_SIZE - OVERLAP</button>
+            <button class="chip-btn" type="button" data-reserve="no">Append Raw (Overflows Limit)</button>
+          </div>
+        </div>
+
+        <div class="slider-grid">
+          <div class="slider-card">
+            <div class="slider-head">
+              <span>CHUNK_SIZE (char limit)</span>
+              <span class="slider-val" id="chunkSizeVal">180 chars</span>
+            </div>
+            <input type="range" id="chunkSizeSlider" min="110" max="280" step="10" value="180" />
+          </div>
+          <div class="slider-card">
+            <div class="slider-head">
+              <span>OVERLAP (ratio)</span>
+              <span class="slider-val" id="overlapVal">15% (27 chars)</span>
+            </div>
+            <input type="range" id="overlapSlider" min="0" max="25" step="5" value="15" />
+          </div>
+        </div>
+
+        <div class="chunk-stats" id="chunkStats"></div>
+
+        <div class="view-tabs">
+          <button class="chip-btn active" type="button" data-lab2-view="canvas">✂ Inline Cut-Line Canvas</button>
+          <button class="chip-btn" type="button" data-lab2-view="cards">▤ Chunk Cards Breakdown</button>
+        </div>
+
+        <div class="cut-canvas" id="cutCanvas">
+          <div class="cut-canvas-head">
+            <span><strong>Live Cut-Line Projection</strong> (cut markers projected directly onto the source prose)</span>
+            <div class="cut-legend">
+              <span class="legend-dot"><span class="legend-swatch" style="background:var(--teal);"></span>Clean boundary</span>
+              <span class="legend-dot"><span class="legend-swatch" style="background:var(--rose);"></span>Mid-sentence cut</span>
+              <span class="legend-dot"><span class="legend-swatch" style="background:var(--accent-soft);border:1px solid var(--accent);"></span>Overlap borrowed tail</span>
+            </div>
+          </div>
+          <div class="cut-doc-body" id="cutDocBody"></div>
+        </div>
+
+        <div class="chunk-list" id="chunkList" style="display: none;"></div>
+        <div class="outcome good" id="chunkOutcome"></div>
+
+        <details class="code-fold" style="margin-top: 16px; margin-bottom: 0;">
+          <summary>View TypeScript implementation synced with current parameters</summary>
+          <div class="code-fold-body">
+            <div class="code-card" style="margin: 0;">
+              <div class="code-header">
+                <span>chunking-strategies.ts · synced with controls</span>
+                <button class="copy-btn" type="button">Copy</button>
+              </div>
+              <pre><code class="language-typescript" id="chunkCodeSync"></code></pre>
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <p>
+      Start simple: build a <strong>Fixed-size</strong> or <strong>Recursive</strong> baseline with <code>256–512 tokens</code> and <code>10%–15% overlap</code> as initial candidates, then let your own evaluation queries decide. Remember that characters do not map cleanly to tokens across tokenizers—especially in multilingual or CJK text. Our runnable examples use character counts for clarity; switch to your embedding model's tokenizer in production.
+    </p>
+    <p>
+      For multilingual or CJK documents, explicitly include full-width sentence delimiters (<code>。？！；，</code>) since Chinese and Japanese lack word spaces, and always <strong>re-attach the matched delimiter</strong> after <code>split()</code> so adjacent sentences do not glue together.
+    </p>
+
+    <h2 id="metadata-pipeline">Two Paths for Metadata Injection & End-to-End Pipeline</h2>
+    <p class="key">
+      Never store bare chunk strings. Every chunk needs at least its source file, section path, and chunk index—and you must decide what belongs in payload vs. embedded text.
+    </p>
+    <p>
+      <code>source</code> enables document-level filtering and user-facing citations; <code>section</code> anchors the chunk inside a heading hierarchy; <code>chunkIndex</code> and <code>totalChunks</code> support neighbor expansion and debugging.
+    </p>
+
+    <figure class="diagram-figure">
+      <figcaption>
+        <span>Two Metadata Paths: Vector Payload vs. Embedded Title Prefix</span>
+        <span class="sim-tag">Architecture diagram</span>
+      </figcaption>
+      <svg viewBox="0 0 880 215" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Two paths for metadata injection">
+        <defs>
+          <marker id="arrow-meta" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--text-muted)" />
+          </marker>
+        </defs>
+
+        <rect x="18" y="60" width="210" height="96" rx="12" fill="var(--bg-muted)" stroke="var(--border-strong)" stroke-width="1.6" />
+        <text x="123" y="92" text-anchor="middle" fill="var(--text)" font-size="14" font-weight="700">DocumentChunk</text>
+        <text x="123" y="114" text-anchor="middle" fill="var(--text-secondary)" font-size="11.5">text: "Standard tickets: 4h SLA..."</text>
+        <text x="123" y="135" text-anchor="middle" fill="var(--text-muted)" font-size="11.5">source · section · chunkIndex</text>
+
+        <path d="M 228 96 C 280 96, 280 54, 338 54" fill="none" stroke="var(--teal)" stroke-width="2" marker-end="url(#arrow-meta)" />
+        <path d="M 228 120 C 280 120, 280 160, 338 160" fill="none" stroke="var(--accent)" stroke-width="2" marker-end="url(#arrow-meta)" />
+
+        <rect x="346" y="16" width="250" height="78" rx="12" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="1.6" />
+        <text x="471" y="44" text-anchor="middle" fill="var(--text)" font-size="13.5" font-weight="700">Path A: Vector DB Payload</text>
+        <text x="471" y="65" text-anchor="middle" fill="var(--text-secondary)" font-size="11.5">ACLs · metadata filters · citations</text>
+        <text x="471" y="83" text-anchor="middle" fill="var(--teal)" font-size="11.5" font-weight="600">Leaves embedding vector untouched</text>
+
+        <rect x="346" y="120" width="250" height="78" rx="12" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.6" />
+        <text x="471" y="148" text-anchor="middle" fill="var(--text)" font-size="13.5" font-weight="700">Path B: Embedded Title Prefix</text>
+        <text x="471" y="169" text-anchor="middle" fill="var(--text-secondary)" font-size="11.5">[Doc / Section] + body text</text>
+        <text x="471" y="187" text-anchor="middle" fill="var(--accent)" font-size="11.5" font-weight="600">Helps isolated chunks; shifts similarity</text>
+
+        <path d="M 596 54 C 638 54, 638 96, 682 96" fill="none" stroke="var(--text-muted)" stroke-width="1.8" marker-end="url(#arrow-meta)" />
+        <path d="M 596 160 C 638 160, 638 120, 682 120" fill="none" stroke="var(--text-muted)" stroke-width="1.8" marker-end="url(#arrow-meta)" />
+
+        <rect x="690" y="60" width="172" height="96" rx="12" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="1.6" />
+        <text x="776" y="92" text-anchor="middle" fill="var(--text)" font-size="14" font-weight="700">Indexed Record</text>
+        <text x="776" y="114" text-anchor="middle" fill="var(--text-secondary)" font-size="12">vector: float[]</text>
+        <text x="776" y="135" text-anchor="middle" fill="var(--text-muted)" font-size="11.5">payload: { source, ... }</text>
+      </svg>
+    </figure>
+  </main>
+
+  <!-- LAB 03: Metadata Dual-Path X-Ray -->
+  <section class="lab-wrap" id="lab-metadata">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <span class="lab-eyebrow">Lab 03 · Metadata Dual-Path X-Ray</span>
+          <h3 class="lab-title">When 2024 and 2025 policy chunks read nearly identically, how does retrieval pick the right year?</h3>
+          <p class="lab-desc">Test query: <code>"What is the updated 2025 support ticket SLA?"</code>. Compare what gets embedded, what lands in payload, and how ranking shifts when no explicit filter is passed.</p>
+        </div>
+        <span class="sim-tag">Simulated ranking</span>
+      </div>
+      <div class="lab-body">
+        <div class="pick-options" id="metaOptions">
+          <button class="pick-card" type="button" data-meta-mode="raw">
+            <div class="pick-kicker">Option A</div>
+            <div class="pick-title">Bare Text Only</div>
+            <p class="pick-sub">Embed raw chunk strings with no source, section, or year metadata.</p>
+          </button>
+          <button class="pick-card" type="button" data-meta-mode="payload">
+            <div class="pick-kicker">Option B</div>
+            <div class="pick-title">Payload Only</div>
+            <p class="pick-sub">Store structured fields in payload for filtering & citations; keep embedded text untouched.</p>
+          </button>
+          <button class="pick-card active" type="button" data-meta-mode="both">
+            <div class="pick-kicker">Option C · Balanced</div>
+            <div class="pick-title">Payload + Short Title Prefix</div>
+            <p class="pick-sub">Use payload for filtering/citations and prepend a short doc/section tag before embedding.</p>
+          </button>
+        </div>
+
+        <div class="split-2">
+          <div class="pane-box">
+            <div class="pane-head">
+              <span>Indexed Record (Embedding Input + Payload)</span>
+              <span class="sim-tag" id="metaTokenCost">Prefix overhead ~ +34 chars</span>
+            </div>
+            <pre class="raw-stream" id="metaPayloadPreview"></pre>
+          </div>
+          <div class="pane-box sim-zone" data-sim-label="Simulated similarity">
+            <div class="pane-head">
+              <span>Top-2 Ranking (without explicit year filter)</span>
+            </div>
+            <div class="rank-list" id="metaRankList"></div>
+          </div>
+        </div>
+
+        <div class="outcome good" id="metaOutcome" style="margin-top: 14px;"></div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h3>Running the End-to-End Ingestion Pipeline</h3>
+    <p>
+      Chaining parsing, cleaning, overlap-reserved recursive chunking, and metadata attachment produces ready-to-embed <code>DocumentChunk[]</code> objects. Complete runnable scripts and test suites live in the public repository at <a href="https://github.com/qufei1993/ai-agent-fullstack-roadmap/tree/main/examples/rag/document-parsing-chunking" target="_blank" rel="noopener"><code>examples/rag/document-parsing-chunking/</code></a>.
+    </p>
+
+    <details class="code-fold">
+      <summary>Inspect the full processDocument() TypeScript pipeline</summary>
+      <div class="code-fold-body">
+        <div class="code-card" style="margin: 0;">
+          <div class="code-header">
+            <span>examples/rag/document-parsing-chunking/parse-and-chunk.ts</span>
+            <button class="copy-btn" type="button">Copy</button>
+          </div>
+          <pre><code class="language-typescript">import path from "path";
+import { PDFParse } from "pdf-parse";
+
+interface DocumentChunk {
+  text: string;
+  metadata: {
+    source: string;
+    section?: string;
+    chunkIndex: number;
+    totalChunks: number;
+  };
+}
+
+async function parsePDF(filePath: string): Promise&lt;string&gt; {
+  const parser = new PDFParse({ url: filePath });
+  const data = await parser.getText();
+  return data.text;
+}
+
+async function processDocument(filePath: string): Promise&lt;DocumentChunk[]&gt; {
+  const fileName = path.basename(filePath);
+  const rawText = await parsePDF(filePath);
+  const cleanedText = cleanText(rawText);
+
+  const CHUNK_SIZE = 512;
+  const OVERLAP = Math.floor(CHUNK_SIZE * 0.15);
+
+  // Reserve overlap budget up front so final chunks never exceed CHUNK_SIZE
+  const splitChunks = splitRecursive(cleanedText, CHUNK_SIZE - OVERLAP);
+  const textChunks = addOverlap(splitChunks, OVERLAP);
+
+  return textChunks.map((text, index) =&gt; ({
+    text,
+    metadata: {
+      source: fileName,
+      chunkIndex: index,
+      totalChunks: textChunks.length,
+    },
+  }));
+}</code></pre>
+        </div>
+      </div>
+    </details>
+
+    <div class="callout warn">
+      <div class="callout-title">Real-World Gotcha: Compatibility Glyphs Surviving NFKC</div>
+      When running the script on real PDFs, certain font-encoded compatibility glyphs can still survive <code>normalize("NFKC")</code>. Add source-specific character maps or upgrade the parser rather than assuming a single cleaning pass handles every PDF. Likewise, for Markdown files, parse into an AST and split by heading hierarchy first instead of piling on regexes.
+    </div>
+
+    <h2 id="decision">Engineering Decision Matrix</h2>
+    <p class="key">
+      Match your parser, chunker, and metadata strategy to your document structure—and verify every change with spot checks and real queries.
+    </p>
+
+    <div class="filter-bar">
+      <button class="chip-btn active" type="button" data-filter="all">All Scenarios</button>
+      <button class="chip-btn" type="button" data-filter="parse">Parsing</button>
+      <button class="chip-btn" type="button" data-filter="chunk">Chunking</button>
+      <button class="chip-btn" type="button" data-filter="clean">Cleaning & CJK</button>
+      <button class="chip-btn" type="button" data-filter="meta">Metadata</button>
+    </div>
+
+    <div class="decision-grid" id="decisionGrid">
+      <div class="decision-card" data-tags="parse">
+        <span class="decision-tag">Parsing</span>
+        <div class="decision-title">Clean, text-layered single-column PDFs</div>
+        <p class="decision-desc">Start with <code>pdf-parse</code>, persist both raw and cleaned text for spot-checking, and verify reading order before tuning chunks.</p>
+      </div>
+      <div class="decision-card" data-tags="parse">
+        <span class="decision-tag">Parsing</span>
+        <div class="decision-title">Multi-column papers, dense tables, or scans</div>
+        <p class="decision-desc">Upgrade the parser first (<code>pdfjs-dist</code> for custom layout logic, LlamaParse or OCR for complex layouts). Never expect chunking to repair scrambled text.</p>
+      </div>
+      <div class="decision-card" data-tags="chunk">
+        <span class="decision-tag">Chunking</span>
+        <div class="decision-title">First production baseline & tuning range</div>
+        <p class="decision-desc">Start with Recursive (or Page-level for self-contained reports) at <code>256–512 tokens</code> and <code>10%–15% overlap</code>; only test Semantic chunking after measuring baseline gaps.</p>
+      </div>
+      <div class="decision-card" data-tags="clean chunk">
+        <span class="decision-tag">Cleaning & CJK</span>
+        <div class="decision-title">Multilingual / CJK docs & noisy extractions</div>
+        <p class="decision-desc">Add explicit full-width delimiters (<code>。？！；，</code>) and preserve matched punctuation. Add cleaning rules strictly from observed sample noise.</p>
+      </div>
+      <div class="decision-card" data-tags="clean parse">
+        <span class="decision-tag">Structure</span>
+        <div class="decision-title">Markdown knowledge bases & API docs</div>
+        <p class="decision-desc">Use a Markdown AST parser to split by heading sections while keeping code fences and tables intact, then recursively split only oversized sections.</p>
+      </div>
+      <div class="decision-card" data-tags="meta">
+        <span class="decision-tag">Metadata</span>
+        <div class="decision-title">Versioned policies & multi-tenant ACLs</div>
+        <p class="decision-desc">Always store <code>source</code>, <code>section</code>, and <code>chunkIndex</code> in payload; prepend a short title prefix to embedded text only when isolated chunks lose critical context.</p>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>
+      Document parsing and chunking define the upper bound of what your retrieval system can ever find. Stabilize raw extraction, spot-check cleaned chunks, and calibrate parameters on real queries first. In the next chapter on embeddings and vector search, we consume these exact <code>DocumentChunk</code> records, turn them into vectors, and index them for retrieval.
+    </p>
+  </footer>
+
+  <script>
+    (function () {
+      /* ============================================================
+         LAB 01: PDF Pitfalls & Text Cleaner
+         ============================================================ */
+      const lab1State = { tab: 'multicol', mode: 'naive' };
+
+      const lab1Data = {
+        multicol: {
+          sourceTitle: 'Original Two-Column PDF (Research Paper / Report)',
+          visualHtml: `
+            <div class="pdf-page-mock">
+              <div class="pdf-two-col">
+                <div class="pdf-col">
+                  <div class="pdf-col-title">Column 1</div>
+                  The history of artificial<br/>intelligence dates back to the 1950s.
+                </div>
+                <div class="pdf-col">
+                  <div class="pdf-col-title">Column 2</div>
+                  In recent years, large language<br/>models have reshaped retrieval...
+                </div>
+              </div>
+            </div>`,
+          naive: {
+            badge: 'Reading order scrambled',
+            badgeClass: 'bad',
+            stream: 'The history of artificial <span class="hl-bad">In recent years, large language</span> intelligence dates back to the 1950s. <span class="hl-bad">models have reshaped retrieval...</span>',
+            outcomeClass: 'bad',
+            outcomeHtml: '<div class="outcome-title">Consequence: Every word was extracted, yet meaning is destroyed</div>Scanning left-to-right by Y coordinate stitches line 1 of Column 1 directly into line 1 of Column 2. Any downstream chunk or embedding inherits this broken prose.'
+          },
+          layout: {
+            badge: 'Column order restored',
+            badgeClass: 'ok',
+            stream: '<span class="hl-good">The history of artificial intelligence dates back to the 1950s.</span>\n\n<span class="hl-good">In recent years, large language models have reshaped retrieval...</span>',
+            outcomeClass: 'good',
+            outcomeHtml: '<div class="outcome-title">Fix: Segment columns first, then read top-to-bottom within each column</div>A layout-aware parser detects column bounding boxes so downstream chunkers receive intact sentences.'
+          }
+        },
+        table: {
+          sourceTitle: 'Original PDF Financial Table',
+          visualHtml: `
+            <div class="pdf-page-mock">
+              <table class="pdf-table-mock">
+                <thead><tr><th>Quarter</th><th>Revenue</th><th>YoY Growth</th></tr></thead>
+                <tbody>
+                  <tr><td>Q1</td><td>120M</td><td>15%</td></tr>
+                  <tr><td>Q2</td><td>145M</td><td>21%</td></tr>
+                </tbody>
+              </table>
+            </div>`,
+          naive: {
+            badge: 'Row/column mapping lost',
+            badgeClass: 'bad',
+            stream: 'Quarter Revenue YoY Growth <span class="hl-bad">Q1 120M 15% Q2 145M 21%</span>\n\n// Or column-major extraction across pages:\nQuarter Q1 Q2 <span class="hl-bad">Revenue 120M 145M</span> YoY Growth 15% 21%',
+            outcomeClass: 'bad',
+            outcomeHtml: '<div class="outcome-title">Consequence: Cells survive, but values detach from headers</div>When a user asks for Q2 growth, flattened streams make it easy for the model to pair the wrong number with the wrong quarter. Always spot-check table extraction.'
+          },
+          layout: {
+            badge: 'Structured Markdown table',
+            badgeClass: 'ok',
+            stream: '<span class="hl-good">| Quarter | Revenue | YoY Growth |\n|---------|---------|------------|\n| Q1      | 120M    | 15%        |\n| Q2      | 145M    | 21%        |</span>',
+            outcomeClass: 'good',
+            outcomeHtml: '<div class="outcome-title">Fix: Reconstruct cell coordinates into Markdown tables</div>Preserving headers and row alignment keeps numbers bound to their meaning—and avoid splitting mid-table during chunking.'
+          }
+        }
+      };
+
+      const rawCleanerSample = [
+        '-- 1 of 3 --',
+        '### 2. Turing Test & Early Foundations',
+        'In １９５０, Alan Turing published "Computing Machinery',
+        'and Intelligence," introducing the imitation game.',
+        'That paper laid the conceptual groundwork',
+        'for modern AI research.',
+        '',
+        '- Core question: Can machines think?',
+        '- Evaluation setup: The imitation game'
+      ].join('\n');
+
+      function escapeHtml(str) {
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      }
+
+      function renderLab1() {
+        const parseView = document.getElementById('lab1ParseView');
+        const cleanerView = document.getElementById('lab1CleanerView');
+        const parserToggle = document.getElementById('lab1ParserToggle');
+
+        document.querySelectorAll('[data-lab1-tab]').forEach((btn) => {
+          btn.classList.toggle('active', btn.dataset.lab1Tab === lab1State.tab);
+        });
+
+        if (lab1State.tab === 'cleaner') {
+          parseView.style.display = 'none';
+          parserToggle.style.display = 'none';
+          cleanerView.style.display = 'block';
+          renderCleaner();
+          return;
+        }
+
+        parseView.style.display = 'block';
+        parserToggle.style.display = 'flex';
+        cleanerView.style.display = 'none';
+
+        document.querySelectorAll('[data-lab1-mode]').forEach((btn) => {
+          btn.classList.remove('danger-active', 'teal-active');
+          if (btn.dataset.lab1Mode === lab1State.mode) {
+            btn.classList.add(lab1State.mode === 'naive' ? 'danger-active' : 'teal-active');
+          }
+        });
+
+        const item = lab1Data[lab1State.tab];
+        const res = item[lab1State.mode];
+        document.getElementById('lab1SourceTitle').textContent = item.sourceTitle;
+        document.getElementById('lab1SourceVisual').innerHTML = item.visualHtml;
+
+        const badge = document.getElementById('lab1OutputBadge');
+        badge.textContent = res.badge;
+        badge.className = 'c-badge ' + res.badgeClass;
+
+        document.getElementById('lab1OutputStream').innerHTML = res.stream;
+        const outcome = document.getElementById('lab1Outcome');
+        outcome.className = 'outcome ' + res.outcomeClass;
+        outcome.innerHTML = res.outcomeHtml;
+      }
+
+      function renderCleaner() {
+        const useNfkc = document.getElementById('ruleNfkc').checked;
+        const usePage = document.getElementById('rulePageNum').checked;
+        const useWrap = document.getElementById('ruleSoftWrap').checked;
+        const useProtect = document.getElementById('ruleProtectStruct').checked;
+
+        document.querySelectorAll('#cleanerRules .rule-check').forEach((el) => {
+          el.classList.toggle('is-on', el.querySelector('input').checked);
+        });
+
+        document.getElementById('cleanerBefore').textContent = rawCleanerSample;
+
+        let out = rawCleanerSample.replace(/\r\n/g, '\n');
+        if (useNfkc) out = out.normalize('NFKC');
+        if (usePage) out = out.replace(/^--\s*\d+\s*of\s*\d+\s*--\n?/gim, '');
+        if (useWrap) {
+          if (useProtect) {
+            const lines = out.split('\n');
+            const merged = [];
+            for (const line of lines) {
+              const trimmed = line.trim();
+              const isStruct = /^(#{1,6}\s|[-*•]\s)/.test(trimmed);
+              if (
+                merged.length > 0 &&
+                trimmed !== '' &&
+                !isStruct &&
+                merged[merged.length - 1] !== '' &&
+                !/^(#{1,6}\s|[-*•]\s)/.test(merged[merged.length - 1]) &&
+                !/[.?!]$/.test(merged[merged.length - 1])
+              ) {
+                merged[merged.length - 1] += ' ' + trimmed;
+              } else {
+                merged.push(trimmed);
+              }
+            }
+            out = merged.join('\n');
+          } else {
+            out = out.replace(/([^\n.?!])\n([^\n])/g, '$1 $2');
+          }
+        }
+        out = out.replace(/\n{3,}/g, '\n\n').trim();
+
+        const afterEl = document.getElementById('cleanerAfter');
+        const badge = document.getElementById('cleanerStatusBadge');
+        const outcome = document.getElementById('cleanerOutcome');
+
+        const titleSwallowed = out.includes('Foundations In');
+
+        if (titleSwallowed) {
+          const highlighted = escapeHtml(out).replace(
+            '### 2. Turing Test &amp; Early Foundations In',
+            '<span class="hl-bad">### 2. Turing Test &amp; Early Foundations In</span>'
+          );
+          afterEl.innerHTML = highlighted;
+          badge.textContent = 'Heading swallowed';
+          badge.className = 'c-badge warn';
+          outcome.className = 'outcome meh';
+          outcome.innerHTML = '<div class="outcome-title">Side effect: The soft-wrap regex merged the heading into paragraph 1</div>Body wraps look cleaner, but because <code>### 2. Turing Test & Early Foundations</code> does not end with a period, the regex glued it straight onto the next sentence. Toggle <strong>"4. Protect headings & list items"</strong> to fix it.';
+        } else if (useNfkc && usePage && useWrap && useProtect) {
+          afterEl.textContent = out;
+          badge.textContent = 'Clean & structure intact';
+          badge.className = 'c-badge ok';
+          outcome.className = 'outcome good';
+          outcome.innerHTML = '<div class="outcome-title">Clean output: Rules matched to observed sample noise</div>Page markers stripped, full-width <code>１９５０</code> normalized to <code>1950</code>, body soft wraps merged, and headings/bullets preserved intact.';
+        } else {
+          afterEl.textContent = out;
+          badge.textContent = 'Noise remains';
+          badge.className = 'c-badge bad';
+          outcome.className = 'outcome bad';
+          outcome.innerHTML = '<div class="outcome-title">Unresolved noise or broken wraps remain</div>Compare left vs. right: disabled rules leave page markers, compatibility glyphs, or hard line breaks in your chunks.';
+        }
+
+        const codeLines = [
+          'function cleanText(raw: string): string {',
+          '  let text = raw.replace(/\\r\\n/g, "\\n");',
+          useNfkc ? '  text = text.normalize("NFKC");' : '  // [disabled] NFKC normalization',
+          usePage ? '  text = text.replace(/^--\\s*\\d+\\s*of\\s*\\d+\\s*--\\n?/gim, "");' : '  // [disabled] strip page numbers',
+          useWrap && !useProtect
+            ? '  // ⚠️ Unsafe on structured docs: merges headings without trailing periods\n  text = text.replace(/([^\\n.?!])\\n([^\\n])/g, "$1 $2");'
+            : useWrap && useProtect
+            ? '  // Skip headings (#) and bullets (- / *), merge only body soft wraps\n  text = mergeBodySoftWraps(text);'
+            : '  // [disabled] soft-wrap merging',
+          '  return text.replace(/\\n{3,}/g, "\\n\\n").trim();',
+          '}'
+        ];
+        const codeEl = document.getElementById('cleanerCodeSync');
+        codeEl.textContent = codeLines.join('\n');
+        if (window.bookHighlightCode) window.bookHighlightCode(codeEl.parentElement);
+      }
+
+      document.querySelectorAll('[data-lab1-tab]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          lab1State.tab = btn.dataset.lab1Tab;
+          renderLab1();
+        });
+      });
+      document.querySelectorAll('[data-lab1-mode]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          lab1State.mode = btn.dataset.lab1Mode;
+          renderLab1();
+        });
+      });
+      document.querySelectorAll('#cleanerRules input').forEach((input) => {
+        input.addEventListener('change', renderCleaner);
+      });
+
+      /* ============================================================
+         PREDICT HOOK
+         ============================================================ */
+      const predictHook = document.getElementById('predictSemantic');
+      const predictFeedback = document.getElementById('predictSemanticFeedback');
+      predictHook.querySelectorAll('.predict-opt').forEach((opt) => {
+        opt.addEventListener('click', () => {
+          predictHook.querySelectorAll('.predict-opt').forEach((b) => {
+            b.classList.remove('is-right', 'is-wrong');
+          });
+          opt.classList.add(opt.dataset.answer === 'right' ? 'is-right' : 'is-wrong');
+          predictFeedback.classList.add('show');
+          predictHook.classList.add('answered');
+        });
+      });
+
+      /* ============================================================
+         LAB 02: Live Chunking & Cut-Line Sandbox
+         ============================================================ */
+      const sampleText = [
+        'Large Language Models (LLMs) reshaped natural language processing. They generate fluent prose and handle translation, summarization, and question answering.',
+        '',
+        'Unlike earlier NLP pipelines, LLMs are built on the Transformer architecture. Self-attention lets the model weigh every token in a sentence against every other token. That mechanism enables long-range dependency tracking.',
+        '',
+        'Google introduced the Transformer in the 2017 paper "Attention Is All You Need." Soon after, GPT, BERT, and T5 accelerated progress across the industry.',
+        '',
+        'Retrieval-Augmented Generation (RAG) pairs an LLM with an external knowledge base. Instead of baking every fact into weights, RAG retrieves grounded passages at inference time.'
+      ].join('\n');
+
+      const lab2State = {
+        strategy: 'recursive-safe',
+        chunkSize: 180,
+        overlapPct: 15,
+        reserveSpace: true,
+        view: 'canvas'
+      };
+
+      function fixedSizeChunk(text, chunkSize, overlap) {
+        const chunks = [];
+        const step = Math.max(1, chunkSize - overlap);
+        let start = 0;
+        while (start < text.length) {
+          const slice = text.slice(start, start + chunkSize);
+          if (slice.trim()) {
+            chunks.push({
+              text: slice,
+              overlapLen: start === 0 ? 0 : Math.min(overlap, slice.length)
+            });
+          }
+          if (start + chunkSize >= text.length) break;
+          start += step;
+        }
+        return chunks;
+      }
+
+      function splitRecursiveCore(text, chunkSize, separators, keepSep) {
+        if (text.length <= chunkSize) return text.trim() ? [text.trim()] : [];
+        const [sep, ...rest] = separators;
+        if (sep === '') {
+          const chunks = [];
+          let s = 0;
+          while (s < text.length) {
+            chunks.push(text.slice(s, s + chunkSize));
+            s += chunkSize;
+          }
+          return chunks;
+        }
+        const splitParts = text.split(sep);
+        const parts = splitParts
+          .map((part, idx) => (keepSep && idx < splitParts.length - 1 ? part + sep : part))
+          .filter((p) => p.trim());
+        if (parts.length <= 1) return splitRecursiveCore(text, chunkSize, rest, keepSep);
+
+        const chunks = [];
+        let current = '';
+        for (const part of parts) {
+          const candidate = current ? current + part : part;
+          if (candidate.length <= chunkSize) {
+            current = candidate;
+          } else {
+            if (current) chunks.push(...splitRecursiveCore(current, chunkSize, rest, keepSep));
+            if (part.length > chunkSize) {
+              chunks.push(...splitRecursiveCore(part, chunkSize, rest, keepSep));
+              current = '';
+            } else {
+              current = part;
+            }
+          }
+        }
+        if (current) chunks.push(...splitRecursiveCore(current, chunkSize, rest, keepSep));
+        return chunks;
+      }
+
+      function addOverlapTracked(baseChunks, overlap) {
+        if (overlap <= 0 || baseChunks.length <= 1) {
+          return baseChunks.map((t) => ({ text: t, overlapLen: 0 }));
+        }
+        return baseChunks.map((chunk, i) => {
+          if (i === 0) return { text: chunk, overlapLen: 0 };
+          const prefix = baseChunks[i - 1].slice(-overlap);
+          return { text: prefix + chunk, overlapLen: prefix.length };
+        });
+      }
+
+      function renderLab2() {
+        const size = lab2State.chunkSize;
+        const overlap = Math.floor((size * lab2State.overlapPct) / 100);
+        document.getElementById('chunkSizeVal').textContent = `${size} chars`;
+        document.getElementById('overlapVal').textContent = `${lab2State.overlapPct}% (${overlap} chars)`;
+
+        document.querySelectorAll('[data-strategy]').forEach((btn) => {
+          btn.classList.remove('active', 'teal-active', 'danger-active');
+          if (btn.dataset.strategy === lab2State.strategy) {
+            btn.classList.add(lab2State.strategy === 'recursive-safe' ? 'teal-active' : 'active');
+          }
+        });
+        document.querySelectorAll('[data-reserve]').forEach((btn) => {
+          const isYes = btn.dataset.reserve === 'yes';
+          btn.classList.toggle('active', isYes === lab2State.reserveSpace);
+        });
+
+        let results = [];
+        let sepLabel = '';
+        if (lab2State.strategy === 'fixed') {
+          results = fixedSizeChunk(sampleText, size, overlap);
+          sepLabel = '// Fixed-size: sliding character window';
+        } else {
+          const seps =
+            lab2State.strategy === 'recursive-space'
+              ? [' ', '']
+              : ['\n\n', '. ', '? ', '! ', '\n', ', ', ' ', ''];
+          const keepSep = lab2State.strategy !== 'recursive-drop';
+          const effectiveLimit = lab2State.reserveSpace ? Math.max(40, size - overlap) : size;
+          const base = splitRecursiveCore(sampleText, effectiveLimit, seps, keepSep);
+          results = addOverlapTracked(base, overlap);
+          sepLabel = `const SEPARATORS = ${JSON.stringify(seps)};`;
+        }
+
+        let overflowCount = 0;
+        let brokenSentenceCount = 0;
+        let droppedPunct = lab2State.strategy === 'recursive-drop';
+
+        const docBodyEl = document.getElementById('cutDocBody');
+        docBodyEl.innerHTML = results
+          .map((item, idx) => {
+            const bodyText = item.overlapLen > 0 ? item.text.slice(item.overlapLen) : item.text;
+            const endsClean = /[.?!]["”]?$/.test(item.text.trim());
+            const isBroken = !endsClean && idx < results.length - 1;
+            const colorCls = 'c' + (idx % 4);
+            const nextOvLen = idx < results.length - 1 ? results[idx + 1].overlapLen : 0;
+            let innerHtml = '';
+            if (nextOvLen > 0 && bodyText.length > nextOvLen) {
+              const headPart = bodyText.slice(0, bodyText.length - nextOvLen);
+              const tailPart = bodyText.slice(bodyText.length - nextOvLen);
+              innerHtml = `${escapeHtml(headPart)}<span class="overlap-mark" title="Tail borrowed as Overlap by the next chunk">${escapeHtml(tailPart)}</span>`;
+            } else {
+              innerHtml = escapeHtml(bodyText);
+            }
+            const knife =
+              idx < results.length - 1
+                ? `<span class="cut-knife ${isBroken || droppedPunct ? 'broken' : 'clean'}" title="${isBroken ? 'Mid-sentence cut' : droppedPunct ? 'Delimiter dropped' : 'Natural sentence boundary'}">${isBroken ? '⚠' : '✂'} #${idx + 1}|#${idx + 2}</span>`
+                : '';
+            return `<span class="cut-seg ${colorCls}">${innerHtml}</span>${knife}`;
+          })
+          .join('');
+
+        document.querySelectorAll('[data-lab2-view]').forEach((btn) => {
+          btn.classList.toggle('active', btn.dataset.lab2View === lab2State.view);
+        });
+        document.getElementById('cutCanvas').style.display = lab2State.view === 'canvas' ? 'block' : 'none';
+        document.getElementById('chunkList').style.display = lab2State.view === 'cards' ? 'grid' : 'none';
+
+        const listEl = document.getElementById('chunkList');
+        listEl.innerHTML = results
+          .map((item, idx) => {
+            const len = item.text.length;
+            const isOver = len > size;
+            if (isOver) overflowCount++;
+            const endsClean = /[.?!]["”]?$/.test(item.text.trim());
+            const isBroken = !endsClean && idx < results.length - 1;
+            if (isBroken) brokenSentenceCount++;
+
+            const ovText = item.overlapLen > 0 ? item.text.slice(0, item.overlapLen) : '';
+            const bodyText = item.overlapLen > 0 ? item.text.slice(item.overlapLen) : item.text;
+            const pct = Math.min(100, Math.round((len / size) * 100));
+
+            const badges = [];
+            if (isOver) badges.push('<span class="c-badge bad">Over limit</span>');
+            if (droppedPunct) badges.push('<span class="c-badge bad">Punct. lost</span>');
+            else if (isBroken) badges.push('<span class="c-badge warn">Mid-sentence</span>');
+            else badges.push('<span class="c-badge ok">Clean boundary</span>');
+
+            return `
+              <div class="chunk-card ${isOver ? 'is-overflow' : isBroken || droppedPunct ? 'is-broken' : ''}">
+                <div class="chunk-card-head">
+                  <span>chunk #${idx + 1} · ${len}/${size} chars</span>
+                  <div class="chunk-badges">${badges.join('')}</div>
+                </div>
+                <div class="len-bar"><div class="len-bar-fill ${isOver ? 'over' : ''}" style="width:${pct}%"></div></div>
+                <div class="chunk-text">${ovText ? `<span class="overlap-mark" title="Overlap from previous chunk">${escapeHtml(ovText)}</span>` : ''}${escapeHtml(bodyText)}</div>
+              </div>`;
+          })
+          .join('');
+
+        document.getElementById('chunkStats').innerHTML = `
+          <div class="stat-pill">Total chunks <strong>${results.length}</strong></div>
+          <div class="stat-pill ${brokenSentenceCount > 0 ? 'is-bad' : ''}">Mid-sentence cuts <strong>${brokenSentenceCount}</strong></div>
+          <div class="stat-pill ${overflowCount > 0 ? 'is-bad' : ''}">Exceeds CHUNK_SIZE <strong>${overflowCount}</strong></div>
+        `;
+
+        const outcome = document.getElementById('chunkOutcome');
+        if (overflowCount > 0) {
+          outcome.className = 'outcome bad';
+          outcome.innerHTML = `<div class="outcome-title">Limit overflow: ${overflowCount} chunk(s) exceeded ${size} chars</div>Appending overlap without reserving <code>CHUNK_SIZE - OVERLAP</code> up front pushes chunks past your budget. Switch back to "Reserve CHUNK_SIZE - OVERLAP" to fix it.`;
+        } else if (droppedPunct) {
+          outcome.className = 'outcome bad';
+          outcome.innerHTML = '<div class="outcome-title">Dropped punctuation bug: sentences glue together</div>Calling <code>text.split(". ")</code> without re-attaching the delimiter strips sentence endings. Always keep matched punctuation and cover it in a regression test.';
+        } else if (lab2State.strategy === 'fixed') {
+          outcome.className = 'outcome meh';
+          outcome.innerHTML = `<div class="outcome-title">Fixed-size baseline: fast, but produced ${brokenSentenceCount} mid-sentence cut(s)</div>Fixed windows ignore sentence boundaries entirely. Useful as a v1 baseline before measuring Recursive improvements.`;
+        } else if (lab2State.strategy === 'recursive-space') {
+          outcome.className = 'outcome meh';
+          outcome.innerHTML = `<div class="outcome-title">Space-only splitting avoids broken words, but still breaks ${brokenSentenceCount} sentence(s)</div>Without paragraph and sentence delimiters at higher priority, splits land wherever the character budget runs out.`;
+        } else {
+          outcome.className = 'outcome good';
+          outcome.innerHTML = `<div class="outcome-title">Recursive baseline ready: ${results.length} chunks, all within ${size} chars</div>Splits prioritize paragraph and sentence boundaries while preserving punctuation; amber highlights show the tail borrowed as overlap by the next chunk.`;
+        }
+
+        const codeEl = document.getElementById('chunkCodeSync');
+        const codeText =
+          lab2State.strategy === 'fixed'
+            ? `const CHUNK_SIZE = ${size};\nconst OVERLAP = ${overlap}; // ${lab2State.overlapPct}%\n\nconst chunks = fixedSizeChunk(cleanedText, CHUNK_SIZE, OVERLAP);`
+            : `${sepLabel}\nconst CHUNK_SIZE = ${size};\nconst OVERLAP = ${overlap}; // ${lab2State.overlapPct}%\n\nconst baseChunks = splitRecursive(\n  cleanedText,\n  ${lab2State.reserveSpace ? 'CHUNK_SIZE - OVERLAP // reserve overlap budget' : 'CHUNK_SIZE // ⚠️ no budget reserved; overlap overflows limit'},\n  SEPARATORS${lab2State.strategy === 'recursive-drop' ? ' /* ⚠️ matched delimiter dropped */' : ''}\n);\nconst chunks = addOverlap(baseChunks, OVERLAP);`;
+        codeEl.textContent = codeText;
+        if (window.bookHighlightCode) window.bookHighlightCode(codeEl.parentElement);
+      }
+
+      document.querySelectorAll('[data-strategy]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          lab2State.strategy = btn.dataset.strategy;
+          renderLab2();
+        });
+      });
+      document.querySelectorAll('[data-reserve]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          lab2State.reserveSpace = btn.dataset.reserve === 'yes';
+          renderLab2();
+        });
+      });
+      document.querySelectorAll('[data-lab2-view]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          lab2State.view = btn.dataset.lab2View;
+          renderLab2();
+        });
+      });
+      document.getElementById('chunkSizeSlider').addEventListener('input', (e) => {
+        lab2State.chunkSize = Number(e.target.value);
+        renderLab2();
+      });
+      document.getElementById('overlapSlider').addEventListener('input', (e) => {
+        lab2State.overlapPct = Number(e.target.value);
+        renderLab2();
+      });
+
+      window.applyLab2Preset = function (strategy) {
+        lab2State.strategy = strategy;
+        renderLab2();
+        if (window.bookJumpToLab) window.bookJumpToLab('lab-chunking');
+      };
+
+      /* ============================================================
+         LAB 03: Metadata Dual-Path X-Ray
+         ============================================================ */
+      const metaScenarios = {
+        raw: {
+          tokenBadge: 'No prefix (+0 chars)',
+          preview: `{
+  "embeddingInput": "Standard support tickets are answered within 4 hours; enterprise hotlines remain under 1 hour.",
+  "payload": {}
+}`,
+          ranks: [
+            {
+              hit: false,
+              rank: '#1',
+              score: '0.78',
+              source: 'Unknown source (empty payload)',
+              text: 'Standard support tickets are answered within 8 hours; enterprise hotlines remain under 1 hour.'
+            },
+            {
+              hit: true,
+              rank: '#2',
+              score: '0.77',
+              source: 'Unknown source (empty payload)',
+              text: 'Standard support tickets are answered within 4 hours; enterprise hotlines remain under 1 hour.'
+            }
+          ],
+          outcomeClass: 'bad',
+          outcomeHtml: '<div class="outcome-title">Consequence: No year filtering and no verifiable citations</div>The 2024 and 2025 chunks collapse onto nearly identical vectors. The model cannot tell which policy is current or cite a source file.'
+        },
+        payload: {
+          tokenBadge: 'No prefix (+0 chars)',
+          preview: `{
+  "embeddingInput": "Standard support tickets are answered within 4 hours; enterprise hotlines remain under 1 hour.",
+  "payload": {
+    "source": "2025-support-policy.pdf",
+    "section": "3.2 Response SLA",
+    "year": 2025,
+    "chunkIndex": 4,
+    "totalChunks": 12
+  }
+}`,
+          ranks: [
+            {
+              hit: false,
+              rank: '#1',
+              score: '0.78',
+              source: '2024-support-policy.pdf · chunk 5/11',
+              text: 'Standard support tickets are answered within 8 hours; enterprise hotlines remain under 1 hour.'
+            },
+            {
+              hit: true,
+              rank: '#2',
+              score: '0.77',
+              source: '2025-support-policy.pdf · chunk 5/12',
+              text: 'Standard support tickets are answered within 4 hours; enterprise hotlines remain under 1 hour.'
+            }
+          ],
+          outcomeClass: 'meh',
+          outcomeHtml: '<div class="outcome-title">Solid baseline: Filtering & citations work, but bare vectors lack year context</div>With an explicit <code>year = 2025</code> filter, payload solves it cleanly. On open-ended queries without filters, however, the bare chunk text still lacks "2025".'
+        },
+        both: {
+          tokenBadge: 'Short title prefix (~ +34 chars)',
+          preview: `{
+  "embeddingInput": "[2025 Support Policy / 3.2 Response SLA]\\nStandard support tickets are answered within 4 hours; enterprise hotlines remain under 1 hour.",
+  "payload": {
+    "source": "2025-support-policy.pdf",
+    "section": "3.2 Response SLA",
+    "year": 2025,
+    "chunkIndex": 4,
+    "totalChunks": 12
+  }
+}`,
+          ranks: [
+            {
+              hit: true,
+              rank: '#1',
+              score: '0.89',
+              source: '2025-support-policy.pdf · chunk 5/12',
+              text: '[2025 Support Policy / 3.2 Response SLA] Standard support tickets are answered within 4 hours...'
+            },
+            {
+              hit: false,
+              rank: '#2',
+              score: '0.74',
+              source: '2024-support-policy.pdf · chunk 5/11',
+              text: '[2024 Support Policy / 3.2 Response SLA] Standard support tickets are answered within 8 hours...'
+            }
+          ],
+          outcomeClass: 'good',
+          outcomeHtml: '<div class="outcome-title">Balanced trade-off: Both filtering and isolated semantics covered</div>Prepending a concise doc/section prefix separates the 2025 chunk in vector space even without explicit filters. Validate on your eval set since prefixes add tokens and shift similarity scores.'
+        }
+      };
+
+      function renderLab3(mode) {
+        document.querySelectorAll('[data-meta-mode]').forEach((card) => {
+          card.classList.toggle('active', card.dataset.metaMode === mode);
+        });
+        const data = metaScenarios[mode];
+        document.getElementById('metaTokenCost').textContent = data.tokenBadge;
+        document.getElementById('metaPayloadPreview').textContent = data.preview;
+        document.getElementById('metaRankList').innerHTML = data.ranks
+          .map(
+            (r) => `
+            <div class="rank-row ${r.hit ? 'hit' : 'miss'}">
+              <div class="rank-meta">
+                <span><strong>${r.rank}</strong> · ${escapeHtml(r.source)}</span>
+                <span class="rank-score">score ${r.score}</span>
+              </div>
+              <div>${escapeHtml(r.text)}</div>
+            </div>`
+          )
+          .join('');
+        const outcome = document.getElementById('metaOutcome');
+        outcome.className = 'outcome ' + data.outcomeClass;
+        outcome.innerHTML = data.outcomeHtml;
+      }
+
+      document.querySelectorAll('[data-meta-mode]').forEach((card) => {
+        card.addEventListener('click', () => renderLab3(card.dataset.metaMode));
+      });
+
+      /* Initial render */
+      renderLab1();
+      renderLab2();
+      renderLab3('both');
+    })();
+  </script>
+  <script src="../shared/site.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-json.min.js"></script>
+</body>
+</html>

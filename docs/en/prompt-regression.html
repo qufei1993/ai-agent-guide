@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prompt Regression Evaluation: Test Suites, Assertions, and Release Gates · AI Agent Guide</title>
+  <!-- SEO:START (auto-synced by scripts/generate-seo.mjs) -->
+  <meta name="description" content="Evaluation suites, scoring rules, and version gates to catch regressions" />
+  <link rel="canonical" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/prompt-regression.html" />
+  <link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/prompt-regression.html" />
+  <link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/prompt-regression.html" />
+  <link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/prompt-regression.html" />
+  <meta property="og:type" content="article" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:locale:alternate" content="zh_CN" />
+  <meta property="og:title" content="Prompt Regression &amp; Evaluation Gates" />
+  <meta property="og:description" content="Evaluation suites, scoring rules, and version gates to catch regressions" />
+  <meta property="og:url" content="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/prompt-regression.html" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "Prompt Regression & Evaluation Gates",
+    "description": "Evaluation suites, scoring rules, and version gates to catch regressions",
+    "inLanguage": "en",
+    "url": "https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/prompt-regression.html",
+    "isPartOf": {
+      "@type": "Book",
+      "name": "AI Agent Guide"
+    }
+  }
+  </script>
+  <!-- SEO:END -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css" />
+  <link rel="stylesheet" href="../shared/tokens.css" />
+  <style>
+    /* Chapter-specific components */
+    .drift-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      margin: 20px 0 26px;
+    }
+    @media (max-width: 760px) { .drift-grid { grid-template-columns: 1fr; } }
+
+    .drift-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: var(--shadow-sm);
+    }
+    .drift-tag {
+      display: inline-block;
+      align-self: flex-start;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 9px;
+      border-radius: 999px;
+      background: var(--rose-soft);
+      color: var(--rose);
+    }
+    .drift-tag.warn { background: var(--accent-soft); color: var(--accent); }
+    .drift-tag.blue { background: var(--blue-soft); color: var(--blue); }
+    .drift-tag.purple { background: var(--purple-soft); color: var(--purple); }
+    .drift-title { font-size: 16px; font-weight: 700; color: var(--text); }
+    .drift-desc { font-size: 13.5px; color: var(--text-secondary); line-height: 1.6; margin: 0; }
+    .drift-example {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .callout {
+      margin: 22px 0;
+      padding: 15px 18px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      font-size: 14.5px;
+      color: var(--text-secondary);
+    }
+    .callout.note { border-left: 4px solid var(--teal); background: var(--teal-soft); }
+    .callout.warn { border-left: 4px solid var(--accent); background: var(--accent-soft); }
+    .callout-title {
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+
+    /* Lab 1 layout */
+    .lab-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 18px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .toolbar-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+    .toolbar-label {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-right: 2px;
+    }
+
+    .lab1-split {
+      display: grid;
+      grid-template-columns: 0.95fr 1.15fr;
+      gap: 16px;
+      align-items: start;
+    }
+    @media (max-width: 840px) { .lab1-split { grid-template-columns: 1fr; } }
+
+    .pane-box {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+    }
+    .pane-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text-secondary);
+    }
+    .code-snippet {
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      line-height: 1.55;
+      background: var(--bg-code);
+      color: #e6edf3;
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      overflow-x: auto;
+      margin: 0 0 12px;
+      white-space: pre;
+    }
+    .expect-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 12px;
+    }
+    .expect-pill {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 3px 8px;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+    }
+
+    .check-list {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .check-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 13px;
+      line-height: 1.5;
+      padding: 7px 10px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+    }
+    .check-item.pass { border-left: 3px solid var(--green); }
+    .check-item.fail { border-left: 3px solid var(--rose); background: var(--rose-soft); }
+    .check-icon { font-weight: 800; flex-shrink: 0; }
+    .check-item.pass .check-icon { color: var(--green); }
+    .check-item.fail .check-icon { color: var(--rose); }
+
+    .score-bar-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px dashed var(--border);
+    }
+    .badge-pass {
+      background: var(--green-soft);
+      color: var(--green);
+      font-weight: 700;
+      font-size: 12px;
+      padding: 2px 9px;
+      border-radius: 999px;
+    }
+    .badge-fail {
+      background: var(--rose-soft);
+      color: var(--rose);
+      font-weight: 700;
+      font-size: 12px;
+      padding: 2px 9px;
+      border-radius: 999px;
+    }
+
+    /* Lab 2 Sandbox */
+    .gate-controls {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 780px) { .gate-controls { grid-template-columns: 1fr; } }
+
+    .control-card {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+    }
+    .control-title {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .gate-table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-elevated);
+      margin-bottom: 14px;
+    }
+    .gate-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+      text-align: left;
+    }
+    .gate-table th, .gate-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .gate-table th {
+      background: var(--bg-muted);
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text-secondary);
+    }
+    .gate-table tr:last-child td { border-bottom: none; }
+    .gate-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+    .gate-banner.blocked {
+      background: var(--rose-soft);
+      border-color: color-mix(in srgb, var(--rose) 45%, var(--border));
+    }
+    .gate-banner.passed {
+      background: var(--green-soft);
+      border-color: color-mix(in srgb, var(--green) 45%, var(--border));
+    }
+
+    /* Lab 3 Layered Eval */
+    .layer-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 780px) { .layer-cards { grid-template-columns: 1fr; } }
+
+    .layer-card {
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      cursor: pointer;
+      text-align: left;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .layer-card.active {
+      border-color: var(--teal);
+      box-shadow: 0 0 0 3px var(--teal-soft);
+    }
+    .layer-card-kicker {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--teal);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .layer-card-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .layer-card-desc { font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; margin: 0; }
+
+    .metric-bars {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .metric-row {
+      display: grid;
+      grid-template-columns: 130px 1fr 84px;
+      gap: 10px;
+      align-items: center;
+      font-size: 13px;
+    }
+    .metric-track {
+      height: 12px;
+      background: var(--bg-muted);
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .metric-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.25s ease;
+    }
+
+    /* Decision matrix */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 18px 0 16px;
+    }
+    .decision-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+    @media (max-width: 760px) { .decision-grid { grid-template-columns: 1fr; } }
+    .decision-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      box-shadow: var(--shadow-sm);
+    }
+    .decision-card.is-hidden { display: none; }
+    .decision-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .decision-name { font-size: 16px; font-weight: 700; color: var(--text); }
+    .decision-fit {
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--teal-soft);
+      color: var(--teal);
+    }
+    .decision-body { font-size: 13.5px; color: var(--text-secondary); line-height: 1.6; margin: 0 0 10px; }
+    .decision-link { font-size: 12.5px; font-weight: 600; }
+
+    .workflow-table-wrap {
+      overflow-x: auto;
+      margin: 18px 0 26px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg-elevated);
+    }
+    .workflow-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+      text-align: left;
+    }
+    .workflow-table th, .workflow-table td {
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    .workflow-table th { background: var(--bg-muted); font-weight: 700; }
+    .workflow-table tr:last-child td { border-bottom: none; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./index.html">
+        <span>AI Agent Guide</span>
+        <span class="brand-badge">Interactive</span>
+      </a>
+      <nav class="topbar-nav">
+        <a href="#drift">Output Drift</a>
+        <a href="#lab-1">Lab 1: Negative Cases</a>
+        <a href="#lab-2">Lab 2: Release Gate</a>
+        <a href="#lab-3">Lab 3: Layered Evals</a>
+        <a href="#tools">Tools &amp; Workflow</a>
+      </nav>
+      <button class="theme-btn" id="themeToggle" type="button" aria-label="Toggle theme">
+        <span id="themeIcon">☀</span>
+        <span id="themeText">Light</span>
+      </button>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-meta">
+      <span class="hero-pill">Module 1 · LLM Engineering Fundamentals</span>
+      <span class="hero-pill">TypeScript + Zod + output_config.format</span>
+      <span class="hero-pill">3 Interactive Labs</span>
+    </div>
+    <h1>Prompt Regression Evaluation: Turning "Feels Better" into Comparable Numbers</h1>
+    <p class="hero-lead">
+      You change one line in a prompt from "be concise" to "analyze in detail," or upgrade the underlying model. The API still returns 200 OK and valid JSON, yet your code-review assistant starts flagging a routine currency formatter as a security vulnerability—or quietly misses a real SQL injection. Without a fixed test suite and assertion rules, you cannot tell model variance apart from a real regression.
+    </p>
+  </section>
+
+  <section class="tldr">
+    <div class="tldr-card">
+      <div class="tldr-title">30-Second Summary</div>
+      <ul class="tldr-list">
+        <li class="tldr-item">
+          <span><strong>Regressions are rarely HTTP errors:</strong> LLM quality drops show up as schema drift, missed risks, nitpicking clean code, or doubled token bills. Catch hard failures with code assertions first.</span>
+          <a class="tldr-go" href="#lab-1">Jump to Lab 1 →</a>
+        </li>
+        <li class="tldr-item">
+          <span><strong>Include negative test cases:</strong> A suite full of buggy snippets tunes your prompt into an over-aggressive reviewer. Clean code cases verify that the model knows when to stay quiet.</span>
+          <a class="tldr-go" href="#lab-2">Jump to Lab 2 →</a>
+        </li>
+        <li class="tldr-item">
+          <span><strong>Rules before judges:</strong> Block baseline failures with schemas and deterministic checks first, then layer <code>usage</code> cost budgets and LLM-as-Judge only where needed.</span>
+          <a class="tldr-go" href="#lab-3">Jump to Lab 3 →</a>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2 id="drift">1. What "Worse Output" Actually Means: Don't Start with Another LLM</h2>
+    <p class="key">
+      Regression testing in AI engineering treats a non-deterministic model as a function under test: <strong>fixed inputs + fixed prompt + fixed assertions = comparable experiments</strong>.
+    </p>
+    <p>
+      Many teams hear "evals" and immediately wire up a more expensive model as a judge. LLM judges have their place, but starting there gets the order backwards. Catch cheap, deterministic failures in code first by splitting regressions into four observable dimensions:
+    </p>
+
+    <div class="drift-grid">
+      <div class="drift-card">
+        <span class="drift-tag">Dimension 1 · Hardest Contract</span>
+        <div class="drift-title">Format Drift</div>
+        <p class="drift-desc">A prompt tweak makes the model wrap JSON in a Markdown fence or emit <code>score</code> as a string, breaking downstream parsers immediately.</p>
+        <div class="drift-example">Check: output_config.format + strict Zod schema</div>
+      </div>
+      <div class="drift-card">
+        <span class="drift-tag warn">Dimension 2 · Core Logic</span>
+        <div class="drift-title">Content Regression</div>
+        <p class="drift-desc">The JSON parses cleanly, but a SQL injection that used to be caught disappears behind generic advice like "consider improving code style."</p>
+        <div class="drift-example">Check: mustMention keywords + issueTypes assertions</div>
+      </div>
+      <div class="drift-card">
+        <span class="drift-tag blue">Dimension 3 · Restraint &amp; UX</span>
+        <div class="drift-title">Style &amp; Boundary Drift</div>
+        <p class="drift-desc">A one-sentence summary balloons to 800 words, or a clean utility function gets flagged with three fabricated "security risks."</p>
+        <div class="drift-example">Check: character caps + zero-false-positive clean-code cases</div>
+      </div>
+      <div class="drift-card">
+        <span class="drift-tag purple">Dimension 4 · Production Cost</span>
+        <div class="drift-title">Cost Regression</div>
+        <p class="drift-desc">Adding 600 words of prompt instructions raises pass rate by 2%, while doubling input and output tokens on every request.</p>
+        <div class="drift-example">Check: log usage.input_tokens / output_tokens &amp; latency</div>
+      </div>
+    </div>
+
+    <figure class="diagram-figure">
+      <svg viewBox="0 0 760 210" width="100%" height="auto" role="img" aria-label="Three-layer prompt regression evaluation funnel">
+        <rect x="12" y="12" width="736" height="186" rx="14" fill="var(--bg-elevated)" stroke="var(--border)" stroke-width="1.5"/>
+        <!-- Step 1 -->
+        <rect x="34" y="42" width="160" height="126" rx="10" fill="var(--bg-muted)" stroke="var(--border-strong)" stroke-width="1.5"/>
+        <text x="114" y="72" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">Fixed Test Suite</text>
+        <text x="114" y="96" text-anchor="middle" font-size="11.5" fill="var(--text-secondary)">cases.json (4 cases)</text>
+        <text x="114" y="118" text-anchor="middle" font-size="11" fill="var(--text-muted)">3 known defects</text>
+        <text x="114" y="136" text-anchor="middle" font-size="11" fill="var(--text-muted)">+ 1 clean negative case</text>
+        <!-- Arrow 1 -->
+        <path d="M198 105 L234 105" stroke="var(--text-muted)" stroke-width="2" marker-end="url(#arrowHead)"/>
+        <!-- Step 2 -->
+        <rect x="240" y="42" width="150" height="126" rx="10" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="1.5"/>
+        <text x="315" y="72" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">L1 · Hard Schema</text>
+        <text x="315" y="96" text-anchor="middle" font-size="11.5" fill="var(--text-secondary)">output_config.format</text>
+        <text x="315" y="118" text-anchor="middle" font-size="11" fill="var(--text-muted)">Zod validates shape</text>
+        <text x="315" y="136" text-anchor="middle" font-size="11" fill="var(--text-muted)">Fail fast on drift</text>
+        <!-- Arrow 2 -->
+        <path d="M394 105 L430 105" stroke="var(--text-muted)" stroke-width="2" marker-end="url(#arrowHead)"/>
+        <!-- Step 3 -->
+        <rect x="436" y="42" width="150" height="126" rx="10" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="1.5"/>
+        <text x="511" y="72" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">L2 · Code Assertions</text>
+        <text x="511" y="96" text-anchor="middle" font-size="11.5" fill="var(--text-secondary)">Rule-based checks</text>
+        <text x="511" y="118" text-anchor="middle" font-size="11" fill="var(--text-muted)">Keywords / types / score</text>
+        <text x="511" y="136" text-anchor="middle" font-size="11" fill="var(--text-muted)">Zero extra LLM cost</text>
+        <!-- Arrow 3 -->
+        <path d="M590 105 L626 105" stroke="var(--text-muted)" stroke-width="2" marker-end="url(#arrowHead)"/>
+        <!-- Step 4 -->
+        <rect x="632" y="42" width="96" height="126" rx="10" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+        <text x="680" y="72" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">L3 · Gate</text>
+        <text x="680" y="96" text-anchor="middle" font-size="11.5" fill="var(--text-secondary)">Version diff</text>
+        <text x="680" y="118" text-anchor="middle" font-size="11" fill="var(--text-muted)">Pass rate &amp; P0</text>
+        <text x="680" y="136" text-anchor="middle" font-size="11" fill="var(--text-muted)">Ship or block</text>
+        <defs>
+          <marker id="arrowHead" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+            <path d="M0,1 L7,4 L0,7 Z" fill="var(--text-muted)"/>
+          </marker>
+        </defs>
+      </svg>
+      <figcaption>Figure 1: Catch structural and semantic regressions with L1 schemas and L2 code assertions before deciding whether a prompt version can ship.</figcaption>
+    </figure>
+
+    <div class="predict-hook" data-answer="b">
+      <div class="predict-badge">Predict First</div>
+      <div class="predict-q">
+        Suppose your code-review eval suite has 4 test cases, and all 4 contain real bugs or security flaws. Your new prompt hits 100% pass rate on all 4. Is it safe to ship?
+      </div>
+      <div class="predict-opts">
+        <button class="predict-opt" type="button" data-opt="a">A. Yes—100% recall means the model caught every risk</button>
+        <button class="predict-opt" type="button" data-opt="b">B. No—without clean-code negative cases, the prompt may over-flag healthy code</button>
+        <button class="predict-opt" type="button" data-opt="c">C. Yes, as long as temperature is set to 0</button>
+      </div>
+      <div class="predict-feedback">
+        <strong>Spot on:</strong> A suite containing only broken code pushes you to make the prompt harsher and harsher. Soon the model starts inventing "security vulnerabilities" and "performance issues" in clean functions. Inspect the real model output in Lab 1 below.
+        <button class="predict-verify" type="button" id="verifyCleanCodeBtn">Verify the clean-code case in Lab 1 →</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- LAB 1 -->
+  <section class="lab-wrap" id="lab-1">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div class="lab-eyebrow">Interactive Lab 01 · Real Output Trace &amp; Negative-Case Diagnosis</div>
+        <h3 class="lab-title">Why Did <code>review-v1</code> Fail on Clean Code?</h3>
+        <p class="lab-desc">
+          Inspect the actual run report from <code>examples/core-methods/prompt-regression/run-eval.ts</code> on <code>qwen-plus</code> (<code>temperature: 0</code>), localized into English. Switch prompt versions and test cases to compare outputs and assertion results.
+          <span class="src-tag">Real run data · prompt-regression-report.md</span>
+        </p>
+      </div>
+      <div class="lab-body">
+        <div class="lab-toolbar">
+          <div class="toolbar-group">
+            <span class="toolbar-label">Prompt:</span>
+            <button class="chip-btn active" type="button" data-prompt="v1">review-v1.md (broad instructions)</button>
+            <button class="chip-btn" type="button" data-prompt="v2">review-v2.md (guardrails + restraint)</button>
+          </div>
+          <div class="toolbar-group">
+            <span class="toolbar-label">Test Case:</span>
+            <button class="chip-btn active" type="button" data-case="missing-null-check">1. Null Check</button>
+            <button class="chip-btn" type="button" data-case="sql-injection">2. SQL Injection</button>
+            <button class="chip-btn" type="button" data-case="n-plus-one">3. N+1 Query</button>
+            <button class="chip-btn" type="button" data-case="clean-code">4. Clean Code (Negative)</button>
+          </div>
+        </div>
+
+        <div class="lab1-split">
+          <div class="pane-box">
+            <div class="pane-head">
+              <span id="lab1CaseTitle">Case: missing-null-check</span>
+              <span id="lab1PromptNote">Using review-v1.md</span>
+            </div>
+            <pre class="code-snippet" id="lab1InputCode"></pre>
+            <div class="pane-head" style="margin-bottom:6px;">
+              <span>Expected Assertions (cases.json)</span>
+            </div>
+            <div class="expect-list" id="lab1ExpectedPills"></div>
+            <div class="score-bar-row">
+              <span>Suite Pass Rate: <strong id="lab1SummaryScore">3 / 4 (75%)</strong></span>
+              <span id="lab1CaseBadge" class="badge-pass">PASS</span>
+            </div>
+          </div>
+
+          <div class="pane-box">
+            <div class="pane-head">
+              <span>Assertion Checklist</span>
+              <span id="lab1ScoreReadout">Model Score: 30</span>
+            </div>
+            <ul class="check-list" id="lab1Checks"></ul>
+            <div class="pane-head" style="margin-bottom:6px;">
+              <span>Actual qwen-plus JSON Output</span>
+            </div>
+            <pre class="code-snippet" id="lab1OutputJson" style="max-height:240px; margin-bottom:0;"></pre>
+          </div>
+        </div>
+
+        <div id="lab1OutcomeBox" class="outcome meh" style="margin-top:14px;">
+          <div class="outcome-title" id="lab1OutcomeTitle">Diagnosis</div>
+          <p id="lab1OutcomeText" style="margin:0;"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2>2. Growing Prompt Rules from Failing Cases</h2>
+    <p class="key">
+      The constraints in <code>review-v2.md</code> were not guessed up front—they grew directly out of a failing test case.
+    </p>
+    <p>
+      In Lab 1, <code>review-v1</code> saw a standard <code>Intl.NumberFormat</code> price helper and invented three defects: it labeled an unvalidated <code>currency</code> argument a "security vulnerability (information leak)," complained about missing JSDoc comments, and scored the function 72.
+    </p>
+    <p>
+      Once that over-review failure mode was captured, <code>review-v2.md</code> added three targeted guardrails:
+    </p>
+    <ol>
+      <li>Explicit review priority: runtime bugs &gt; security risks &gt; performance bottlenecks &gt; maintainability.</li>
+      <li>An explicit zero-issue exit: when code has no clear defects, return an empty <code>issues</code> array and a <code>score</code> between 80 and 100.</li>
+      <li>Clear boundaries for security and performance: do not report security vulnerabilities without visible untrusted input, database, file, or network boundaries; do not flag routine object allocation or formatting helpers as performance issues.</li>
+    </ol>
+    <p>
+      Re-running the exact same 4 cases after those edits made <code>clean-code</code> pass (score 95, <code>issues: []</code>) with zero regressions on the first 3 defect cases. That is the core payoff of regression testing: <strong>fix a known failure mode and prove you did not break existing behavior</strong>.
+    </p>
+
+    <h2>3. Wiring Assertions and Release Gates into Your Workflow</h2>
+    <p class="key">
+      Never rely on overall pass rate alone. If a P0 security case flips from pass to fail, the release gate must block the build even if the aggregate pass rate looks acceptable.
+    </p>
+    <p>
+      In production, keyword, type, and score checks are only the starting line. Teams typically add two more safeguards: an <strong>output length cap</strong> (catching sudden verbosity spikes that break UI layouts or inflate token spend) and <strong>repeated runs on critical cases</strong> (even at <code>temperature: 0</code>, backend updates or floating-point non-determinism can introduce occasional variance).
+    </p>
+  </main>
+
+  <!-- LAB 2 -->
+  <section class="lab-wrap" id="lab-2">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div class="lab-eyebrow">Interactive Lab 02 · Assertion Sandbox &amp; Release Gate</div>
+        <h3 class="lab-title">Tune Gate Thresholds and Model Variance to See When Releases Block</h3>
+        <p class="lab-desc">
+          Layer an output character cap and multi-run stability checks onto the real <code>run-eval.ts</code> skeleton. Watch the release gate decision update live alongside the generated TypeScript snippet.
+          <span class="sim-tag">Gate rules &amp; variance are simulated</span>
+        </p>
+      </div>
+      <div class="lab-body">
+        <div class="gate-controls">
+          <div class="control-card">
+            <div class="control-title">
+              <span>Candidate Prompt</span>
+            </div>
+            <div class="toolbar-group">
+              <button class="chip-btn active" type="button" data-gate-prompt="v1">review-v1</button>
+              <button class="chip-btn" type="button" data-gate-prompt="v2">review-v2</button>
+            </div>
+          </div>
+          <div class="control-card">
+            <div class="control-title">
+              <span>JSON Cap (maxChars)</span>
+              <strong id="gateMaxCharsVal">1000 chars</strong>
+            </div>
+            <div class="toolbar-group">
+              <button class="chip-btn" type="button" data-max-chars="500">500 (Strict)</button>
+              <button class="chip-btn active" type="button" data-max-chars="1000">1000 (Default)</button>
+              <button class="chip-btn" type="button" data-max-chars="2000">2000 (Loose)</button>
+            </div>
+          </div>
+          <div class="control-card">
+            <div class="control-title">
+              <span>Stability &amp; P0 Gate</span>
+            </div>
+            <div class="toolbar-group">
+              <button class="chip-btn active" type="button" data-runs="1">Single Run</button>
+              <button class="chip-btn" type="button" data-runs="3">3x Majority</button>
+              <button class="chip-btn" type="button" id="toggleNoiseBtn">Simulate Variance: OFF</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="gate-table-wrap sim-zone" data-sim-label="Simulated gate evaluation">
+          <table class="gate-table">
+            <thead>
+              <tr>
+                <th>Case ID</th>
+                <th>Priority</th>
+                <th>Output Size</th>
+                <th>Semantic Check</th>
+                <th>Length Check</th>
+                <th>Gate Status</th>
+              </tr>
+            </thead>
+            <tbody id="gateTableBody"></tbody>
+          </table>
+        </div>
+
+        <div id="gateBanner" class="gate-banner blocked">
+          <div>
+            <strong id="gateBannerTitle" style="font-size:15px;">Release Gate: BLOCKED</strong>
+            <div id="gateBannerDesc" style="font-size:13px; color:var(--text-secondary); margin-top:2px;"></div>
+          </div>
+          <span id="gatePassRatePill" class="badge-fail">3 / 4 Passed</span>
+        </div>
+
+        <details class="code-fold" style="margin-top:16px;">
+          <summary>View synced TypeScript eval script (<code>run-eval.ts</code> excerpt)</summary>
+          <div class="code-fold-body">
+            <div class="code-card">
+              <div class="code-header">
+                <span>evaluateCase + Length Gate + Multi-Run Stability</span>
+                <button class="copy-btn" type="button">Copy</button>
+              </div>
+              <pre><code class="language-typescript" id="lab2CodeBlock"></code></pre>
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2>4. Don't Overestimate a Minimal Script: 5 Engineering Limits</h2>
+    <p class="key">
+      A few dozen lines of TypeScript assertions solve the first 60% of regressions—they are not a full evaluation platform.
+    </p>
+    <ol>
+      <li><strong>Keyword checks are blunt:</strong> A model can mention "SQL injection" while giving a broken fix, or describe the exact same vulnerability using synonyms and trigger a false failure.</li>
+      <li><strong>Scores are not universal:</strong> What "60/100" means shifts across prompts unless anchored to a concrete rubric.</li>
+      <li><strong>Single runs can flake:</strong> Even with <code>temperature: 0</code>, provider-side model updates and hardware non-determinism create occasional drift; P0 cases need repeated runs.</li>
+      <li><strong>No LLM-as-Judge yet:</strong> Soft qualities like "is this explanation clear?" or "is the suggested patch actionable?" cannot be verified by regex alone and eventually require a rubric-guided judge model.</li>
+      <li><strong>No token cost tracking:</strong> Production eval runners should record <code>response.usage.input_tokens</code> and <code>output_tokens</code> so a 2% quality gain never sneaks in a 2x bill increase.</li>
+    </ol>
+  </main>
+
+  <!-- LAB 3 -->
+  <section class="lab-wrap" id="lab-3">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div class="lab-eyebrow">Interactive Lab 03 · Three-Stage Eval Maturity</div>
+        <h3 class="lab-title">From Minimal Script to Production Evals: What Each Layer Buys and Costs</h3>
+        <p class="lab-desc">
+          Select an evaluation tier to compare regression coverage, runtime cost, and signal quality. The engineering rule stays constant: <strong>lock down deterministic rules first, then add model judges selectively</strong>.
+          <span class="sim-tag">Illustrative coverage &amp; cost comparison</span>
+        </p>
+      </div>
+      <div class="lab-body">
+        <div class="layer-cards">
+          <button class="layer-card active" type="button" data-eval-tier="tier1">
+            <div class="layer-card-kicker">Stage 1 · MVP</div>
+            <div class="layer-card-title">Schema + Code Assertions</div>
+            <p class="layer-card-desc">Lock structure with <code>zodOutputFormat</code> and guard regressions with keywords, types, and negative cases.</p>
+          </button>
+          <button class="layer-card" type="button" data-eval-tier="tier2">
+            <div class="layer-card-kicker">Stage 2 · Cost &amp; Stability</div>
+            <div class="layer-card-title">+ Length Gate &amp; Usage Tracking</div>
+            <p class="layer-card-desc">Log input/output tokens and latency, and run critical cases 3x to filter out variance.</p>
+          </button>
+          <button class="layer-card" type="button" data-eval-tier="tier3">
+            <div class="layer-card-kicker">Stage 3 · Soft Quality</div>
+            <div class="layer-card-title">+ LLM-as-Judge Rubric</div>
+            <p class="layer-card-desc">Score hard-rule passers with a stronger model on actionability, tone, and reasoning depth.</p>
+          </button>
+        </div>
+
+        <div class="pane-box sim-zone" data-sim-label="Illustrative comparison">
+          <div class="pane-head">
+            <span id="tierDetailTitle">Stage 1: Schema + Code Assertions</span>
+            <span id="tierCostTag">Extra judge calls: 0 / case</span>
+          </div>
+          <p id="tierDetailDesc" style="font-size:13.5px; color:var(--text-secondary); margin:0 0 12px;"></p>
+          <div class="metric-bars">
+            <div class="metric-row">
+              <span>Hard Regressions</span>
+              <div class="metric-track"><div class="metric-fill bar-sim" id="barHard" style="width:75%; background:var(--teal);"></div></div>
+              <strong id="valHard">75%</strong>
+            </div>
+            <div class="metric-row">
+              <span>Soft Quality</span>
+              <div class="metric-track"><div class="metric-fill bar-sim" id="barSoft" style="width:25%; background:var(--blue);"></div></div>
+              <strong id="valSoft">25%</strong>
+            </div>
+            <div class="metric-row">
+              <span>Time / Cost</span>
+              <div class="metric-track"><div class="metric-fill bar-sim" id="barCost" style="width:20%; background:var(--accent);"></div></div>
+              <strong id="valCost">Low (1x)</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2 id="tools">5. Choosing Off-the-Shelf Eval Tools &amp; Daily Workflow</h2>
+    <p class="key">
+      Write your own script first to internalize how an eval harness works. Once your suite grows past a few dozen cases—or needs CI integration and team dashboards—adopt a dedicated tool.
+    </p>
+
+    <div class="filter-bar" id="decisionFilters">
+      <button class="chip-btn active" type="button" data-filter="all">All Tools</button>
+      <button class="chip-btn" type="button" data-filter="ts">TypeScript / CI</button>
+      <button class="chip-btn" type="button" data-filter="python">Python / RAG</button>
+      <button class="chip-btn" type="button" data-filter="platform">Team Observability</button>
+      <button class="chip-btn" type="button" data-filter="opt">Auto-Optimization</button>
+    </div>
+
+    <div class="decision-grid" id="decisionGrid">
+      <div class="decision-card" data-tags="ts">
+        <div class="decision-head">
+          <span class="decision-name">Promptfoo</span>
+          <span class="decision-fit">Prompt Diff &amp; CI</span>
+        </div>
+        <p class="decision-body">Closest match to this chapter's workflow. Declarative YAML organizes prompts, providers, and assertions with a built-in side-by-side web viewer for CI regression runs.</p>
+        <a class="decision-link" href="https://www.promptfoo.dev/docs/getting-started/" target="_blank" rel="noopener">Docs: promptfoo.dev →</a>
+      </div>
+      <div class="decision-card" data-tags="python">
+        <div class="decision-head">
+          <span class="decision-name">DeepEval</span>
+          <span class="decision-fit">Python / RAG / Agent</span>
+        </div>
+        <p class="decision-body">Pytest-style LLM testing framework with built-in metrics like Faithfulness and Answer Relevancy—ideal once you move into RAG retrieval and agent evals.</p>
+        <a class="decision-link" href="https://deepeval.com/docs/introduction" target="_blank" rel="noopener">Docs: deepeval.com →</a>
+      </div>
+      <div class="decision-card" data-tags="platform">
+        <div class="decision-head">
+          <span class="decision-name">LangSmith</span>
+          <span class="decision-fit">Team Traces &amp; Datasets</span>
+        </div>
+        <p class="decision-body">Hosted platform for turning failing production traces into regression dataset items with one click, connecting live observability with offline version comparisons.</p>
+        <a class="decision-link" href="https://docs.langchain.com/langsmith/evaluation" target="_blank" rel="noopener">Docs: LangSmith Evaluation →</a>
+      </div>
+      <div class="decision-card" data-tags="opt python">
+        <div class="decision-head">
+          <span class="decision-name">DSPy</span>
+          <span class="decision-fit">Programmatic Optimization</span>
+        </div>
+        <p class="decision-body">Built around "programming, not prompting": automatically optimizes instructions and few-shot examples against your metric—once you already have a reliable dataset.</p>
+        <a class="decision-link" href="https://dspy.ai/" target="_blank" rel="noopener">Docs: dspy.ai →</a>
+      </div>
+    </div>
+
+    <h3>Embedding Regression Evals into Your Daily Loop</h3>
+    <p>
+      A runnable script is only the starting point. The real leverage comes from making four habits automatic: run and save a baseline report before editing any prompt; re-run the exact same cases afterward to diff results; whenever production or manual testing turns up a bad output, add that input to <code>cases.json</code> before touching the prompt; and before shipping, check P0 regressions—not just the headline pass rate.
+    </p>
+
+    <div class="workflow-table-wrap">
+      <table class="workflow-table">
+        <thead>
+          <tr>
+            <th>Task Type</th>
+            <th>Do First</th>
+            <th>Best Delegated to AI</th>
+            <th>Engineer Must Verify</th>
+            <th>Acceptance Gate</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>AI Feature Iteration</strong></td>
+            <td>Prepare positive &amp; negative cases</td>
+            <td>Draft prompts, parsers, and retry logic</td>
+            <td>Output quality, token cost, fallback paths</td>
+            <td>Version diff on a fixed case suite</td>
+          </tr>
+          <tr>
+            <td><strong>Bug Fix</strong></td>
+            <td>Reproduce the bad output</td>
+            <td>Read logs, spot conflicting rules</td>
+            <td>Root cause validity and collateral regressions</td>
+            <td>Add regression case first, then verify fix</td>
+          </tr>
+          <tr>
+            <td><strong>Agent Capability</strong></td>
+            <td>Define tools &amp; permission boundaries</td>
+            <td>Scaffold execution loop and tool wrappers</td>
+            <td>Privilege escalation, infinite loops, unrecoverable states</td>
+            <td>Inspect tool call trace and final state</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout note">
+      <div class="callout-title">Full Runnable Source Code</div>
+      The complete example lives in <code>examples/core-methods/prompt-regression/</code> (including <code>cases.json</code>, <code>prompts/review-v1.md</code>, <code>prompts/review-v2.md</code>, and <code>run-eval.ts</code>). With an Anthropic-compatible endpoint that supports <code>output_config.format</code> (such as Alibaba Cloud Bailian Qwen), run <code>npx tsx --env-file=.env examples/core-methods/prompt-regression/run-eval.ts</code>.
+    </div>
+
+    <p>
+      Prompt regression evaluation is ultimately an engineering habit, not a stack of frameworks. A handful of real, representative test cases—especially negative cases—is worth far more than any eval dashboard. As you move into RAG knowledge bases and autonomous agents, the exact same loop scales up: the assertions simply expand from a single JSON payload to retrieval recall, citation faithfulness, and multi-step tool trajectories.
+    </p>
+  </main>
+
+  <footer></footer>
+
+  <script>
+    // Real outputs captured from examples/core-methods/prompt-regression/reports/prompt-regression-report.md (qwen-plus), localized into English
+    const EVAL_CASES = {
+      "missing-null-check": {
+        title: "missing-null-check: Missing Null Guard",
+        priority: "P1 · Runtime",
+        input: "function getUserName(user?: { name?: string }) {\n  return user.name.toUpperCase();\n}",
+        expected: ["Keywords: null, undefined", "Type: bug", "Score: 0-80"],
+        v1: {
+          passed: true,
+          score: 30,
+          checks: [
+            { pass: true, text: "output_config.format output matches ReviewResult schema" },
+            { pass: true, text: "Matched keywords: null, undefined" },
+            { pass: true, text: "Expected issue type present: bug" },
+            { pass: true, text: "Score 30 is within expected range: 0-80" }
+          ],
+          output: {
+            summary: "Runtime crash risk: missing null/undefined checks before property access.",
+            issues: [{
+              type: "bug",
+              message: "Calling toUpperCase() throws a TypeError when user or user.name is null/undefined.",
+              suggestion: "Add optional chaining: return user?.name?.toUpperCase() ?? '';"
+            }],
+            score: 30
+          },
+          outcomeType: "good",
+          outcomeTitle: "v1 Passed: Obvious runtime null bugs are easy to catch",
+          outcomeText: "For a clear TypeError risk, even a broad prompt like review-v1 catches the bug and returns valid JSON."
+        },
+        v2: {
+          passed: true,
+          score: 40,
+          checks: [
+            { pass: true, text: "output_config.format output matches ReviewResult schema" },
+            { pass: true, text: "Matched keywords: null, undefined" },
+            { pass: true, text: "Expected issue type present: bug" },
+            { pass: true, text: "Score 40 is within expected range: 0-80" }
+          ],
+          output: {
+            summary: "Runtime null dereference risk when user or user.name is undefined.",
+            issues: [{
+              type: "bug",
+              message: "Calling toUpperCase() throws TypeError if user or user.name is undefined or null.",
+              suggestion: "Guard with optional chaining and a fallback: return user?.name?.toUpperCase() ?? '';"
+            }],
+            score: 40
+          },
+          outcomeType: "good",
+          outcomeTitle: "v2 Still Passes: Restraint rules did not cause a false negative",
+          outcomeText: "After adding anti-fabrication guardrails, the real runtime defect is still caught reliably with zero regression."
+        }
+      },
+      "sql-injection": {
+        title: "sql-injection: SQL Injection Vulnerability",
+        priority: "P0 · Security",
+        input: "async function findUser(name: string) {\n  return db.query(`select * from users where name = '${name}'`);\n}",
+        expected: ["Keywords: SQL, injection", "Type: security", "Score: 0-70"],
+        v1: {
+          passed: true,
+          score: 20,
+          checks: [
+            { pass: true, text: "output_config.format output matches ReviewResult schema" },
+            { pass: true, text: "Matched keywords: SQL, injection" },
+            { pass: true, text: "Expected issue type present: security" },
+            { pass: true, text: "Score 20 is within expected range: 0-70" }
+          ],
+          output: {
+            summary: "Critical SQL injection vulnerability from raw string interpolation.",
+            issues: [
+              {
+                type: "security",
+                message: "Interpolating user-supplied name directly into the SQL string creates a SQL injection vulnerability.",
+                suggestion: "Use parameterized queries: db.query('select * from users where name = ?', [name])."
+              },
+              {
+                type: "bug",
+                message: "Missing error handling and explicit return type annotation.",
+                suggestion: "Wrap db.query in try/catch and declare a return type."
+              }
+            ],
+            score: 20
+          },
+          outcomeType: "good",
+          outcomeTitle: "v1 Passed: High-severity SQL injection caught",
+          outcomeText: "The core security defect passed assertions, though v1 also tacked on a lower-priority complaint about missing return types."
+        },
+        v2: {
+          passed: true,
+          score: 30,
+          checks: [
+            { pass: true, text: "output_config.format output matches ReviewResult schema" },
+            { pass: true, text: "Matched keywords: SQL, injection" },
+            { pass: true, text: "Expected issue type present: security" },
+            { pass: true, text: "Score 30 is within expected range: 0-70" }
+          ],
+          output: {
+            summary: "Critical SQL injection risk and unhandled database query rejection.",
+            issues: [
+              {
+                type: "security",
+                message: "Directly concatenating name into the SQL statement exposes the query to SQL injection.",
+                suggestion: "Switch to a parameterized query: db.query('select * from users where name = ?', [name])."
+              },
+              {
+                type: "bug",
+                message: "Unhandled promise rejection if db.query fails.",
+                suggestion: "Wrap db.query in try/catch."
+              }
+            ],
+            score: 30
+          },
+          outcomeType: "good",
+          outcomeTitle: "v2 Passed: Both SQL injection and async error risk caught cleanly",
+          outcomeText: "Because db.query and external input interpolation are explicitly visible, v2's security boundary rules trigger as intended."
+        }
+      },
+      "n-plus-one": {
+        title: "n-plus-one: Query Inside a Loop",
+        priority: "P1 · Performance",
+        input: "async function listOrders(users: User[]) {\n  const result = [];\n  for (const user of users) {\n    const orders = await db.orders.findMany({ where: { userId: user.id } });\n    result.push({ user, orders });\n  }\n  return result;\n}",
+        expected: ["Keywords: loop, query", "Type: performance", "Score: 0-80"],
+        v1: {
+          passed: true,
+          score: 45,
+          checks: [
+            { pass: true, text: "output_config.format output matches ReviewResult schema" },
+            { pass: true, text: "Matched keywords: loop, query" },
+            { pass: true, text: "Expected issue type present: performance" },
+            { pass: true, text: "Score 45 is within expected range: 0-80" }
+          ],
+          output: {
+            summary: "Severe N+1 query performance bottleneck inside loop, plus missing types and weak naming.",
+            issues: [
+              { type: "performance", message: "Awaiting a database query inside a loop causes an N+1 query pattern.", suggestion: "Batch-fetch all orders in one query using an IN clause." },
+              { type: "bug", message: "Missing explicit return type annotation and undeclared db/User symbols.", suggestion: "Add explicit return type and import definitions." },
+              { type: "style", message: "Variable name result is too generic for maintainability.", suggestion: "Rename result to userOrders." }
+            ],
+            score: 45
+          },
+          outcomeType: "meh",
+          outcomeTitle: "v1 Passed but Noisy: Mixed in irrelevant style nitpicks",
+          outcomeText: "Assertions passed, yet v1 padded the review with complaints about omitted snippet imports and the variable name result."
+        },
+        v2: {
+          passed: true,
+          score: 45,
+          checks: [
+            { pass: true, text: "output_config.format output matches ReviewResult schema" },
+            { pass: true, text: "Matched keywords: loop, query" },
+            { pass: true, text: "Expected issue type present: performance" },
+            { pass: true, text: "Score 45 is within expected range: 0-80" }
+          ],
+          output: {
+            summary: "Severe N+1 query bottleneck: executes one database query per user inside the loop.",
+            issues: [
+              {
+                type: "performance",
+                message: "Running db.orders.findMany inside the loop triggers an N+1 query problem.",
+                suggestion: "Fetch orders in a single batch query (where: { userId: { in: userIds } }) and group in memory."
+              }
+            ],
+            score: 45
+          },
+          outcomeType: "good",
+          outcomeTitle: "v2 Passed with Much Higher Signal-to-Noise",
+          outcomeText: "v2 isolates the production-impacting N+1 query and drops the distracting naming and import nitpicks."
+        }
+      },
+      "clean-code": {
+        title: "clean-code: Healthy Utility Function (Negative Case)",
+        priority: "P1 · Negative",
+        input: "function formatPrice(value: number, currency = 'USD') {\n  return new Intl.NumberFormat('en-US', {\n    style: 'currency',\n    currency,\n  }).format(value);\n}",
+        expected: ["Keywords: none", "Issues: empty []", "Score: 80-100"],
+        v1: {
+          passed: false,
+          score: 72,
+          checks: [
+            { pass: true, text: "output_config.format output matches ReviewResult schema" },
+            { pass: true, text: "Matched keywords: none required" },
+            { pass: false, text: "Clean code should report 0 issues, but got: bug, security, style" },
+            { pass: false, text: "Score 72 is outside expected range: 80-100" }
+          ],
+          output: {
+            summary: "Concise helper, but has potential runtime bug, security exposure, and missing docs.",
+            issues: [
+              { type: "bug", message: "Intl.NumberFormat throws RangeError if an invalid currency code is passed.", suggestion: "Validate against ISO 4217 currency codes before formatting." },
+              { type: "security", message: "Passing an unvalidated user-controlled currency string may cause unexpected behavior or info leaks.", suggestion: "Allowlist permitted currency codes." },
+              { type: "style", message: "Missing JSDoc documentation for parameters and return value.", suggestion: "Add full JSDoc comments." }
+            ],
+            score: 72
+          },
+          outcomeType: "bad",
+          outcomeTitle: "v1 Failed (Over-Reviewing): Flagged a clean formatter as a security flaw",
+          outcomeText: "This is the classic symptom of omitting negative cases: trying to look thorough, the model imagined untrusted input, fabricated 3 defects, and tanked the score."
+        },
+        v2: {
+          passed: true,
+          score: 95,
+          checks: [
+            { pass: true, text: "output_config.format output matches ReviewResult schema" },
+            { pass: true, text: "Matched keywords: none required" },
+            { pass: true, text: "Issue list matches expectation: empty []" },
+            { pass: true, text: "Score 95 is within expected range: 80-100" }
+          ],
+          output: {
+            summary: "Clean, type-safe utility with no obvious runtime, security, or performance issues.",
+            issues: [],
+            score: 95
+          },
+          outcomeType: "good",
+          outcomeTitle: "v2 Fixed: Learned to stay quiet when code is clean",
+          outcomeText: "With anti-fabrication guardrails in place, v2 returns issues: [] with a 95 score while keeping all 3 defect cases green."
+        }
+      }
+    };
+
+    // Lab 1 State
+    let curPrompt = "v1";
+    let curCase = "missing-null-check";
+
+    function renderLab1() {
+      const c = EVAL_CASES[curCase];
+      const r = c[curPrompt];
+      document.getElementById("lab1CaseTitle").textContent = "Case: " + c.title;
+      document.getElementById("lab1PromptNote").textContent = "Using review-" + curPrompt + ".md";
+      document.getElementById("lab1InputCode").textContent = c.input;
+      document.getElementById("lab1ExpectedPills").innerHTML = c.expected
+        .map((t) => `<span class="expect-pill">${t}</span>`)
+        .join("");
+
+      document.getElementById("lab1SummaryScore").textContent = curPrompt === "v1" ? "3 / 4 (75%)" : "4 / 4 (100%)";
+      const badge = document.getElementById("lab1CaseBadge");
+      badge.textContent = r.passed ? "PASS" : "FAIL";
+      badge.className = r.passed ? "badge-pass" : "badge-fail";
+
+      document.getElementById("lab1ScoreReadout").textContent = "Model Score: " + r.score;
+      document.getElementById("lab1Checks").innerHTML = r.checks
+        .map((chk) => `<li class="check-item ${chk.pass ? "pass" : "fail"}"><span class="check-icon">${chk.pass ? "✓" : "✕"}</span><span>${chk.text}</span></li>`)
+        .join("");
+      document.getElementById("lab1OutputJson").textContent = JSON.stringify(r.output, null, 2);
+
+      const box = document.getElementById("lab1OutcomeBox");
+      box.className = "outcome " + r.outcomeType;
+      document.getElementById("lab1OutcomeTitle").textContent = r.outcomeTitle;
+      document.getElementById("lab1OutcomeText").textContent = r.outcomeText;
+    }
+
+    document.querySelectorAll("#lab-1 [data-prompt]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        curPrompt = btn.dataset.prompt;
+        document.querySelectorAll("#lab-1 [data-prompt]").forEach((b) => b.classList.toggle("active", b === btn));
+        renderLab1();
+      });
+    });
+    document.querySelectorAll("#lab-1 [data-case]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        curCase = btn.dataset.case;
+        document.querySelectorAll("#lab-1 [data-case]").forEach((b) => b.classList.toggle("active", b === btn));
+        renderLab1();
+      });
+    });
+    renderLab1();
+
+    // Predict hook
+    document.querySelectorAll(".predict-hook").forEach((hook) => {
+      const answer = hook.dataset.answer;
+      const fb = hook.querySelector(".predict-feedback");
+      hook.querySelectorAll(".predict-opt").forEach((opt) => {
+        opt.addEventListener("click", () => {
+          hook.querySelectorAll(".predict-opt").forEach((o) => o.classList.remove("is-right", "is-wrong"));
+          opt.classList.add(opt.dataset.opt === answer ? "is-right" : "is-wrong");
+          fb.classList.add("show");
+        });
+      });
+    });
+    document.getElementById("verifyCleanCodeBtn")?.addEventListener("click", () => {
+      curPrompt = "v1";
+      curCase = "clean-code";
+      document.querySelectorAll("#lab-1 [data-prompt]").forEach((b) => b.classList.toggle("active", b.dataset.prompt === "v1"));
+      document.querySelectorAll("#lab-1 [data-case]").forEach((b) => b.classList.toggle("active", b.dataset.case === "clean-code"));
+      renderLab1();
+      if (window.bookJumpToLab) window.bookJumpToLab("lab-1");
+    });
+
+    // Lab 2 Gate Sandbox
+    let gatePrompt = "v1";
+    let gateMaxChars = 1000;
+    let gateRuns = 1;
+    let gateNoise = false;
+
+    const CASE_ORDER = ["missing-null-check", "sql-injection", "n-plus-one", "clean-code"];
+
+    function renderLab2() {
+      const tbody = document.getElementById("gateTableBody");
+      let passedCount = 0;
+      let p0Failed = false;
+
+      const rows = CASE_ORDER.map((id) => {
+        const c = EVAL_CASES[id];
+        const r = c[gatePrompt];
+        const jsonLen = JSON.stringify(r.output).length;
+        const lenOk = jsonLen <= gateMaxChars;
+
+        // Simulated fluctuation when noise is ON and runs === 1 on sql-injection or n-plus-one
+        let semanticOk = r.passed;
+        let runNote = gateRuns === 3 ? "3/3 stable" : "1/1";
+        if (gateNoise) {
+          if (id === "sql-injection" && gatePrompt === "v1") {
+            if (gateRuns === 1) {
+              semanticOk = false;
+              runNote = "1x miss (variance)";
+            } else {
+              runNote = "2/3 pass (majority)";
+            }
+          } else if (id === "n-plus-one" && gateRuns === 3) {
+            runNote = "3/3 pass";
+          }
+        }
+
+        const finalOk = semanticOk && lenOk;
+        if (finalOk) passedCount += 1;
+        if (!finalOk && c.priority.startsWith("P0")) p0Failed = true;
+
+        return `<tr>
+          <td><code>${id}</code></td>
+          <td>${c.priority}</td>
+          <td>${jsonLen} chars</td>
+          <td>${semanticOk ? `<span class="badge-pass">Pass (${runNote})</span>` : `<span class="badge-fail">Fail (${runNote})</span>`}</td>
+          <td>${lenOk ? `<span class="badge-pass">≤ ${gateMaxChars}</span>` : `<span class="badge-fail">Over (&gt; ${gateMaxChars})</span>`}</td>
+          <td>${finalOk ? `<span class="badge-pass">PASS</span>` : `<span class="badge-fail">FAIL</span>`}</td>
+        </tr>`;
+      });
+
+      tbody.innerHTML = rows.join("");
+
+      const allPassed = passedCount === CASE_ORDER.length && !p0Failed;
+      const banner = document.getElementById("gateBanner");
+      const title = document.getElementById("gateBannerTitle");
+      const desc = document.getElementById("gateBannerDesc");
+      const pill = document.getElementById("gatePassRatePill");
+
+      banner.className = "gate-banner " + (allPassed ? "passed" : "blocked");
+      pill.className = allPassed ? "badge-pass" : "badge-fail";
+      pill.textContent = `${passedCount} / ${CASE_ORDER.length} Passed`;
+
+      if (allPassed) {
+        title.textContent = "Release Gate: PASSED (Ready to Merge)";
+        desc.textContent = `review-${gatePrompt}.md passed all semantic assertions, length caps (≤ ${gateMaxChars} chars), and P0 checks.`;
+      } else if (p0Failed) {
+        title.textContent = "Release Gate: BLOCKED (P0 Security Regression)";
+        desc.textContent = "A P0 security case failed. Even with a high aggregate pass rate, any P0 regression must block deployment.";
+      } else {
+        title.textContent = "Release Gate: BLOCKED (Assertion or Length Failure)";
+        desc.textContent = `${CASE_ORDER.length - passedCount} case(s) failed checks. Fix the prompt or adjust thresholds before shipping.`;
+      }
+
+      const codeEl = document.getElementById("lab2CodeBlock");
+      codeEl.textContent = `const MAX_OUTPUT_CHARS = ${gateMaxChars};
+const REPEAT_RUNS = ${gateRuns};
+
+function evaluateCase(testCase: EvalCase, parsed: ReviewResult): CaseReport {
+  const failures: string[] = [];
+  const rawJson = JSON.stringify(parsed);
+
+  // 1. Output length gate (prevent verbosity spikes from inflating cost or breaking UI)
+  if (rawJson.length > MAX_OUTPUT_CHARS) {
+    failures.push(\`Output length \${rawJson.length} exceeds limit \${MAX_OUTPUT_CHARS}\`);
+  }
+
+  // 2. Keyword, issueType, and scoreRange assertions
+  if (!includesAll(rawJson, testCase.expected.mustMention)) {
+    failures.push("Missing one or more required keywords");
+  }
+  // ... issueTypes & scoreRange checks
+  return { caseId: testCase.id, title: testCase.title, passed: failures.length === 0, checks: [], failures, output: parsed };
+}
+
+// Repeat ${gateRuns}x to smooth out single-run sampling variance
+async function runWithStability(prompt: string, testCase: EvalCase) {
+  let passCount = 0;
+  for (let i = 0; i < REPEAT_RUNS; i++) {
+    const report = await runSingleCase(prompt, testCase);
+    if (report.passed) passCount++;
+  }
+  return passCount >= Math.ceil(REPEAT_RUNS / 2);
+}`;
+      if (window.bookHighlightCode) window.bookHighlightCode(document.getElementById("lab-2"));
+    }
+
+    document.querySelectorAll("#lab-2 [data-gate-prompt]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        gatePrompt = btn.dataset.gatePrompt;
+        document.querySelectorAll("#lab-2 [data-gate-prompt]").forEach((b) => b.classList.toggle("active", b === btn));
+        renderLab2();
+      });
+    });
+    document.querySelectorAll("#lab-2 [data-max-chars]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        gateMaxChars = Number(btn.dataset.maxChars);
+        document.getElementById("gateMaxCharsVal").textContent = gateMaxChars + " chars";
+        document.querySelectorAll("#lab-2 [data-max-chars]").forEach((b) => b.classList.toggle("active", b === btn));
+        renderLab2();
+      });
+    });
+    document.querySelectorAll("#lab-2 [data-runs]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        gateRuns = Number(btn.dataset.runs);
+        document.querySelectorAll("#lab-2 [data-runs]").forEach((b) => b.classList.toggle("active", b === btn));
+        renderLab2();
+      });
+    });
+    document.getElementById("toggleNoiseBtn")?.addEventListener("click", (e) => {
+      gateNoise = !gateNoise;
+      e.target.classList.toggle("danger-active", gateNoise);
+      e.target.textContent = "Simulate Variance: " + (gateNoise ? "ON" : "OFF");
+      renderLab2();
+    });
+    renderLab2();
+
+    // Lab 3 Tier Explorer
+    const EVAL_TIERS = {
+      tier1: {
+        title: "Stage 1: Schema + Code Assertions",
+        cost: "Extra judge calls: 0 / case",
+        desc: "Best for solo projects and early iteration. Fast deterministic rules catch the first 60% of regressions—broken JSON, missed keywords, and noisy false positives—in seconds.",
+        hard: 75, soft: 25, costPct: 20, costLabel: "Low (1x)"
+      },
+      tier2: {
+        title: "Stage 2: + Length Gate & Usage Tracking",
+        cost: "Extra judge calls: 0 (sampling only)",
+        desc: "Essential before production launch. Log response.usage.input_tokens / output_tokens and latency to stop cost creep, and run P0 cases 3x to filter out variance.",
+        hard: 90, soft: 40, costPct: 45, costLabel: "Med (1-3x)"
+      },
+      tier3: {
+        title: "Stage 3: + LLM-as-Judge Rubric",
+        cost: "Extra judge calls: +1 / case",
+        desc: "Only after hard rules pass, add a stronger model scored against an explicit rubric to evaluate soft qualities like fix actionability and tone.",
+        hard: 92, soft: 85, costPct: 80, costLabel: "High (4x+)"
+      }
+    };
+
+    document.querySelectorAll("#lab-3 [data-eval-tier]").forEach((card) => {
+      card.addEventListener("click", () => {
+        document.querySelectorAll("#lab-3 [data-eval-tier]").forEach((c) => c.classList.remove("active"));
+        card.classList.add("active");
+        const t = EVAL_TIERS[card.dataset.evalTier];
+        document.getElementById("tierDetailTitle").textContent = t.title;
+        document.getElementById("tierCostTag").textContent = t.cost;
+        document.getElementById("tierDetailDesc").textContent = t.desc;
+        document.getElementById("barHard").style.width = t.hard + "%";
+        document.getElementById("valHard").textContent = t.hard + "%";
+        document.getElementById("barSoft").style.width = t.soft + "%";
+        document.getElementById("valSoft").textContent = t.soft + "%";
+        document.getElementById("barCost").style.width = t.costPct + "%";
+        document.getElementById("valCost").textContent = t.costLabel;
+      });
+    });
+  </script>
+  <script src="../shared/site.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-json.min.js"></script>
+</body>
+</html>

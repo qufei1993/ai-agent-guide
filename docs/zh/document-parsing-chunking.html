@@ -1,0 +1,1699 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>文档解析与分块策略：RAG 检索不准，问题可能出在向量化之前 · AI Agent Guide</title>
+  <!-- SEO:START (auto-synced by scripts/generate-seo.mjs) -->
+  <meta name="description" content="将原始文档转为保留结构和来源的检索单元，对比不同分块方式对证据完整性的影响" />
+  <link rel="canonical" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/document-parsing-chunking.html" />
+  <link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/document-parsing-chunking.html" />
+  <link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/document-parsing-chunking.html" />
+  <link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/document-parsing-chunking.html" />
+  <meta property="og:type" content="article" />
+  <meta property="og:locale" content="zh_CN" />
+  <meta property="og:locale:alternate" content="en_US" />
+  <meta property="og:title" content="文档解析与分块策略" />
+  <meta property="og:description" content="将原始文档转为保留结构和来源的检索单元，对比不同分块方式对证据完整性的影响" />
+  <meta property="og:url" content="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/document-parsing-chunking.html" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "文档解析与分块策略",
+    "description": "将原始文档转为保留结构和来源的检索单元，对比不同分块方式对证据完整性的影响",
+    "inLanguage": "zh-CN",
+    "url": "https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/document-parsing-chunking.html",
+    "isPartOf": {
+      "@type": "Book",
+      "name": "AI Agent Guide"
+    }
+  }
+  </script>
+  <!-- SEO:END -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css" />
+  <link rel="stylesheet" href="../shared/tokens.css" />
+  <style>
+    /* Chapter-specific components */
+    .lab-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 18px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .toolbar-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+    .toolbar-label {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-right: 2px;
+    }
+
+    .split-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      align-items: stretch;
+    }
+    @media (max-width: 820px) { .split-2 { grid-template-columns: 1fr; } }
+
+    .pane-box {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+    }
+    .pane-box > #lab1SourceVisual {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .pane-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      flex-wrap: wrap;
+    }
+
+    /* Lab 1: PDF pitfalls & Cleaner */
+    .pdf-page-mock {
+      flex: 1;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--text);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .pdf-two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .pdf-col {
+      border-left: 2px solid var(--border);
+      padding-left: 10px;
+    }
+    .pdf-col-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
+    .pdf-table-mock {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+      margin: 0;
+    }
+    .pdf-table-mock th, .pdf-table-mock td {
+      border: 1px solid var(--border-strong);
+      padding: 6px 10px;
+      text-align: left;
+    }
+    .pdf-table-mock th {
+      background: var(--bg-muted);
+      font-weight: 700;
+    }
+    .raw-stream {
+      flex: 1;
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      line-height: 1.7;
+      background: var(--bg-code);
+      color: #e6edf3;
+      padding: 14px 16px;
+      border-radius: var(--radius-sm);
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin: 0;
+    }
+    .hl-bad {
+      background: rgba(244, 63, 94, 0.24);
+      color: #fecdd3;
+      border-bottom: 1.5px solid #fb7185;
+      border-radius: 3px;
+      padding: 1px 4px;
+    }
+    .hl-good {
+      background: rgba(16, 185, 129, 0.2);
+      color: #a7f3d0;
+      border-bottom: 1.5px solid #34d399;
+      border-radius: 3px;
+      padding: 1px 4px;
+    }
+    .hl-warn {
+      background: rgba(245, 158, 11, 0.24);
+      color: #fde68a;
+      border-bottom: 1.5px solid #fbbf24;
+      border-radius: 3px;
+      padding: 1px 4px;
+    }
+
+    .rule-toggles {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .rule-check {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 11px;
+      border-radius: 999px;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-elevated);
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.15s;
+    }
+    .rule-check input { accent-color: var(--teal); cursor: pointer; }
+    .rule-check.is-on {
+      border-color: var(--teal);
+      background: var(--teal-soft);
+      color: var(--text);
+    }
+
+    /* Lab 2: Chunking Sandbox */
+    .slider-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    @media (max-width: 720px) { .slider-grid { grid-template-columns: 1fr; } }
+
+    .slider-card {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 11px 14px;
+    }
+    .slider-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .slider-val {
+      font-family: var(--font-mono);
+      color: var(--teal);
+      font-size: 13px;
+    }
+    .slider-card input[type="range"] {
+      width: 100%;
+      accent-color: var(--teal);
+      cursor: pointer;
+    }
+
+    .chunk-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .stat-pill {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 6px 12px;
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .stat-pill strong {
+      font-family: var(--font-mono);
+      color: var(--text);
+      font-size: 13.5px;
+    }
+    .stat-pill.is-bad {
+      border-color: var(--rose);
+      background: var(--rose-soft);
+      color: var(--rose);
+    }
+    .stat-pill.is-bad strong { color: var(--rose); }
+
+    .chunk-list {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    @media (max-width: 760px) { .chunk-list { grid-template-columns: 1fr; } }
+
+    .chunk-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: border-color 0.15s;
+    }
+    .chunk-card.is-overflow { border-color: var(--rose); }
+    .chunk-card.is-broken { border-color: var(--accent); }
+    .chunk-card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12px;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+    }
+    .chunk-badges {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+    .c-badge {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 1px 7px;
+      border-radius: 999px;
+    }
+    .c-badge.bad { background: var(--rose-soft); color: var(--rose); }
+    .c-badge.warn { background: var(--accent-soft); color: var(--accent); }
+    .c-badge.ok { background: var(--green-soft); color: var(--green); }
+
+    .chunk-text {
+      font-size: 13px;
+      line-height: 1.65;
+      color: var(--text);
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+    .overlap-mark {
+      background: var(--accent-soft);
+      border-bottom: 2px solid var(--accent);
+      border-radius: 2px;
+      padding: 1px 0;
+    }
+    .len-bar {
+      height: 5px;
+      border-radius: 999px;
+      background: var(--bg-muted);
+      overflow: hidden;
+    }
+    .len-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: var(--teal);
+      transition: width 0.2s;
+    }
+    .len-bar-fill.over { background: var(--rose); }
+
+    /* Lab 2 Inline Cut-Line Document Canvas (Heterogeneous Stage) */
+    .cut-canvas {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow-sm);
+    }
+    .cut-canvas-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px dashed var(--border);
+      font-size: 12.5px;
+      color: var(--text-secondary);
+    }
+    .cut-legend {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-size: 12px;
+      align-items: center;
+    }
+    .legend-dot {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .legend-swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+      display: inline-block;
+    }
+    .cut-doc-body {
+      font-size: 14px;
+      line-height: 2.05;
+      color: var(--text);
+      word-break: break-word;
+    }
+    .cut-seg {
+      padding: 2px 3px;
+      border-radius: 4px;
+      transition: opacity 0.15s;
+    }
+    .cut-seg.c0 { background: var(--teal-soft); }
+    .cut-seg.c1 { background: var(--blue-soft); }
+    .cut-seg.c2 { background: var(--purple-soft); }
+    .cut-seg.c3 { background: var(--green-soft); }
+    .cut-knife {
+      display: inline-flex;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 1px 6px;
+      margin: 0 3px;
+      border-radius: 999px;
+      vertical-align: middle;
+      user-select: none;
+    }
+    .cut-knife.clean {
+      background: var(--teal);
+      color: #fff;
+    }
+    [data-theme="dark"] .cut-knife.clean {
+      color: #0b1215;
+    }
+    .cut-knife.broken {
+      background: var(--rose);
+      color: #fff;
+    }
+    [data-theme="dark"] .cut-knife.broken {
+      color: #16090c;
+    }
+    .view-tabs {
+      display: inline-flex;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    /* Lab 3: Metadata X-Ray */
+    .rank-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .rank-row {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+    .rank-row.hit { border-left: 3px solid var(--green); }
+    .rank-row.miss { border-left: 3px solid var(--rose); }
+    .rank-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .rank-score {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 18px 0 12px;
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./index.html">
+        <span>AI Agent Guide</span>
+        <span class="brand-badge">Interactive</span>
+      </a>
+      <nav class="topbar-nav">
+        <a href="#pdf-pitfalls">PDF 解析陷阱</a>
+        <a href="#lab-cleaning">实验 01：解析与清洗</a>
+        <a href="#lab-chunking">实验 02：切片沙盒</a>
+        <a href="#lab-metadata">实验 03：元数据双路径</a>
+        <a href="#decision">工程选型清单</a>
+      </nav>
+      <button class="theme-btn" id="themeToggle" type="button">
+        <span id="themeIcon">☀</span>
+        <span id="themeText">浅色</span>
+      </button>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-meta">
+      <span class="hero-pill">模块三 · RAG 检索与证据</span>
+      <span>预计阅读 12 分钟 · 3 个交互实验台</span>
+    </div>
+    <h1>文档解析与分块策略：RAG 检索不准，问题可能出在向量化之前</h1>
+    <p class="hero-lead">
+      很多人第一次搭建 RAG，会把精力全花在 Embedding 模型、向量数据库和 Prompt 上。系统跑起来后，检索结果依然很乱。往上游排查，问题往往早就发生在文档解析、清洗和切片阶段。上游数据已经失真，后面换模型、调 Prompt，通常只是给脏数据做精装修。
+    </p>
+  </section>
+
+  <section class="tldr">
+    <div class="tldr-card">
+      <div class="tldr-head">
+        <span class="tldr-kicker">30 秒速览 · 本章 3 个核心工程判断</span>
+      </div>
+      <ol class="tldr-list">
+        <li class="tldr-item">
+          <span class="tldr-num">01</span>
+          <span class="tldr-claim">解析顺序错了，切片和 Embedding 救不回来。多栏错位、表格打平、扫描件缺文字层，必须先升级解析环节或抽样验收。</span>
+          <button class="tldr-go" type="button" onclick="window.bookJumpToLab('lab-cleaning')">去实验 01 诊断解析与清洗 ↓</button>
+        </li>
+        <li class="tldr-item">
+          <span class="tldr-num">02</span>
+          <span class="tldr-claim">切片没有通用最优值，但中文基线必须显式加入全角分隔符并保留标点；先用 Recursive 建基线，再由查询集调参。</span>
+          <button class="tldr-go" type="button" onclick="window.bookJumpToLab('lab-chunking')">去实验 02 实时调参切片 ↓</button>
+        </li>
+        <li class="tldr-item">
+          <span class="tldr-num">03</span>
+          <span class="tldr-claim">元数据有两条去向：进 payload 负责过滤与溯源，拼入文本前缀补足孤立语义但会增加 token 并改变相似度分布。</span>
+          <button class="tldr-go" type="button" onclick="window.bookJumpToLab('lab-metadata')">去实验 03 透视双路径 ↓</button>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2 id="pdf-pitfalls">长上下文时代为什么还要做 RAG，以及上游为何最先出事</h2>
+    <p class="key">
+      长上下文解决“能放多少”，RAG 解决“应该放什么”。上游文档处理决定了检索系统能看到什么，数据一旦在这里被切碎或错位，下游环节无法修复。
+    </p>
+    <p>
+      大模型的上下文窗口越来越长，<a href="https://developers.openai.com/api/docs/guides/tools-file-search" target="_blank" rel="noopener">文件搜索</a>也逐渐成为模型平台的内置能力。但上下文再长，也不适合每次都把整套产品文档、公司制度和历史资料全量塞给模型。除了浪费 token 和混入噪音，当数据持续更新、不同用户权限不同、回答必须附带可靠出处时，模型仍然要先找证据，再基于证据回答。
+    </p>
+    <p>
+      如今的 RAG 正在成为 AI 应用和 Agent 的知识层：Agent 决定什么时候查、查什么、是否继续查；检索系统负责从真实数据中召回可靠证据。而整条链路的第一步，就是把原始文档变成质量稳定、来源清晰的 <code>DocumentChunk</code>。
+    </p>
+
+    <figure class="diagram-figure">
+      <figcaption>
+        <span>RAG 文档预处理流水线：四个处理阶段与上游失真高发点</span>
+        <span class="sim-tag">结构示意</span>
+      </figcaption>
+      <svg viewBox="0 0 880 226" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="RAG 文档预处理四阶段流水线与失真高发点">
+        <defs>
+          <marker id="arrow-pipe" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--teal)" />
+          </marker>
+          <marker id="arrow-risk" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--rose)" />
+          </marker>
+        </defs>
+        <!-- Stage bar label -->
+        <text x="14" y="20" fill="var(--teal)" font-size="11.5" font-weight="700">主链路 · 从原始文件到可检索证据</text>
+
+        <!-- Node 0: Raw -->
+        <rect x="14" y="34" width="128" height="86" rx="12" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="1.6" />
+        <text x="78" y="66" text-anchor="middle" fill="var(--text)" font-size="14" font-weight="700">原始文档</text>
+        <text x="78" y="90" text-anchor="middle" fill="var(--text-secondary)" font-size="12">PDF / Markdown</text>
+
+        <line x1="142" y1="77" x2="176" y2="77" stroke="var(--teal)" stroke-width="2" marker-end="url(#arrow-pipe)" />
+
+        <!-- Node 1: Parse -->
+        <rect x="182" y="34" width="136" height="86" rx="12" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="1.6" />
+        <text x="250" y="66" text-anchor="middle" fill="var(--text)" font-size="14" font-weight="700">1. 解析提取</text>
+        <text x="250" y="90" text-anchor="middle" fill="var(--text-secondary)" font-size="12">恢复阅读顺序</text>
+
+        <line x1="318" y1="77" x2="352" y2="77" stroke="var(--teal)" stroke-width="2" marker-end="url(#arrow-pipe)" />
+
+        <!-- Node 2: Clean -->
+        <rect x="358" y="34" width="136" height="86" rx="12" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="1.6" />
+        <text x="426" y="66" text-anchor="middle" fill="var(--text)" font-size="14" font-weight="700">2. 文本清洗</text>
+        <text x="426" y="90" text-anchor="middle" fill="var(--text-secondary)" font-size="12">去噪与归一化</text>
+
+        <line x1="494" y1="77" x2="528" y2="77" stroke="var(--teal)" stroke-width="2" marker-end="url(#arrow-pipe)" />
+
+        <!-- Node 3: Chunk -->
+        <rect x="534" y="34" width="136" height="86" rx="12" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="1.6" />
+        <text x="602" y="66" text-anchor="middle" fill="var(--text)" font-size="14" font-weight="700">3. 切片重叠</text>
+        <text x="602" y="90" text-anchor="middle" fill="var(--text-secondary)" font-size="12">保留自然边界</text>
+
+        <line x1="670" y1="77" x2="704" y2="77" stroke="var(--teal)" stroke-width="2" marker-end="url(#arrow-pipe)" />
+
+        <!-- Node 4: Metadata -->
+        <rect x="710" y="34" width="156" height="86" rx="12" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.6" />
+        <text x="788" y="66" text-anchor="middle" fill="var(--text)" font-size="14" font-weight="700">4. 元数据注入</text>
+        <text x="788" y="90" text-anchor="middle" fill="var(--text-secondary)" font-size="12">DocumentChunk[]</text>
+
+        <!-- Failure callout lane -->
+        <text x="14" y="150" fill="var(--rose)" font-size="11.5" font-weight="700">高频失真点 · 一旦出错下游无法修复</text>
+
+        <line x1="250" y1="120" x2="250" y2="160" stroke="var(--rose)" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#arrow-risk)" />
+        <rect x="182" y="166" width="136" height="44" rx="8" fill="var(--rose-soft)" stroke="var(--rose)" stroke-width="1.2" stroke-dasharray="4 3" />
+        <text x="250" y="193" text-anchor="middle" fill="var(--rose)" font-size="12" font-weight="600">多栏错位 · 表格打平</text>
+
+        <line x1="426" y1="120" x2="426" y2="160" stroke="var(--rose)" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#arrow-risk)" />
+        <rect x="358" y="166" width="136" height="44" rx="8" fill="var(--rose-soft)" stroke="var(--rose)" stroke-width="1.2" stroke-dasharray="4 3" />
+        <text x="426" y="193" text-anchor="middle" fill="var(--rose)" font-size="12" font-weight="600">正则误吞标题与列表</text>
+
+        <line x1="602" y1="120" x2="602" y2="160" stroke="var(--rose)" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#arrow-risk)" />
+        <rect x="534" y="166" width="136" height="44" rx="8" fill="var(--rose-soft)" stroke="var(--rose)" stroke-width="1.2" stroke-dasharray="4 3" />
+        <text x="602" y="193" text-anchor="middle" fill="var(--rose)" font-size="12" font-weight="600">句中硬切 · 丢失标点</text>
+
+        <line x1="788" y1="120" x2="788" y2="160" stroke="var(--rose)" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#arrow-risk)" />
+        <rect x="710" y="166" width="156" height="44" rx="8" fill="var(--rose-soft)" stroke="var(--rose)" stroke-width="1.2" stroke-dasharray="4 3" />
+        <text x="788" y="193" text-anchor="middle" fill="var(--rose)" font-size="12" font-weight="600">裸文本失源 · 权限失效</text>
+      </svg>
+    </figure>
+
+    <h3>PDF 解析，难点不只是读取文字</h3>
+    <p>
+      Markdown 和纯文本可以直接读取，但 PDF 麻烦得多。PDF 本质上关心页面如何精准排版呈现，不保证程序能直接恢复人类阅读顺序。普通 PDF 需要解析器根据字符坐标推断段落、栏位和表格，而推断经常在三类文档上翻车：<strong>多栏布局打乱顺序</strong>、<strong>表格丢失行列对应</strong>、以及<strong>扫描件根本没有文字层</strong>。
+    </p>
+  </main>
+
+  <!-- LAB 01: PDF Pitfalls & Text Cleaner -->
+  <section class="lab-wrap" id="lab-cleaning">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <span class="lab-eyebrow">实验 01 · 上游故障与清洗器诊所</span>
+          <h3 class="lab-title">亲眼看看 PDF 解析翻车，以及“通用清洗正则”如何制造新脏数据</h3>
+          <p class="lab-desc">切换三类常见 PDF 故障，并在“文本清洗”标签下逐条开关正则规则，观察标题与列表被误吞并的瞬间。</p>
+        </div>
+        <span class="sim-tag">交互诊断沙盒</span>
+      </div>
+      <div class="lab-body">
+        <div class="lab-toolbar">
+          <div class="toolbar-group">
+            <span class="toolbar-label">故障场景：</span>
+            <button class="chip-btn active" type="button" data-lab1-tab="multicol">① 多栏布局错位</button>
+            <button class="chip-btn" type="button" data-lab1-tab="table">② 表格结构拍平</button>
+            <button class="chip-btn" type="button" data-lab1-tab="cleaner">③ 文本清洗与正则副作用</button>
+          </div>
+          <div class="toolbar-group" id="lab1ParserToggle">
+            <span class="toolbar-label">解析方式：</span>
+            <button class="chip-btn danger-active" type="button" data-lab1-mode="naive">按坐标朴素提取</button>
+            <button class="chip-btn" type="button" data-lab1-mode="layout">布局感知解析</button>
+          </div>
+        </div>
+
+        <!-- View: Multicol & Table -->
+        <div id="lab1ParseView">
+          <div class="split-2">
+            <div class="pane-box">
+              <div class="pane-head">
+                <span id="lab1SourceTitle">原始 PDF 视觉版面</span>
+                <span class="sim-tag">人眼看到的页面</span>
+              </div>
+              <div id="lab1SourceVisual"></div>
+            </div>
+            <div class="pane-box">
+              <div class="pane-head">
+                <span id="lab1OutputTitle">解析器输出的文本流</span>
+                <span id="lab1OutputBadge" class="c-badge bad">语义错乱</span>
+              </div>
+              <pre class="raw-stream" id="lab1OutputStream"></pre>
+            </div>
+          </div>
+          <div class="outcome bad" id="lab1Outcome" style="margin-top: 14px;"></div>
+        </div>
+
+        <!-- View: Cleaner Interactive Rules -->
+        <div id="lab1CleanerView" style="display: none;">
+          <div class="rule-toggles" id="cleanerRules">
+            <label class="rule-check is-on">
+              <input type="checkbox" id="ruleNfkc" checked />
+              <span>1. NFKC 兼容字形归一化</span>
+            </label>
+            <label class="rule-check is-on">
+              <input type="checkbox" id="rulePageNum" checked />
+              <span>2. 清除页码 (-- 1 of 3 --)</span>
+            </label>
+            <label class="rule-check is-on">
+              <input type="checkbox" id="ruleSoftWrap" checked />
+              <span>3. 启发式合并软换行</span>
+            </label>
+            <label class="rule-check">
+              <input type="checkbox" id="ruleProtectStruct" />
+              <span>4. 保护标题与列表行（修复误合并）</span>
+            </label>
+          </div>
+          <div class="split-2">
+            <div class="pane-box">
+              <div class="pane-head">
+                <span>PDF 提取原始文本（含硬换行、页码、标题与列表）</span>
+                <span class="sim-tag">清洗前</span>
+              </div>
+              <pre class="raw-stream" id="cleanerBefore"></pre>
+            </div>
+            <div class="pane-box">
+              <div class="pane-head">
+                <span>当前规则组合的清洗结果</span>
+                <span id="cleanerStatusBadge" class="c-badge warn">存在误合并</span>
+              </div>
+              <pre class="raw-stream" id="cleanerAfter"></pre>
+            </div>
+          </div>
+          <div class="outcome meh" id="cleanerOutcome" style="margin-top: 14px;"></div>
+
+          <details class="code-fold" style="margin-top: 16px; margin-bottom: 0;">
+            <summary>查看与当前开关同步的 cleanText() TypeScript 实现</summary>
+            <div class="code-fold-body">
+              <div class="code-card" style="margin: 0;">
+                <div class="code-header">
+                  <span>clean-text.ts · 随上方开关实时同步</span>
+                  <button class="copy-btn" type="button">复制</button>
+                </div>
+                <pre><code class="language-typescript" id="cleanerCodeSync"></code></pre>
+              </div>
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <p>
+      在 Node.js 生态里，处理有可靠文字层、版式相对规整的 PDF，可以从 <a href="https://www.npmjs.com/package/pdf-parse" target="_blank" rel="noopener"><code>pdf-parse</code></a> 起步。它用 TypeScript 编写、自带类型声明，不需要原生编译扩展，除文字和图片提取外也提供基础表格检测。但面对复杂多栏、跨页表格或扫描件时，不要指望切片算法修复错误的阅读顺序：需要底层字符坐标时可选用 Mozilla 的 <a href="https://www.npmjs.com/package/pdfjs-dist" target="_blank" rel="noopener"><code>pdfjs-dist</code></a>；若文档布局复杂且表格是核心证据，可评估 <a href="https://www.llamaindex.ai/llamaparse" target="_blank" rel="noopener">LlamaParse</a> 等专门解析服务（接入前请结合<a href="https://www.llamaindex.ai/pricing" target="_blank" rel="noopener">官方定价页</a>的积分计费方式与真实文档抽样效果做验证）。
+    </p>
+    <div class="callout note">
+      <div class="callout-title">扫描件快速排查与 OCR 验收</div>
+      在 PDF 阅读器里尝试选中文字可以做一次快速判断：选不中往往意味着需要 OCR（不过字体轮廓化或复制权限限制也会导致无法选中）。进入切片前，务必抽样核对标题、数字、专有名词和表格，检索系统不会察觉 OCR 错字，只会忠实地把错误内容召回。
+    </div>
+
+    <h2 id="chunking-strategies">三种切片策略、中文分隔符与 Overlap</h2>
+    <p class="key">
+      切片要在“内容足够小、语义足够聚焦”和“上下文足够完整、能独立回答问题”之间找平衡。
+    </p>
+    <p>
+      切片太大，一个 chunk 混进多个话题，向量很难准确代表其中任何一个；切片太小，只剩半句话；切割位置不对，关键结论被劈成两半，任意一个 chunk 都答不全问题。
+    </p>
+
+    <div class="predict-hook" id="predictSemantic">
+      <div class="predict-q">
+        <span class="predict-badge">先猜再验证</span>
+        <span>基于 Embedding 相似度找主题边界的 <strong>Semantic（语义切片）</strong> 听起来更高级。在公开基准测试中，它是否稳定击败了 Recursive 或 Page-level 切片？</span>
+      </div>
+      <div class="predict-opts">
+        <button class="predict-opt" type="button" data-answer="wrong">A. 是，语义切片准确率全面领先，值得默认开启</button>
+        <button class="predict-opt" type="button" data-answer="right">B. 否，语义切片没有稳定优势，额外计算和调参成本常不划算</button>
+        <button class="predict-opt" type="button" data-answer="wrong">C. 只要把 chunk size 降到 128 token 以下，语义切片就一定最优</button>
+      </div>
+      <div class="predict-feedback" id="predictSemanticFeedback">
+        <strong>实证结论：</strong>Vectara 在 NAACL 2025 发表的对比研究 <a class="src-tag" href="https://aclanthology.org/2025.findings-naacl.114/" target="_blank" rel="noopener">来源：Vectara NAACL 2025 ↗</a> 表明，语义切片在文档检索、证据检索与生成任务中并没有表现出稳定优势，其额外的 Embedding 计算成本缺乏一致收益支撑。NVIDIA 在 2025 年的切片实验 <a class="src-tag" href="https://developer.nvidia.com/blog/finding-the-best-chunking-strategy-for-accurate-ai-responses/" target="_blank" rel="noopener">来源：NVIDIA 2025 ↗</a> 也发现，不同数据集的最佳 chunk size 各不相同，整体平均表现最好的是 page-level 切片，15% overlap 的收益也只出现在特定组合中。
+      </div>
+      <button class="predict-verify" type="button" onclick="window.applyLab2Preset('recursive-zh')">去实验 02 对比 Fixed-size 与中文 Recursive 切片 ↓</button>
+    </div>
+  </main>
+
+  <!-- LAB 02: Interactive Chinese Chunking & Overlap Sandbox -->
+  <section class="lab-wrap" id="lab-chunking">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <span class="lab-eyebrow">实验 02 · 真实算法切片沙盒</span>
+          <h3 class="lab-title">调节策略、中文分隔符、Chunk Size 与 Overlap，实时观察断句与粘连</h3>
+          <p class="lab-desc">下方直接运行本章的 <code>fixedSizeChunk</code>、<code>splitRecursive</code> 与 <code>addOverlap</code> 算法。拖动参数，检查高亮的重叠区与截断告警。</p>
+        </div>
+        <span class="sim-tag">教学沙盒 · 字符上限演示</span>
+      </div>
+      <div class="lab-body">
+        <div class="lab-toolbar">
+          <div class="toolbar-group">
+            <span class="toolbar-label">切片策略：</span>
+            <button class="chip-btn" type="button" data-strategy="fixed">Fixed-size 硬切</button>
+            <button class="chip-btn" type="button" data-strategy="recursive-en">Recursive（英文分隔符）</button>
+            <button class="chip-btn teal-active" type="button" data-strategy="recursive-zh">Recursive（中文 · 保留标点）</button>
+            <button class="chip-btn" type="button" data-strategy="recursive-drop">Recursive（丢弃标点）</button>
+          </div>
+          <div class="toolbar-group">
+            <span class="toolbar-label">Overlap 空间：</span>
+            <button class="chip-btn active" type="button" data-reserve="yes">预留 CHUNK_SIZE - OVERLAP</button>
+            <button class="chip-btn" type="button" data-reserve="no">切完硬拼（易超上限）</button>
+          </div>
+        </div>
+
+        <div class="slider-grid">
+          <div class="slider-card">
+            <div class="slider-head">
+              <span>CHUNK_SIZE（字符上限）</span>
+              <span class="slider-val" id="chunkSizeVal">80 字符</span>
+            </div>
+            <input type="range" id="chunkSizeSlider" min="45" max="150" step="5" value="80" />
+          </div>
+          <div class="slider-card">
+            <div class="slider-head">
+              <span>OVERLAP（重叠比例）</span>
+              <span class="slider-val" id="overlapVal">15%（12 字符）</span>
+            </div>
+            <input type="range" id="overlapSlider" min="0" max="25" step="5" value="15" />
+          </div>
+        </div>
+
+        <div class="chunk-stats" id="chunkStats"></div>
+
+        <div class="view-tabs">
+          <button class="chip-btn active" type="button" data-lab2-view="canvas">✂ 原文切刀画布</button>
+          <button class="chip-btn" type="button" data-lab2-view="cards">▤ 切块卡片明细</button>
+        </div>
+
+        <div class="cut-canvas" id="cutCanvas">
+          <div class="cut-canvas-head">
+            <span><strong>原文切刀实时投影</strong>（切割点直接落在原文上，方便观察是否腰斩句子）</span>
+            <div class="cut-legend">
+              <span class="legend-dot"><span class="legend-swatch" style="background:var(--teal);"></span>自然边界切刀</span>
+              <span class="legend-dot"><span class="legend-swatch" style="background:var(--rose);"></span>句中硬切警报</span>
+              <span class="legend-dot"><span class="legend-swatch" style="background:var(--accent-soft);border:1px solid var(--accent);"></span>Overlap 借位重叠区</span>
+            </div>
+          </div>
+          <div class="cut-doc-body" id="cutDocBody"></div>
+        </div>
+
+        <div class="chunk-list" id="chunkList" style="display: none;"></div>
+        <div class="outcome good" id="chunkOutcome"></div>
+
+        <details class="code-fold" style="margin-top: 16px; margin-bottom: 0;">
+          <summary>查看当前参数对应的 TypeScript 切片实现（实时同步）</summary>
+          <div class="code-fold-body">
+            <div class="code-card" style="margin: 0;">
+              <div class="code-header">
+                <span>chunking-strategies.ts · 参数与分隔符实时同步</span>
+                <button class="copy-btn" type="button">复制</button>
+              </div>
+              <pre><code class="language-typescript" id="chunkCodeSync"></code></pre>
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <p>
+      工程上更稳妥的推进顺序是：先用 <strong>Fixed-size</strong> 或 <strong>Recursive</strong> 建立基线，把 <code>256～512 token</code> 和 <code>10%～15% overlap</code> 放进初期候选范围，再用自己的真实查询集做检索评估。另外要区分字符与 token：不同模型的 tokenizer 切分规则不同，不能用固定比例把中文字数精确换算成 token。本文示例为方便直接运行采用字符上限，接入真实 Embedding 模型后应改用对应 tokenizer 计算长度。
+    </p>
+    <p>
+      处理中文文档时，尤其要注意两点：显式把全角标点 <code>。？！；，</code> 加入分隔符优先级列表，并且在 <code>split()</code> 后<strong>把命中的标点拼接回片段末尾</strong>，避免出现“训练的Transformer”这种标点丢失造成的文本粘连。
+    </p>
+
+    <h2 id="metadata-pipeline">元数据注入的两条路径与完整处理链路</h2>
+    <p class="key">
+      切片不能只存一段裸文本。至少要记录来源文档、所属章节和切片序号，并明确元数据是只进向量库 payload，还是拼进待向量化的文本前缀。
+    </p>
+    <p>
+      <code>source</code> 负责引用溯源与文档级过滤，<code>section</code> 保存标题路径用于定位，<code>chunkIndex</code> 与 <code>totalChunks</code> 则为相邻切片扩展和线上排查提供位置依据。
+    </p>
+
+    <figure class="diagram-figure">
+      <figcaption>
+        <span>元数据注入的两条路径：Payload 过滤溯源 vs 标题前缀补足语义</span>
+        <span class="sim-tag">架构示意</span>
+      </figcaption>
+      <svg viewBox="0 0 880 215" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="元数据注入的两条路径">
+        <defs>
+          <marker id="arrow-meta" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--text-muted)" />
+          </marker>
+        </defs>
+
+        <!-- Left source -->
+        <rect x="18" y="60" width="210" height="96" rx="12" fill="var(--bg-muted)" stroke="var(--border-strong)" stroke-width="1.6" />
+        <text x="123" y="92" text-anchor="middle" fill="var(--text)" font-size="14" font-weight="700">DocumentChunk</text>
+        <text x="123" y="114" text-anchor="middle" fill="var(--text-secondary)" font-size="12">text: "普通工单 4 小时内响应..."</text>
+        <text x="123" y="135" text-anchor="middle" fill="var(--text-muted)" font-size="11.5">source · section · chunkIndex</text>
+
+        <!-- Branch lines -->
+        <path d="M 228 96 C 280 96, 280 54, 338 54" fill="none" stroke="var(--teal)" stroke-width="2" marker-end="url(#arrow-meta)" />
+        <path d="M 228 120 C 280 120, 280 160, 338 160" fill="none" stroke="var(--accent)" stroke-width="2" marker-end="url(#arrow-meta)" />
+
+        <!-- Path A: Payload -->
+        <rect x="346" y="16" width="250" height="78" rx="12" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="1.6" />
+        <text x="471" y="44" text-anchor="middle" fill="var(--text)" font-size="13.5" font-weight="700">路径 A：写入向量库 Payload</text>
+        <text x="471" y="65" text-anchor="middle" fill="var(--text-secondary)" font-size="12">权限隔离 · 元数据过滤 · 来源展示</text>
+        <text x="471" y="83" text-anchor="middle" fill="var(--teal)" font-size="11.5" font-weight="600">不改变切片本身的向量语义</text>
+
+        <!-- Path B: Prefix -->
+        <rect x="346" y="120" width="250" height="78" rx="12" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.6" />
+        <text x="471" y="148" text-anchor="middle" fill="var(--text)" font-size="13.5" font-weight="700">路径 B：标题前缀拼入文本</text>
+        <text x="471" y="169" text-anchor="middle" fill="var(--text-secondary)" font-size="12">[文档 / 章节] + 正文一起 Embedding</text>
+        <text x="471" y="187" text-anchor="middle" fill="var(--accent)" font-size="11.5" font-weight="600">补孤立语义，但增 token 且改相似度分布</text>
+
+        <!-- Arrows to Index -->
+        <path d="M 596 54 C 638 54, 638 96, 682 96" fill="none" stroke="var(--text-muted)" stroke-width="1.8" marker-end="url(#arrow-meta)" />
+        <path d="M 596 160 C 638 160, 638 120, 682 120" fill="none" stroke="var(--text-muted)" stroke-width="1.8" marker-end="url(#arrow-meta)" />
+
+        <!-- Right Vector DB -->
+        <rect x="690" y="60" width="172" height="96" rx="12" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="1.6" />
+        <text x="776" y="92" text-anchor="middle" fill="var(--text)" font-size="14" font-weight="700">向量索引记录</text>
+        <text x="776" y="114" text-anchor="middle" fill="var(--text-secondary)" font-size="12">vector: float[]</text>
+        <text x="776" y="135" text-anchor="middle" fill="var(--text-muted)" font-size="11.5">payload: { source, ... }</text>
+      </svg>
+    </figure>
+  </main>
+
+  <!-- LAB 03: Metadata Dual-Path X-Ray -->
+  <section class="lab-wrap" id="lab-metadata">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <span class="lab-eyebrow">实验 03 · 元数据双路径 X-Ray</span>
+          <h3 class="lab-title">当两份年度制度的孤立切片正文几乎一模一样时，检索怎么分清谁是 2025 版？</h3>
+          <p class="lab-desc">测试查询：<code>“2025 年售后工单响应时限改成多久了？”</code>。切换三种入库方式，对比送入 Embedding 的文本、Payload 载荷与检索排序后果。</p>
+        </div>
+        <span class="sim-tag">模拟召回排序演示</span>
+      </div>
+      <div class="lab-body">
+        <div class="pick-options" id="metaOptions">
+          <button class="pick-card" type="button" data-meta-mode="raw">
+            <div class="pick-kicker">方案 A</div>
+            <div class="pick-title">裸文本入库（无元数据）</div>
+            <p class="pick-sub">只把切片正文直接向量化，不记录文档来源、章节与年份。</p>
+          </button>
+          <button class="pick-card" type="button" data-meta-mode="payload">
+            <div class="pick-kicker">方案 B</div>
+            <div class="pick-title">仅写入 Payload</div>
+            <p class="pick-sub">结构化字段进 payload 供过滤与引用，但待向量化文本保持原样。</p>
+          </button>
+          <button class="pick-card active" type="button" data-meta-mode="both">
+            <div class="pick-kicker">方案 C · 组合权衡</div>
+            <div class="pick-title">Payload + 轻量标题前缀</div>
+            <p class="pick-sub">Payload 管过滤溯源，同时把文档/章节短前缀拼入 Embedding 文本。</p>
+          </button>
+        </div>
+
+        <div class="split-2">
+          <div class="pane-box">
+            <div class="pane-head">
+              <span>实际入库结构（Embedding 输入 + Payload）</span>
+              <span class="sim-tag" id="metaTokenCost">额外前缀约 +18 字符</span>
+            </div>
+            <pre class="raw-stream" id="metaPayloadPreview"></pre>
+          </div>
+          <div class="pane-box sim-zone" data-sim-label="模拟相似度">
+            <div class="pane-head">
+              <span>检索结果排序（无显式过滤条件时）</span>
+            </div>
+            <div class="rank-list" id="metaRankList"></div>
+          </div>
+        </div>
+
+        <div class="outcome good" id="metaOutcome" style="margin-top: 14px;"></div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h3>跑通完整文档处理链路</h3>
+    <p>
+      把解析、清洗、预留 Overlap 的递归切片和元数据注入串起来，就能得到可直接喂给下游 Embedding 环节的 <code>DocumentChunk[]</code>。完整可运行脚本与测试样例保存在公开仓库 <a href="https://github.com/qufei1993/ai-agent-fullstack-roadmap/tree/main/examples/rag/document-parsing-chunking" target="_blank" rel="noopener"><code>examples/rag/document-parsing-chunking/</code></a>。
+    </p>
+
+    <details class="code-fold">
+      <summary>查看完整的 processDocument() TypeScript 流水线</summary>
+      <div class="code-fold-body">
+        <div class="code-card" style="margin: 0;">
+          <div class="code-header">
+            <span>examples/rag/document-parsing-chunking/parse-and-chunk.ts</span>
+            <button class="copy-btn" type="button">复制</button>
+          </div>
+          <pre><code class="language-typescript">import path from "path";
+import { PDFParse } from "pdf-parse";
+
+interface DocumentChunk {
+  text: string;
+  metadata: {
+    source: string;
+    section?: string;
+    chunkIndex: number;
+    totalChunks: number;
+  };
+}
+
+async function parsePDF(filePath: string): Promise&lt;string&gt; {
+  const parser = new PDFParse({ url: filePath });
+  const data = await parser.getText();
+  return data.text;
+}
+
+async function processDocument(filePath: string): Promise&lt;DocumentChunk[]&gt; {
+  const fileName = path.basename(filePath);
+  const rawText = await parsePDF(filePath);
+  const cleanedText = cleanText(rawText);
+
+  const CHUNK_SIZE = 512;
+  const OVERLAP = Math.floor(CHUNK_SIZE * 0.15);
+
+  // 预留 overlap 空间，保证最终切片仍不超过 CHUNK_SIZE
+  const splitChunks = splitRecursive(cleanedText, CHUNK_SIZE - OVERLAP);
+  const textChunks = addOverlap(splitChunks, OVERLAP);
+
+  return textChunks.map((text, index) =&gt; ({
+    text,
+    metadata: {
+      source: fileName,
+      chunkIndex: index,
+      totalChunks: textChunks.length,
+    },
+  }));
+}</code></pre>
+        </div>
+      </div>
+    </details>
+
+    <div class="callout warn">
+      <div class="callout-title">真实运行踩坑：NFKC 之后仍可能残留兼容字形</div>
+      在真实 PDF 样本上跑完完整脚本后，部分 PDF 字体编码产生的兼容字形在 <code>normalize("NFKC")</code> 后依然可能残留。遇到这类问题时，应针对具体文档来源补充字符映射或更换解析器，不要假设一次通用清洗就能解决所有异常。另外，处理 Markdown 时不要硬套纯文本正则，应使用 Markdown 解析器生成语法树，先按标题层级切分 section，再对过长段落递归切片。
+    </div>
+
+    <h2 id="decision">工程选型速查矩阵</h2>
+    <p class="key">
+      文档处理没有银弹，按文档形态与检索目标做决策，并用抽样检查和真实查询集验证每一步改动。
+    </p>
+
+    <div class="filter-bar">
+      <button class="chip-btn active" type="button" data-filter="all">全部场景</button>
+      <button class="chip-btn" type="button" data-filter="parse">解析选型</button>
+      <button class="chip-btn" type="button" data-filter="chunk">切片策略</button>
+      <button class="chip-btn" type="button" data-filter="clean">清洗与中文</button>
+      <button class="chip-btn" type="button" data-filter="meta">元数据设计</button>
+    </div>
+
+    <div class="decision-grid" id="decisionGrid">
+      <div class="decision-card" data-tags="parse">
+        <span class="decision-tag">解析选型</span>
+        <div class="decision-title">版式规整、带文字层的 PDF</div>
+        <p class="decision-desc">先用 <code>pdf-parse</code> 跑通基础链路，保存原始文本与清洗后文本做抽样对比，确认阅读顺序正确再进入切片。</p>
+      </div>
+      <div class="decision-card" data-tags="parse">
+        <span class="decision-tag">解析选型</span>
+        <div class="decision-title">多栏论文、复杂表格或扫描件</div>
+        <p class="decision-desc">优先升级解析层（底层坐标重建用 <code>pdfjs-dist</code>，复杂版面评估 LlamaParse 或 OCR），绝不指望下游切片修复错位文本。</p>
+      </div>
+      <div class="decision-card" data-tags="chunk">
+        <span class="decision-tag">切片策略</span>
+        <div class="decision-title">第一版基线与参数候选</div>
+        <p class="decision-desc">从 Recursive（或按页结构完整的 Page-level）起步，初期测试 <code>256～512 token</code> 与 <code>10%～15% overlap</code>，确认有痛点再评估 Semantic 切片。</p>
+      </div>
+      <div class="decision-card" data-tags="clean chunk">
+        <span class="decision-tag">清洗与中文</span>
+        <div class="decision-title">中文技术文档与合同</div>
+        <p class="decision-desc">显式加入 <code>。？！；，</code> 分隔符并保留标点；清洗规则必须先看样本噪音再逐条添加，避免软换行正则吞并标题与列表。</p>
+      </div>
+      <div class="decision-card" data-tags="clean parse">
+        <span class="decision-tag">清洗与结构</span>
+        <div class="decision-title">Markdown 知识库与 API 文档</div>
+        <p class="decision-desc">利用 Markdown 解析器生成 AST，先按标题层级切分 section 并保护代码围栏与表格，只对超长 section 做二次递归切片。</p>
+      </div>
+      <div class="decision-card" data-tags="meta">
+        <span class="decision-tag">元数据设计</span>
+        <div class="decision-title">多版本制度与权限隔离</div>
+        <p class="decision-desc"><code>source</code>、<code>section</code>、<code>chunkIndex</code> 必入 payload 管过滤与引用；若切片脱离标题后语义模糊，再按需拼接轻量标题前缀进 Embedding 文本。</p>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>
+      文档解析与切片决定了检索系统能看到什么。先把原始文本、清洗结果和切片质量稳定下来，再用真实查询集校准参数，下游的 Embedding 模型与向量数据库才有可靠数据可用。下一章的向量检索会直接消费这里产出的 <code>DocumentChunk</code>，把每段文本转化为向量并写入索引。
+    </p>
+  </footer>
+
+  <script>
+    (function () {
+      /* ============================================================
+         LAB 01: PDF Pitfalls & Text Cleaner
+         ============================================================ */
+      const lab1State = { tab: 'multicol', mode: 'naive' };
+
+      const lab1Data = {
+        multicol: {
+          sourceTitle: '原始 PDF 双栏版面（学术论文 / 年报）',
+          visualHtml: `
+            <div class="pdf-page-mock">
+              <div class="pdf-two-col">
+                <div class="pdf-col">
+                  <div class="pdf-col-title">左栏 Column 1</div>
+                  人工智能的发展历程<br/>可以追溯到 1950 年代。
+                </div>
+                <div class="pdf-col">
+                  <div class="pdf-col-title">右栏 Column 2</div>
+                  近年来，随着大模型的<br/>快速普及，检索增强……
+                </div>
+              </div>
+            </div>`,
+          naive: {
+            badge: '阅读顺序错乱',
+            badgeClass: 'bad',
+            stream: '人工智能的发展历程<span class="hl-bad">近年来，随着大模型的</span>可以追溯到 1950 年代。<span class="hl-bad">快速普及，检索增强……</span>',
+            outcomeClass: 'bad',
+            outcomeHtml: '<div class="outcome-title">后果：文字全提取出来了，但语义已经报废</div>解析器按页面 Y 坐标从左到右横扫，把左栏第一行和右栏第一行硬拼到了一起。这样的文本继续切片，Embedding 得到的向量毫无可靠语义。'
+          },
+          layout: {
+            badge: '栏位顺序恢复',
+            badgeClass: 'ok',
+            stream: '<span class="hl-good">人工智能的发展历程可以追溯到 1950 年代。</span>\n\n<span class="hl-good">近年来，随着大模型的快速普及，检索增强……</span>',
+            outcomeClass: 'good',
+            outcomeHtml: '<div class="outcome-title">修复：先按版面分栏，再按栏内顺序读取</div>布局感知解析器先识别两栏边界，分别读完左栏再读右栏，下游切片才能拿到完整句子。'
+          }
+        },
+        table: {
+          sourceTitle: '原始 PDF 财务表格',
+          visualHtml: `
+            <div class="pdf-page-mock">
+              <table class="pdf-table-mock">
+                <thead><tr><th>季度</th><th>收入</th><th>增长率</th></tr></thead>
+                <tbody>
+                  <tr><td>Q1</td><td>120M</td><td>15%</td></tr>
+                  <tr><td>Q2</td><td>145M</td><td>21%</td></tr>
+                </tbody>
+              </table>
+            </div>`,
+          naive: {
+            badge: '行列关系丢失',
+            badgeClass: 'bad',
+            stream: '季度 收入 增长率 <span class="hl-bad">Q1 120M 15% Q2 145M 21%</span>\n\n// 若跨页或按列扫描，甚至可能变成：\n季度 Q1 Q2 <span class="hl-bad">收入 120M 145M</span> 增长率 15% 21%',
+            outcomeClass: 'bad',
+            outcomeHtml: '<div class="outcome-title">后果：单元格都在，但数字和表头解绑了</div>如果用户问“Q2 增长率是多少”，被拍平或按列打散的文本极易让模型张冠李戴。答案依赖表格时，必须单独抽样验收解析结果。'
+          },
+          layout: {
+            badge: '结构化表格保留',
+            badgeClass: 'ok',
+            stream: '<span class="hl-good">| 季度 | 收入 | 增长率 |\n|------|------|--------|\n| Q1   | 120M | 15%    |\n| Q2   | 145M | 21%    |</span>',
+            outcomeClass: 'good',
+            outcomeHtml: '<div class="outcome-title">修复：重建行列坐标并输出为 Markdown 表格</div>保留表头与单元格的对应关系，切片时还应尽量避免从表格中间腰斩。'
+          }
+        }
+      };
+
+      const rawCleanerSample = [
+        '-- 1 of 3 --',
+        '### 2. 图灵测试与早期理论',
+        '图灵在 １９５０ 年发表了著名论文《计算机器与智能》，',
+        '提出了“图灵测试”这一概念。',
+        '这篇论文奠定了人工智能研究的',
+        '理论基础。',
+        '',
+        '- 核心观点：机器能否思考',
+        '- 评测方式：模仿游戏'
+      ].join('\n');
+
+      function escapeHtml(str) {
+        return str
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+      }
+
+      function renderLab1() {
+        const parseView = document.getElementById('lab1ParseView');
+        const cleanerView = document.getElementById('lab1CleanerView');
+        const parserToggle = document.getElementById('lab1ParserToggle');
+
+        document.querySelectorAll('[data-lab1-tab]').forEach((btn) => {
+          btn.classList.toggle('active', btn.dataset.lab1Tab === lab1State.tab);
+        });
+
+        if (lab1State.tab === 'cleaner') {
+          parseView.style.display = 'none';
+          parserToggle.style.display = 'none';
+          cleanerView.style.display = 'block';
+          renderCleaner();
+          return;
+        }
+
+        parseView.style.display = 'block';
+        parserToggle.style.display = 'flex';
+        cleanerView.style.display = 'none';
+
+        document.querySelectorAll('[data-lab1-mode]').forEach((btn) => {
+          btn.classList.remove('danger-active', 'teal-active');
+          if (btn.dataset.lab1Mode === lab1State.mode) {
+            btn.classList.add(lab1State.mode === 'naive' ? 'danger-active' : 'teal-active');
+          }
+        });
+
+        const item = lab1Data[lab1State.tab];
+        const res = item[lab1State.mode];
+        document.getElementById('lab1SourceTitle').textContent = item.sourceTitle;
+        document.getElementById('lab1SourceVisual').innerHTML = item.visualHtml;
+
+        const badge = document.getElementById('lab1OutputBadge');
+        badge.textContent = res.badge;
+        badge.className = 'c-badge ' + res.badgeClass;
+
+        document.getElementById('lab1OutputStream').innerHTML = res.stream;
+        const outcome = document.getElementById('lab1Outcome');
+        outcome.className = 'outcome ' + res.outcomeClass;
+        outcome.innerHTML = res.outcomeHtml;
+      }
+
+      function renderCleaner() {
+        const useNfkc = document.getElementById('ruleNfkc').checked;
+        const usePage = document.getElementById('rulePageNum').checked;
+        const useWrap = document.getElementById('ruleSoftWrap').checked;
+        const useProtect = document.getElementById('ruleProtectStruct').checked;
+
+        document.querySelectorAll('#cleanerRules .rule-check').forEach((el) => {
+          el.classList.toggle('is-on', el.querySelector('input').checked);
+        });
+
+        document.getElementById('cleanerBefore').textContent = rawCleanerSample;
+
+        let out = rawCleanerSample.replace(/\r\n/g, '\n');
+        if (useNfkc) out = out.normalize('NFKC');
+        if (usePage) out = out.replace(/^--\s*\d+\s*of\s*\d+\s*--\n?/gim, '');
+        if (useWrap) {
+          if (useProtect) {
+            // Protect heading (#) and list (- ) lines when merging soft wraps
+            const lines = out.split('\n');
+            const merged = [];
+            for (const line of lines) {
+              const trimmed = line.trim();
+              const isStruct = /^(#{1,6}\s|[-*•]\s)/.test(trimmed);
+              if (
+                merged.length > 0 &&
+                trimmed !== '' &&
+                !isStruct &&
+                merged[merged.length - 1] !== '' &&
+                !/^(#{1,6}\s|[-*•]\s)/.test(merged[merged.length - 1]) &&
+                !/[。？！；.?!]$/.test(merged[merged.length - 1])
+              ) {
+                merged[merged.length - 1] += trimmed;
+              } else {
+                merged.push(trimmed);
+              }
+            }
+            out = merged.join('\n');
+          } else {
+            out = out.replace(/([^\n。？！；.?!])\n([^\n])/g, '$1$2');
+          }
+        }
+        out = out.replace(/\n{3,}/g, '\n\n').trim();
+
+        const afterEl = document.getElementById('cleanerAfter');
+        const badge = document.getElementById('cleanerStatusBadge');
+        const outcome = document.getElementById('cleanerOutcome');
+
+        const titleSwallowed = out.includes('理论图灵在');
+        const listSwallowed = out.includes('思考- 评测方式');
+
+        if (titleSwallowed || listSwallowed) {
+          let highlighted = escapeHtml(out)
+            .replace('### 2. 图灵测试与早期理论图灵在', '<span class="hl-bad">### 2. 图灵测试与早期理论图灵在</span>')
+            .replace('- 核心观点：机器能否思考- 评测方式：模仿游戏', '<span class="hl-bad">- 核心观点：机器能否思考- 评测方式：模仿游戏</span>');
+          afterEl.innerHTML = highlighted;
+          badge.textContent = '标题与列表被误吞并';
+          badge.className = 'c-badge warn';
+          outcome.className = 'outcome meh';
+          outcome.innerHTML = '<div class="outcome-title">注意副作用：保守的软换行正则吞掉了标题和列表</div>正文里的硬换行确实合并顺了，但因为标题 <code>### 2. 图灵测试与早期理论</code> 和列表项末尾都没有句号，正则把它们也拼进了下一行。试着勾选 <strong>“4. 保护标题与列表行”</strong> 查看修复效果。';
+        } else if (useNfkc && usePage && useWrap && useProtect) {
+          afterEl.textContent = out;
+          badge.textContent = '正文与结构均干净';
+          badge.className = 'c-badge ok';
+          outcome.className = 'outcome good';
+          outcome.innerHTML = '<div class="outcome-title">干净输出：只针对真实样本噪音加规则</div>页码已清除、全角数字 <code>１９５０</code> 已归一化为 <code>1950</code>，正文软换行正确合并，同时标题与列表结构完整保留。';
+        } else {
+          afterEl.textContent = out;
+          badge.textContent = '仍有残留噪音';
+          badge.className = 'c-badge bad';
+          outcome.className = 'outcome bad';
+          outcome.innerHTML = '<div class="outcome-title">仍有未清理的噪音或排版断行</div>对比左右两栏：未开启对应规则时，页码、全角兼容字符或页面硬换行会直接进入后续切片阶段。';
+        }
+
+        const codeLines = [
+          'function cleanText(raw: string): string {',
+          '  let text = raw.replace(/\\r\\n/g, "\\n");',
+          useNfkc ? '  text = text.normalize("NFKC");' : '  // [已关闭] NFKC 归一化',
+          usePage ? '  text = text.replace(/^--\\s*\\d+\\s*of\\s*\\d+\\s*--\\n?/gim, "");' : '  // [已关闭] 去除页码',
+          useWrap && !useProtect
+            ? '  // ⚠️ 仅适合纯连续正文：无句末标点的标题和列表会被误合并\n  text = text.replace(/([^\\n。？！；.?!])\\n([^\\n])/g, "$1$2");'
+            : useWrap && useProtect
+            ? '  // 跳过标题（#）与列表项（- / *），只合并连续正文软换行\n  text = mergeBodySoftWraps(text);'
+            : '  // [已关闭] 软换行合并',
+          '  return text.replace(/\\n{3,}/g, "\\n\\n").trim();',
+          '}'
+        ];
+        const codeEl = document.getElementById('cleanerCodeSync');
+        codeEl.textContent = codeLines.join('\n');
+        if (window.bookHighlightCode) window.bookHighlightCode(codeEl.parentElement);
+      }
+
+      document.querySelectorAll('[data-lab1-tab]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          lab1State.tab = btn.dataset.lab1Tab;
+          renderLab1();
+        });
+      });
+      document.querySelectorAll('[data-lab1-mode]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          lab1State.mode = btn.dataset.lab1Mode;
+          renderLab1();
+        });
+      });
+      document.querySelectorAll('#cleanerRules input').forEach((input) => {
+        input.addEventListener('change', renderCleaner);
+      });
+
+      /* ============================================================
+         PREDICT HOOK
+         ============================================================ */
+      const predictHook = document.getElementById('predictSemantic');
+      const predictFeedback = document.getElementById('predictSemanticFeedback');
+      predictHook.querySelectorAll('.predict-opt').forEach((opt) => {
+        opt.addEventListener('click', () => {
+          predictHook.querySelectorAll('.predict-opt').forEach((b) => {
+            b.classList.remove('is-right', 'is-wrong');
+          });
+          opt.classList.add(opt.dataset.answer === 'right' ? 'is-right' : 'is-wrong');
+          predictFeedback.classList.add('show');
+          predictHook.classList.add('answered');
+        });
+      });
+
+      /* ============================================================
+         LAB 02: Real Chinese Chunking & Overlap Sandbox
+         ============================================================ */
+      const sampleText = [
+        '大型语言模型（LLM）的出现改变了自然语言处理领域。它们能够理解和生成连贯的文本，完成翻译、摘要、问答等复杂任务。',
+        '',
+        '与传统的 NLP 模型不同，LLM 是基于 Transformer 架构训练的。Transformer 引入了注意力机制，让模型能够在处理一个词时，同时关注句子里其他所有词的上下文关系。这是 LLM 能够理解长距离依赖的根本原因。',
+        '',
+        '2017 年，谷歌在论文《Attention Is All You Need》中正式提出 Transformer 架构。此后，GPT 系列、BERT、T5 等模型相继问世，推动了整个行业的跨越式发展。',
+        '',
+        'RAG（检索增强生成）是将 LLM 与外部知识库结合的一种技术路线。它的核心思路是：不把所有知识压缩进模型参数，而是在推理时动态检索相关信息，作为上下文提供给模型。'
+      ].join('\n');
+
+      const lab2State = {
+        strategy: 'recursive-zh',
+        chunkSize: 80,
+        overlapPct: 15,
+        reserveSpace: true,
+        view: 'canvas'
+      };
+
+      function fixedSizeChunk(text, chunkSize, overlap) {
+        const chunks = [];
+        const step = Math.max(1, chunkSize - overlap);
+        let start = 0;
+        while (start < text.length) {
+          const slice = text.slice(start, start + chunkSize);
+          if (slice.trim()) {
+            chunks.push({
+              text: slice,
+              overlapLen: start === 0 ? 0 : Math.min(overlap, slice.length)
+            });
+          }
+          if (start + chunkSize >= text.length) break;
+          start += step;
+        }
+        return chunks;
+      }
+
+      function splitRecursiveCore(text, chunkSize, separators, keepSep) {
+        if (text.length <= chunkSize) return text.trim() ? [text.trim()] : [];
+        const [sep, ...rest] = separators;
+        if (sep === '') {
+          const chunks = [];
+          let s = 0;
+          while (s < text.length) {
+            chunks.push(text.slice(s, s + chunkSize));
+            s += chunkSize;
+          }
+          return chunks;
+        }
+        const splitParts = text.split(sep);
+        const parts = splitParts
+          .map((part, idx) => (keepSep && idx < splitParts.length - 1 ? part + sep : part))
+          .filter((p) => p.trim());
+        if (parts.length <= 1) return splitRecursiveCore(text, chunkSize, rest, keepSep);
+
+        const chunks = [];
+        let current = '';
+        for (const part of parts) {
+          const candidate = current ? current + part : part;
+          if (candidate.length <= chunkSize) {
+            current = candidate;
+          } else {
+            if (current) chunks.push(...splitRecursiveCore(current, chunkSize, rest, keepSep));
+            if (part.length > chunkSize) {
+              chunks.push(...splitRecursiveCore(part, chunkSize, rest, keepSep));
+              current = '';
+            } else {
+              current = part;
+            }
+          }
+        }
+        if (current) chunks.push(...splitRecursiveCore(current, chunkSize, rest, keepSep));
+        return chunks;
+      }
+
+      function addOverlapTracked(baseChunks, overlap) {
+        if (overlap <= 0 || baseChunks.length <= 1) {
+          return baseChunks.map((t) => ({ text: t, overlapLen: 0 }));
+        }
+        return baseChunks.map((chunk, i) => {
+          if (i === 0) return { text: chunk, overlapLen: 0 };
+          const prefix = baseChunks[i - 1].slice(-overlap);
+          return { text: prefix + chunk, overlapLen: prefix.length };
+        });
+      }
+
+      function renderLab2() {
+        const size = lab2State.chunkSize;
+        const overlap = Math.floor((size * lab2State.overlapPct) / 100);
+        document.getElementById('chunkSizeVal').textContent = `${size} 字符`;
+        document.getElementById('overlapVal').textContent = `${lab2State.overlapPct}%（${overlap} 字符）`;
+
+        document.querySelectorAll('[data-strategy]').forEach((btn) => {
+          btn.classList.remove('active', 'teal-active', 'danger-active');
+          if (btn.dataset.strategy === lab2State.strategy) {
+            btn.classList.add(lab2State.strategy === 'recursive-zh' ? 'teal-active' : 'active');
+          }
+        });
+        document.querySelectorAll('[data-reserve]').forEach((btn) => {
+          const isYes = btn.dataset.reserve === 'yes';
+          btn.classList.toggle('active', isYes === lab2State.reserveSpace);
+        });
+
+        let results = [];
+        let sepLabel = '';
+        if (lab2State.strategy === 'fixed') {
+          results = fixedSizeChunk(sampleText, size, overlap);
+          sepLabel = '// Fixed-size：直接按字符下标滑动窗口切片';
+        } else {
+          const seps =
+            lab2State.strategy === 'recursive-en'
+              ? ['\n\n', '\n', '. ', ' ', '']
+              : ['\n\n', '。', '？', '！', '；', '\n', '，', ''];
+          const keepSep = lab2State.strategy !== 'recursive-drop';
+          const effectiveLimit = lab2State.reserveSpace ? Math.max(20, size - overlap) : size;
+          const base = splitRecursiveCore(sampleText, effectiveLimit, seps, keepSep);
+          results = addOverlapTracked(base, overlap);
+          sepLabel = `const SEPARATORS = ${JSON.stringify(seps)};`;
+        }
+
+        let overflowCount = 0;
+        let brokenSentenceCount = 0;
+        let droppedPunct = lab2State.strategy === 'recursive-drop';
+
+        // Render Inline Document Cut-Line Canvas (shows each base segment + knife marker + overlap tail)
+        const docBodyEl = document.getElementById('cutDocBody');
+        const canvasSegments = results.map((item, idx) => {
+          const bodyText = item.overlapLen > 0 ? item.text.slice(item.overlapLen) : item.text;
+          const endsClean = /[。？！；.?!]$/.test(item.text.trim());
+          const isBroken = !endsClean && idx < results.length - 1;
+          const colorCls = 'c' + (idx % 4);
+          // Highlight the tail of this segment that will be borrowed as overlap by the next chunk
+          const nextOvLen = idx < results.length - 1 ? results[idx + 1].overlapLen : 0;
+          let innerHtml = '';
+          if (nextOvLen > 0 && bodyText.length > nextOvLen) {
+            const headPart = bodyText.slice(0, bodyText.length - nextOvLen);
+            const tailPart = bodyText.slice(bodyText.length - nextOvLen);
+            innerHtml = `${escapeHtml(headPart)}<span class="overlap-mark" title="此段末尾将被下一 chunk 作为 Overlap 复用">${escapeHtml(tailPart)}</span>`;
+          } else {
+            innerHtml = escapeHtml(bodyText);
+          }
+          const knife =
+            idx < results.length - 1
+              ? `<span class="cut-knife ${isBroken || droppedPunct ? 'broken' : 'clean'}" title="${isBroken ? '句中硬切：句子在此被劈成两半' : droppedPunct ? '分隔标点丢失' : '自然边界切分'}">${isBroken ? '⚠' : '✂'} #${idx + 1}|#${idx + 2}</span>`
+              : '';
+          return `<span class="cut-seg ${colorCls}">${innerHtml}</span>${knife}`;
+        });
+        docBodyEl.innerHTML = canvasSegments.join('');
+
+        document.querySelectorAll('[data-lab2-view]').forEach((btn) => {
+          btn.classList.toggle('active', btn.dataset.lab2View === lab2State.view);
+        });
+        document.getElementById('cutCanvas').style.display = lab2State.view === 'canvas' ? 'block' : 'none';
+        document.getElementById('chunkList').style.display = lab2State.view === 'cards' ? 'grid' : 'none';
+
+        const listEl = document.getElementById('chunkList');
+        listEl.innerHTML = results
+          .map((item, idx) => {
+            const len = item.text.length;
+            const isOver = len > size;
+            if (isOver) overflowCount++;
+            const endsClean = /[。？！；.?!]$/.test(item.text.trim());
+            const isBroken = !endsClean && idx < results.length - 1;
+            if (isBroken) brokenSentenceCount++;
+
+            const ovText = item.overlapLen > 0 ? item.text.slice(0, item.overlapLen) : '';
+            const bodyText = item.overlapLen > 0 ? item.text.slice(item.overlapLen) : item.text;
+            const pct = Math.min(100, Math.round((len / size) * 100));
+
+            const badges = [];
+            if (isOver) badges.push('<span class="c-badge bad">超上限</span>');
+            if (droppedPunct) badges.push('<span class="c-badge bad">标点丢失</span>');
+            else if (isBroken) badges.push('<span class="c-badge warn">句中截断</span>');
+            else badges.push('<span class="c-badge ok">边界完整</span>');
+
+            return `
+              <div class="chunk-card ${isOver ? 'is-overflow' : isBroken || droppedPunct ? 'is-broken' : ''}">
+                <div class="chunk-card-head">
+                  <span>chunk #${idx + 1} · ${len}/${size} 字符</span>
+                  <div class="chunk-badges">${badges.join('')}</div>
+                </div>
+                <div class="len-bar"><div class="len-bar-fill ${isOver ? 'over' : ''}" style="width:${pct}%"></div></div>
+                <div class="chunk-text">${ovText ? `<span class="overlap-mark" title="来自上一 chunk 的 Overlap 重叠区">${escapeHtml(ovText)}</span>` : ''}${escapeHtml(bodyText)}</div>
+              </div>`;
+          })
+          .join('');
+
+        document.getElementById('chunkStats').innerHTML = `
+          <div class="stat-pill">总切片数 <strong>${results.length}</strong></div>
+          <div class="stat-pill ${brokenSentenceCount > 0 ? 'is-bad' : ''}">句中截断 <strong>${brokenSentenceCount}</strong> 处</div>
+          <div class="stat-pill ${overflowCount > 0 ? 'is-bad' : ''}">超过 CHUNK_SIZE 上限 <strong>${overflowCount}</strong> 个</div>
+        `;
+
+        const outcome = document.getElementById('chunkOutcome');
+        if (overflowCount > 0) {
+          outcome.className = 'outcome bad';
+          outcome.innerHTML = `<div class="outcome-title">上限突破：有 ${overflowCount} 个切片超过了 ${size} 字符上限</div>切分阶段未预留 <code>CHUNK_SIZE - OVERLAP</code>，直接拼接重叠区会导致最终长度超标。切回“预留 CHUNK_SIZE - OVERLAP”即可修复。`;
+        } else if (droppedPunct) {
+          outcome.className = 'outcome bad';
+          outcome.innerHTML = '<div class="outcome-title">标点丢失陷阱：文本发生粘连</div>调用 <code>text.split("。")</code> 后直接丢掉分隔符，相邻句子失去句号边界。生产代码必须把命中的标点拼接回片段末尾，并写进回归测试。';
+        } else if (lab2State.strategy === 'fixed') {
+          outcome.className = 'outcome meh';
+          outcome.innerHTML = `<div class="outcome-title">Fixed-size 基线：速度快，但产生了 ${brokenSentenceCount} 处句中截断</div>它完全不理解句子边界，常把一句话劈成两半。适合作为第一版基线，随后对比 Recursive 策略。`;
+        } else if (lab2State.strategy === 'recursive-en') {
+          outcome.className = 'outcome meh';
+          outcome.innerHTML = `<div class="outcome-title">英文默认分隔符失效：中文没有词间空格</div>由于找不到 <code>". "</code> 或 <code>" "</code>，递归切片器被迫回退到按字符硬切，产生了 ${brokenSentenceCount} 处句中截断。切换到“中文分隔符”即可看到差别。`;
+        } else {
+          outcome.className = 'outcome good';
+          outcome.innerHTML = `<div class="outcome-title">中文 Recursive 基线就绪：共 ${results.length} 个切片，全部控制在 ${size} 字符以内</div>优先按段落和中文句末标点 <code>。？！；</code> 切分并保留标点；琥珀色底纹为来自上一 chunk 的 Overlap 重叠区。`;
+        }
+
+        const codeEl = document.getElementById('chunkCodeSync');
+        const codeText =
+          lab2State.strategy === 'fixed'
+            ? `const CHUNK_SIZE = ${size};\nconst OVERLAP = ${overlap}; // ${lab2State.overlapPct}%\n\nconst chunks = fixedSizeChunk(cleanedText, CHUNK_SIZE, OVERLAP);`
+            : `${sepLabel}\nconst CHUNK_SIZE = ${size};\nconst OVERLAP = ${overlap}; // ${lab2State.overlapPct}%\n\nconst baseChunks = splitRecursive(\n  cleanedText,\n  ${lab2State.reserveSpace ? 'CHUNK_SIZE - OVERLAP // 预留重叠空间' : 'CHUNK_SIZE // ⚠️ 未预留空间，追加 overlap 后可能超上限'},\n  SEPARATORS${lab2State.strategy === 'recursive-drop' ? ' /* ⚠️ 未保留命中标点 */' : ''}\n);\nconst chunks = addOverlap(baseChunks, OVERLAP);`;
+        codeEl.textContent = codeText;
+        if (window.bookHighlightCode) window.bookHighlightCode(codeEl.parentElement);
+      }
+
+      document.querySelectorAll('[data-strategy]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          lab2State.strategy = btn.dataset.strategy;
+          renderLab2();
+        });
+      });
+      document.querySelectorAll('[data-reserve]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          lab2State.reserveSpace = btn.dataset.reserve === 'yes';
+          renderLab2();
+        });
+      });
+      document.querySelectorAll('[data-lab2-view]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          lab2State.view = btn.dataset.lab2View;
+          renderLab2();
+        });
+      });
+      document.getElementById('chunkSizeSlider').addEventListener('input', (e) => {
+        lab2State.chunkSize = Number(e.target.value);
+        renderLab2();
+      });
+      document.getElementById('overlapSlider').addEventListener('input', (e) => {
+        lab2State.overlapPct = Number(e.target.value);
+        renderLab2();
+      });
+
+      window.applyLab2Preset = function (strategy) {
+        lab2State.strategy = strategy;
+        renderLab2();
+        if (window.bookJumpToLab) window.bookJumpToLab('lab-chunking');
+      };
+
+      /* ============================================================
+         LAB 03: Metadata Dual-Path X-Ray
+         ============================================================ */
+      const metaScenarios = {
+        raw: {
+          tokenBadge: '无额外前缀（+0 字符）',
+          preview: `{
+  "embeddingInput": "普通工单的响应时限缩短至 4 小时，大客户专线保持 1 小时内响应。",
+  "payload": {}
+}`,
+          ranks: [
+            {
+              hit: false,
+              rank: '#1',
+              score: '0.78',
+              source: '未知来源（无 payload）',
+              text: '普通工单的响应时限为 8 小时，大客户专线保持 1 小时内响应。'
+            },
+            {
+              hit: true,
+              rank: '#2',
+              score: '0.77',
+              source: '未知来源（无 payload）',
+              text: '普通工单的响应时限缩短至 4 小时，大客户专线保持 1 小时内响应。'
+            }
+          ],
+          outcomeClass: 'bad',
+          outcomeHtml: '<div class="outcome-title">后果：无法按年份过滤，也无法展示引用来源</div>2024 旧版和 2025 新版切片在向量空间里几乎重叠，模型既分不清哪条是 2025 版，也无法给出可核验的文件出处。'
+        },
+        payload: {
+          tokenBadge: '无额外前缀（+0 字符）',
+          preview: `{
+  "embeddingInput": "普通工单的响应时限缩短至 4 小时，大客户专线保持 1 小时内响应。",
+  "payload": {
+    "source": "2025-after-sales-policy.pdf",
+    "section": "3.2 工单响应 SLA",
+    "year": 2025,
+    "chunkIndex": 4,
+    "totalChunks": 12
+  }
+}`,
+          ranks: [
+            {
+              hit: false,
+              rank: '#1',
+              score: '0.78',
+              source: '2024-after-sales-policy.pdf · chunk 5/11',
+              text: '普通工单的响应时限为 8 小时，大客户专线保持 1 小时内响应。'
+            },
+            {
+              hit: true,
+              rank: '#2',
+              score: '0.77',
+              source: '2025-after-sales-policy.pdf · chunk 5/12',
+              text: '普通工单的响应时限缩短至 4 小时，大客户专线保持 1 小时内响应。'
+            }
+          ],
+          outcomeClass: 'meh',
+          outcomeHtml: '<div class="outcome-title">稳妥基础方案：过滤与溯源已就绪，但孤立语义仍缺上下文</div>如果查询层加了 <code>year = 2025</code> 过滤条件，Payload 可以精准拦掉旧版；但在开放式提问（没有显式过滤条件）时，纯正文向量里不含“2025 售后”，两条相似度依然难分高下。'
+        },
+        both: {
+          tokenBadge: '轻量标题前缀（约 +24 字符）',
+          preview: `{
+  "embeddingInput": "[2025 售后制度 / 3.2 工单响应 SLA]\\n普通工单的响应时限缩短至 4 小时，大客户专线保持 1 小时内响应。",
+  "payload": {
+    "source": "2025-after-sales-policy.pdf",
+    "section": "3.2 工单响应 SLA",
+    "year": 2025,
+    "chunkIndex": 4,
+    "totalChunks": 12
+  }
+}`,
+          ranks: [
+            {
+              hit: true,
+              rank: '#1',
+              score: '0.89',
+              source: '2025-after-sales-policy.pdf · chunk 5/12',
+              text: '[2025 售后制度 / 3.2 工单响应 SLA] 普通工单的响应时限缩短至 4 小时……'
+            },
+            {
+              hit: false,
+              rank: '#2',
+              score: '0.74',
+              source: '2024-after-sales-policy.pdf · chunk 5/11',
+              text: '[2024 售后制度 / 3.2 工单响应 SLA] 普通工单的响应时限为 8 小时……'
+            }
+          ],
+          outcomeClass: 'good',
+          outcomeHtml: '<div class="outcome-title">组合权衡：过滤溯源与孤立切片语义同时补齐</div>把简短的文档标题与章节拼入待向量化文本后，即便没有显式 filter，2025 新版也会在语义相似度上拉开差距。代价是每个切片多消耗少量 token，且会改变相似度分布，上线前需用查询集验证。'
+        }
+      };
+
+      function renderLab3(mode) {
+        document.querySelectorAll('[data-meta-mode]').forEach((card) => {
+          card.classList.toggle('active', card.dataset.metaMode === mode);
+        });
+        const data = metaScenarios[mode];
+        document.getElementById('metaTokenCost').textContent = data.tokenBadge;
+        document.getElementById('metaPayloadPreview').textContent = data.preview;
+        document.getElementById('metaRankList').innerHTML = data.ranks
+          .map(
+            (r) => `
+            <div class="rank-row ${r.hit ? 'hit' : 'miss'}">
+              <div class="rank-meta">
+                <span><strong>${r.rank}</strong> · ${escapeHtml(r.source)}</span>
+                <span class="rank-score">score ${r.score}</span>
+              </div>
+              <div>${escapeHtml(r.text)}</div>
+            </div>`
+          )
+          .join('');
+        const outcome = document.getElementById('metaOutcome');
+        outcome.className = 'outcome ' + data.outcomeClass;
+        outcome.innerHTML = data.outcomeHtml;
+      }
+
+      document.querySelectorAll('[data-meta-mode]').forEach((card) => {
+        card.addEventListener('click', () => renderLab3(card.dataset.metaMode));
+      });
+
+      /* Initial render */
+      renderLab1();
+      renderLab2();
+      renderLab3('both');
+    })();
+  </script>
+  <script src="../shared/site.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-json.min.js"></script>
+</body>
+</html>

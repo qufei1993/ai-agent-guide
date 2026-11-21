@@ -1,0 +1,2694 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Context Engineering：上下文不是越多越好 · AI Agent Guide</title>
+  <!-- SEO:START (auto-synced by scripts/generate-seo.mjs) -->
+  <meta name="description" content="理解上下文来源、信息位置与预算，通过筛选、组织和按需加载提高有效信息比例" />
+  <link rel="canonical" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/context-engineering.html" />
+  <link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/context-engineering.html" />
+  <link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/context-engineering.html" />
+  <link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/context-engineering.html" />
+  <meta property="og:type" content="article" />
+  <meta property="og:locale" content="zh_CN" />
+  <meta property="og:locale:alternate" content="en_US" />
+  <meta property="og:title" content="Context Engineering" />
+  <meta property="og:description" content="理解上下文来源、信息位置与预算，通过筛选、组织和按需加载提高有效信息比例" />
+  <meta property="og:url" content="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/context-engineering.html" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "Context Engineering",
+    "description": "理解上下文来源、信息位置与预算，通过筛选、组织和按需加载提高有效信息比例",
+    "inLanguage": "zh-CN",
+    "url": "https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/context-engineering.html",
+    "isPartOf": {
+      "@type": "Book",
+      "name": "AI Agent Guide"
+    }
+  }
+  </script>
+  <!-- SEO:END -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css" />
+  <link rel="stylesheet" href="../shared/tokens.css" />
+  <style>
+    :root {
+      --bg: #faf8f5;
+      --bg-elevated: #ffffff;
+      --bg-muted: #f2efe9;
+      --bg-code: #1e2028;
+      --text: #1c1917;
+      --text-secondary: #57534e;
+      --text-muted: #78716c;
+      --border: #e7e2da;
+      --border-strong: #d6cfc4;
+      --accent: #b45309;
+      --accent-soft: #fef3c7;
+      --blue: #2563eb;
+      --blue-soft: #eff6ff;
+      --teal: #0d9488;
+      --teal-soft: #f0fdfa;
+      --purple: #7c3aed;
+      --purple-soft: #f5f3ff;
+      --rose: #e11d48;
+      --rose-soft: #fff1f2;
+      --green: #15803d;
+      --green-soft: #f0fdf4;
+      --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.05);
+      --shadow-md: 0 8px 24px -4px rgba(28, 25, 23, 0.08), 0 2px 6px -1px rgba(28, 25, 23, 0.04);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --font-sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", Roboto, sans-serif;
+      --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --page-width: 980px;
+    }
+
+    [data-theme="dark"] {
+      --bg: #121316;
+      --bg-elevated: #1a1c21;
+      --bg-muted: #22252c;
+      --bg-code: #0d0e11;
+      --text: #eceae4;
+      --text-secondary: #a8a29e;
+      --text-muted: #78716c;
+      --border: #2a2d35;
+      --border-strong: #3a3e49;
+      --accent: #f59e0b;
+      --accent-soft: rgba(245, 158, 11, 0.14);
+      --blue: #60a5fa;
+      --blue-soft: rgba(96, 165, 250, 0.12);
+      --teal: #2dd4bf;
+      --teal-soft: rgba(45, 212, 191, 0.12);
+      --purple: #a78bfa;
+      --purple-soft: rgba(167, 139, 250, 0.12);
+      --rose: #fb7185;
+      --rose-soft: rgba(251, 113, 133, 0.12);
+      --green: #4ade80;
+      --green-soft: rgba(74, 222, 128, 0.12);
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 10px 30px -5px rgba(0, 0, 0, 0.45);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.75;
+      font-size: 16.5px;
+      -webkit-font-smoothing: antialiased;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    /* Top bar & reading progress */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: color-mix(in srgb, var(--bg) 86%, transparent);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .topbar-inner {
+      max-width: var(--page-width);
+      margin: 0 auto;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .brand-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      letter-spacing: 0.02em;
+    }
+
+    .topbar-nav {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      font-size: 13.5px;
+    }
+
+    .topbar-nav a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .topbar-nav a:hover { color: var(--text); }
+
+    .theme-btn {
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 5px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .theme-btn:hover { border-color: var(--border-strong); }
+
+    .progress-track { height: 2px; background: transparent; width: 100%; }
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--teal), var(--accent));
+      transition: width 0.08s linear;
+    }
+
+    /* Layout containers - unified width across text, cards, code & labs */
+    .prose {
+      max-width: var(--page-width);
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .lab-wrap {
+      max-width: var(--page-width);
+      margin: 36px auto;
+      padding: 0 24px;
+    }
+
+    /* Hero */
+    .hero {
+      max-width: var(--page-width);
+      margin: 44px auto 24px;
+      padding: 0 24px;
+    }
+
+    .hero-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .hero-pill {
+      background: var(--bg-muted);
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    h1 {
+      font-size: clamp(28px, 4vw, 40px);
+      line-height: 1.22;
+      letter-spacing: -0.02em;
+      margin: 0 0 16px;
+      font-weight: 750;
+    }
+
+    .hero-lead {
+      font-size: 18px;
+      color: var(--text-secondary);
+      line-height: 1.65;
+      margin: 0 0 22px;
+    }
+
+    h2 {
+      font-size: 24px;
+      line-height: 1.3;
+      margin: 52px 0 14px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      letter-spacing: -0.015em;
+    }
+
+    h3 {
+      font-size: 19px;
+      line-height: 1.4;
+      margin: 28px 0 12px;
+      font-weight: 650;
+    }
+
+    p { margin: 0 0 16px; }
+
+    a {
+      color: var(--blue);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      text-decoration-color: color-mix(in srgb, var(--blue) 40%, transparent);
+    }
+
+    a:hover { text-decoration-color: var(--blue); }
+
+    strong { font-weight: 650; color: var(--text); }
+
+    code {
+      font-family: var(--font-mono);
+      font-size: 0.875em;
+      background: var(--bg-muted);
+      padding: 2px 6px;
+      border-radius: 5px;
+      border: 1px solid var(--border);
+    }
+
+    blockquote {
+      margin: 20px 0 24px;
+      padding: 16px 20px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--accent);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-sm);
+    }
+
+    blockquote p { margin: 0 0 6px; font-size: 16px; font-style: italic; }
+    blockquote cite { display: block; font-style: normal; font-size: 13px; color: var(--text-muted); }
+
+    /* Concept Compare Grid (Prompt vs Context) */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin: 20px 0 28px;
+    }
+
+    .compare-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .compare-card.highlight {
+      border-color: color-mix(in srgb, var(--teal) 45%, var(--border));
+      background: linear-gradient(180deg, var(--teal-soft) 0%, var(--bg-elevated) 55%);
+    }
+
+    .compare-kicker {
+      font-size: 11.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .compare-card.highlight .compare-kicker { color: var(--teal); }
+    .compare-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+    .compare-desc { font-size: 14px; color: var(--text-secondary); margin: 0; line-height: 1.6; }
+
+    /* Interactive 4-Layer Explorer */
+    .layer-explorer {
+      display: grid;
+      grid-template-columns: 0.95fr 1.05fr;
+      gap: 16px;
+      margin: 20px 0 12px;
+      align-items: stretch;
+    }
+
+    .layer-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .layer-btn {
+      text-align: left;
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      border-radius: var(--radius-sm);
+      padding: 11px 14px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--text);
+      font-family: var(--font-sans);
+    }
+
+    .layer-btn:hover {
+      border-color: var(--border-strong);
+      transform: translateX(2px);
+    }
+
+    .layer-btn.active {
+      box-shadow: var(--shadow-sm);
+      border-color: var(--text-secondary);
+      background: var(--bg-muted);
+    }
+
+    .layer-btn-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .layer-swatch {
+      width: 10px;
+      height: 28px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    .layer-name { font-size: 14.5px; font-weight: 700; display: block; line-height: 1.3; }
+    .layer-sub { font-size: 12px; color: var(--text-muted); }
+
+    .layer-badge {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .layer-detail {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .layer-detail-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+    }
+
+    .layer-detail-title { font-size: 16.5px; font-weight: 700; }
+    .layer-meta-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+    .meta-tag {
+      font-size: 12px;
+      padding: 3px 9px;
+      border-radius: 6px;
+      background: var(--bg-muted);
+      color: var(--text-secondary);
+    }
+
+    .layer-example {
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+
+    /* Stat Strip for Lost in the Middle */
+    .stat-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin: 20px 0 18px;
+    }
+
+    .stat-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .stat-card.dip {
+      background: var(--rose-soft);
+      border-color: color-mix(in srgb, var(--rose) 35%, var(--border));
+    }
+
+    .stat-pos { font-size: 12.5px; color: var(--text-secondary); font-weight: 600; margin-bottom: 4px; }
+    .stat-num { font-size: 28px; font-weight: 800; font-family: var(--font-mono); line-height: 1.2; }
+    .stat-note { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+    .callout {
+      margin: 22px 0;
+      padding: 15px 18px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      font-size: 14.5px;
+    }
+
+    .callout-note {
+      background: var(--blue-soft);
+      border-color: color-mix(in srgb, var(--blue) 30%, var(--border));
+    }
+
+    .callout-warn {
+      background: var(--accent-soft);
+      border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+    }
+
+    .callout-title {
+      font-weight: 700;
+      font-size: 12.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 5px;
+      display: block;
+    }
+
+    .callout-note .callout-title { color: var(--blue); }
+    .callout-warn .callout-title { color: var(--accent); }
+
+    /* Code blocks + interactive line highlight */
+    .code-card {
+      margin: 22px 0;
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: var(--bg-code);
+      border: 1px solid #2b2f3a;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 14px;
+      background: #16181f;
+      border-bottom: 1px solid #2b2f3a;
+      font-size: 12.5px;
+      color: #9ca3af;
+      font-family: var(--font-mono);
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .code-layer-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    .code-pill {
+      border: 1px solid #373c4a;
+      background: #20242e;
+      color: #cbd5e1;
+      border-radius: 999px;
+      padding: 2px 9px;
+      font-size: 11.5px;
+      cursor: pointer;
+      font-family: var(--font-sans);
+      transition: all 0.15s;
+    }
+
+    .code-pill.active,
+    .code-pill:hover {
+      background: #2dd4bf;
+      color: #0d0e11;
+      border-color: #2dd4bf;
+      font-weight: 600;
+    }
+
+    .copy-btn {
+      background: #272b36;
+      color: #e5e7eb;
+      border: 1px solid #373c4a;
+      border-radius: 6px;
+      padding: 3px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .copy-btn:hover { background: #373c4a; }
+
+    pre {
+      margin: 0;
+      padding: 16px 18px;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 13.5px;
+      line-height: 1.65;
+      color: #e6edf3;
+    }
+
+    pre code {
+      background: none;
+      border: none;
+      padding: 0;
+      font-size: inherit;
+      color: inherit;
+      display: block;
+    }
+
+    .code-line {
+      display: block;
+      padding: 0 6px;
+      margin: 0 -6px;
+      border-radius: 4px;
+      transition: background 0.15s, opacity 0.15s;
+    }
+
+    .code-dim .code-line { opacity: 0.35; }
+    .code-dim .code-line.hl {
+      opacity: 1;
+      background: rgba(45, 212, 191, 0.16);
+      box-shadow: inset 3px 0 0 #2dd4bf;
+    }
+
+    /* Interactive Lab Shell */
+    .lab-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+
+    .lab-header {
+      padding: 18px 24px;
+      background: var(--bg-muted);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .lab-eyebrow {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--teal);
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    .lab-title { font-size: 18px; font-weight: 700; margin: 0 0 4px; }
+    .lab-desc { font-size: 14px; color: var(--text-secondary); margin: 0; }
+    .lab-body { padding: 24px; }
+
+    /* Lab 1 */
+    .lab1-grid {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .token-meter-wrap { margin-bottom: 20px; }
+    .token-meter-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 13.5px;
+      margin-bottom: 8px;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .token-bar {
+      height: 16px;
+      border-radius: 999px;
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      display: flex;
+    }
+
+    .seg-system { background: var(--purple); transition: width 0.25s ease; }
+    .seg-history { background: var(--blue); transition: width 0.25s ease; }
+    .seg-rag { background: var(--teal); transition: width 0.25s ease; }
+    .seg-noise { background: #9ca3af; transition: width 0.25s ease; }
+    .seg-task { background: var(--accent); transition: width 0.25s ease; }
+
+    .legend-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 8px;
+      font-size: 12.5px;
+      color: var(--text-secondary);
+    }
+
+    .legend-item { display: inline-flex; align-items: center; gap: 6px; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
+    .control-group {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      margin-bottom: 14px;
+    }
+
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13.5px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      gap: 8px;
+    }
+
+    .toggle-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .chip-btn {
+      border: 1px solid var(--border-strong);
+      background: var(--bg-elevated);
+      color: var(--text-secondary);
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-weight: 500;
+    }
+
+    .chip-btn.active {
+      background: var(--text);
+      color: var(--bg);
+      border-color: var(--text);
+    }
+
+    .chip-btn.danger-active {
+      background: var(--rose);
+      color: #ffffff;
+      border-color: var(--rose);
+    }
+
+    .doc-slots {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 5px;
+      margin-top: 10px;
+    }
+
+    .doc-slot {
+      height: 28px;
+      border-radius: 5px;
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .doc-slot:hover:not(.disabled):not(.is-answer) {
+      border-color: var(--teal);
+      color: var(--text);
+    }
+
+    .doc-slot.is-answer {
+      background: var(--teal);
+      color: #ffffff;
+      border-color: var(--teal);
+      font-weight: 700;
+      transform: translateY(-2px);
+      box-shadow: 0 3px 8px rgba(13, 148, 136, 0.35);
+    }
+
+    .doc-slot.disabled { opacity: 0.25; pointer-events: none; }
+
+    input[type="range"] { width: 100%; accent-color: var(--teal); cursor: pointer; }
+
+    .metric-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .metric-box {
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .metric-k { font-size: 12px; color: var(--text-muted); margin-bottom: 3px; }
+    .metric-v {
+      font-size: 24px;
+      font-weight: 750;
+      font-family: var(--font-mono);
+      line-height: 1.2;
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .metric-sub {
+      font-size: 12.5px;
+      font-weight: 600;
+      font-family: var(--font-sans);
+      color: var(--text-secondary);
+    }
+
+    .diagnosis-box {
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 13.5px;
+      line-height: 1.55;
+      border: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .diagnosis-box.warn {
+      background: var(--rose-soft);
+      border-color: color-mix(in srgb, var(--rose) 35%, var(--border));
+    }
+
+    .diagnosis-box.good {
+      background: var(--teal-soft);
+      border-color: color-mix(in srgb, var(--teal) 35%, var(--border));
+    }
+
+    /* Lab 1 X-Ray Inspector */
+    .xray-panel {
+      margin-top: 20px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+      overflow: hidden;
+    }
+
+    .xray-tabs {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 14px;
+      background: var(--bg-muted);
+      border-bottom: 1px solid var(--border);
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .xray-tab-group { display: flex; gap: 6px; }
+    .xray-tab {
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-secondary);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .xray-tab.active {
+      background: var(--bg-elevated);
+      color: var(--text);
+      border-color: var(--border);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .xray-content {
+      padding: 14px;
+      max-height: 250px;
+      overflow-y: auto;
+    }
+
+    .heatmap-stream { display: flex; flex-direction: column; gap: 6px; }
+
+    .hm-block {
+      padding: 7px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      font-size: 12.5px;
+      font-family: var(--font-mono);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      transition: opacity 0.2s;
+    }
+
+    .hm-block.is-key { border-color: var(--teal); background: var(--teal-soft); font-weight: 600; }
+    .hm-block.is-key-lost { border-color: var(--rose); background: var(--rose-soft); }
+
+    .hm-badge {
+      font-size: 11px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    .payload-pre {
+      margin: 0;
+      padding: 12px;
+      border-radius: 6px;
+      background: var(--bg-code);
+      color: #e6edf3;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.55;
+      overflow-x: auto;
+    }
+
+    /* Lab 2 */
+    .lab2-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .lab2-sandbox-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      font-size: 13px;
+    }
+
+    .btn-group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+    .btn {
+      border: 1px solid var(--border-strong);
+      background: var(--bg-elevated);
+      color: var(--text);
+      padding: 7px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn:hover:not(:disabled) { border-color: var(--text-secondary); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .btn-primary {
+      background: var(--teal);
+      color: #ffffff;
+      border-color: var(--teal);
+    }
+
+    .btn-primary:hover:not(:disabled) { filter: brightness(1.06); border-color: var(--teal); }
+
+    .turn-indicator {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      padding: 5px 12px;
+      background: var(--bg-muted);
+      border-radius: 999px;
+      font-weight: 600;
+    }
+
+    .lab2-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+
+    .strategy-panel {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .strategy-head {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+      font-weight: 700;
+      gap: 8px;
+    }
+
+    .strategy-badge { font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+    .badge-warn { background: var(--rose-soft); color: var(--rose); }
+    .badge-good { background: var(--teal-soft); color: var(--teal); }
+
+    .strategy-body {
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 350px;
+      max-height: 430px;
+      overflow-y: auto;
+    }
+
+    .summary-card {
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      background: var(--purple-soft);
+      border: 1px dashed var(--purple);
+      font-size: 12.5px;
+      line-height: 1.5;
+    }
+
+    .summary-card-title {
+      font-weight: 700;
+      color: var(--purple);
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    .msg-item {
+      padding: 8px 11px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      font-size: 13px;
+      line-height: 1.5;
+      transition: opacity 0.2s;
+    }
+
+    .msg-item.dropped {
+      opacity: 0.42;
+      text-decoration: line-through;
+      background: var(--bg-muted);
+    }
+
+    .msg-item.is-spike { border-color: var(--rose); background: var(--rose-soft); }
+
+    .msg-role {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      margin-right: 6px;
+      color: var(--text-muted);
+    }
+
+    .msg-tag {
+      font-size: 11px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      margin-left: 6px;
+      font-weight: 600;
+    }
+
+    .tag-constraint { background: var(--accent-soft); color: var(--accent); }
+    .tag-lost { background: var(--rose-soft); color: var(--rose); }
+    .tag-ok { background: var(--green-soft); color: var(--green); }
+
+    .strategy-foot {
+      padding: 10px 16px;
+      border-top: 1px solid var(--border);
+      background: var(--bg-elevated);
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* Lab 3 */
+    .lab3-modes { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+    .jit-layout { display: grid; grid-template-columns: 0.95fr 1.05fr; gap: 18px; }
+
+    .file-pool, .jit-timeline {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      background: var(--bg);
+    }
+
+    .file-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+
+    .file-pill {
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.2s;
+    }
+
+    .file-pill.loaded-relevant { border-color: var(--teal); background: var(--teal-soft); color: var(--teal); font-weight: 600; }
+    .file-pill.loaded-noise { border-color: var(--rose); background: var(--rose-soft); color: var(--rose); }
+    .file-pill.cleared { opacity: 0.45; border-style: dashed; }
+
+    .jit-timeline { display: flex; flex-direction: column; justify-content: space-between; gap: 12px; }
+    .context-blocks-stack { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+
+    .ctx-block {
+      padding: 8px 11px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      font-size: 12.5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .ctx-block.active-block { border-left: 3px solid var(--teal); }
+    .ctx-block.noise-block { border-left: 3px solid var(--rose); background: var(--rose-soft); }
+    .ctx-block.cleared-block { opacity: 0.5; border-style: dashed; text-decoration: line-through; }
+
+    .jit-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+
+    .jit-stat-val { font-family: var(--font-mono); font-size: 18px; font-weight: 700; }
+    .jit-stat-lbl { font-size: 11.5px; color: var(--text-muted); }
+
+    /* Collapsible code details */
+    details.code-fold {
+      margin: 20px 0;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg-elevated);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    details.code-fold summary {
+      padding: 13px 18px;
+      font-size: 14.5px;
+      font-weight: 650;
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-muted);
+      color: var(--text);
+    }
+
+    details.code-fold summary::-webkit-details-marker { display: none; }
+
+    details.code-fold summary::after {
+      content: "展开代码 +";
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--teal);
+      font-family: var(--font-mono);
+    }
+
+    details.code-fold[open] summary::after {
+      content: "收起 -";
+    }
+
+    .code-fold-body {
+      padding: 16px 18px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Scenario Decision Matrix (Flat cards + non-hiding filter highlight) */
+    .decision-filter-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 14px 0 16px;
+      flex-wrap: wrap;
+    }
+
+    .decision-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .decision-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .decision-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: opacity 0.2s, border-color 0.2s, transform 0.2s;
+    }
+
+    .decision-card.is-match {
+      border-color: var(--teal);
+      box-shadow: var(--shadow-md);
+    }
+
+    .decision-card.is-dim {
+      opacity: 0.35;
+    }
+
+    .decision-card.is-summary {
+      background: linear-gradient(180deg, var(--accent-soft) 0%, var(--bg-elevated) 70%);
+      border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+    }
+
+    .dc-tag {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--teal);
+      letter-spacing: 0.03em;
+    }
+
+    .decision-card.is-summary .dc-tag { color: var(--accent); }
+
+    .dc-title {
+      font-size: 15.5px;
+      font-weight: 700;
+      line-height: 1.35;
+      color: var(--text);
+    }
+
+    .dc-desc {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    /* Footer */
+    footer {
+      max-width: var(--page-width);
+      margin: 64px auto 80px;
+      padding: 28px 24px 0;
+      border-top: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 14.5px;
+    }
+
+    .next-card {
+      margin-top: 24px;
+      padding: 18px 20px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+    }
+
+    .next-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    @media (max-width: 860px) {
+      .compare-grid,
+      .layer-explorer,
+      .stat-strip,
+      .lab1-grid,
+      .lab2-columns,
+      .jit-layout,
+      .decision-grid { grid-template-columns: 1fr; }
+      .doc-slots { grid-template-columns: repeat(5, 1fr); }
+      .file-grid { grid-template-columns: 1fr; }
+      .topbar-nav { display: none; }
+    }
+
+    /* Narrative <-> Lab coupling, predict-first hook & micro-transitions */
+    .inline-trigger {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin: 4px 2px;
+      padding: 4px 11px;
+      border-radius: 999px;
+      border: 1px solid rgba(13, 148, 136, 0.35);
+      background: var(--teal-soft);
+      color: var(--teal);
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      vertical-align: baseline;
+      transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+    }
+
+    .inline-trigger:hover {
+      transform: translateY(-1px);
+      border-color: var(--teal);
+      background: rgba(13, 148, 136, 0.16);
+    }
+
+    @keyframes labPulse {
+      0% { box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.38), var(--shadow-md); }
+      65% { box-shadow: 0 0 0 8px rgba(13, 148, 136, 0), var(--shadow-md); }
+      100% { box-shadow: 0 0 0 0 rgba(13, 148, 136, 0), var(--shadow-md); }
+    }
+
+    .lab-card.is-pulsing {
+      animation: labPulse 0.9s ease-out;
+      border-color: var(--teal);
+    }
+
+    .predict-hook {
+      margin-bottom: 16px;
+      padding: 12px 14px;
+      border-radius: var(--radius-md);
+      border: 1px dashed rgba(217, 119, 6, 0.45);
+      background: var(--accent-soft);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .predict-q {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .predict-badge {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .predict-opts {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .predict-opt {
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-strong);
+      background: var(--bg-elevated);
+      color: var(--text-secondary);
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .predict-opt:hover { border-color: var(--accent); color: var(--text-primary); }
+    .predict-opt.is-right { border-color: var(--teal); background: var(--teal-soft); color: var(--teal); }
+    .predict-opt.is-wrong { border-color: var(--rose); background: var(--rose-soft); color: var(--rose); }
+
+    .predict-feedback {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.55;
+      display: none;
+    }
+
+    .predict-feedback.show { display: block; }
+
+    .token-bar > div {
+      transition: width 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    @keyframes blockIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .context-block, .hm-block {
+      animation: blockIn 0.2s ease-out;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#">
+        <span>AI Agent Guide</span>
+        <span class="brand-badge">交互版</span>
+      </a>
+      <nav class="topbar-nav">
+        <a href="#sources">四类来源</a>
+        <a href="#lab-1">位置与热力图</a>
+        <a href="#lab-2">边界沙盒</a>
+        <a href="#lab-3">积木装卸台</a>
+        <a href="#decision">选型指南</a>
+      </nav>
+      <button class="theme-btn" id="themeToggle" type="button" aria-label="切换深浅色主题">
+        <span id="themeIcon">☀</span>
+        <span id="themeText">浅色</span>
+      </button>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-meta">
+      <span class="hero-pill">第一阶段 · LLM 工程基础</span>
+      <span>含 5 处交互组件 · 可透视 Payload 与边界失效</span>
+    </div>
+    <h1>Context Engineering：上下文不是越多越好</h1>
+    <p class="hero-lead">
+      上下文太长会导致模型注意力稀释。就像去医院看病，你不会把出生以来所有病历都带过去，而是只带这次相关的几份检查报告。
+    </p>
+  </section>
+
+  <section class="tldr" aria-label="30 秒版">
+    <div class="tldr-card">
+      <div class="tldr-head">
+        <span class="tldr-kicker">30 秒版 · 只记这 3 句</span>
+        <span class="sim-tag">实验台曲线与权重为教学示意</span>
+      </div>
+      <ol class="tldr-list">
+        <li class="tldr-item">
+          <span class="tldr-num">01</span>
+          <span class="tldr-claim">上下文不是一锅粥，按生命周期分四层管理。</span>
+          <button class="tldr-go" type="button" onclick="document.getElementById('layers').scrollIntoView({behavior:'smooth'})">看四层结构 →</button>
+        </li>
+        <li class="tldr-item">
+          <span class="tldr-num">02</span>
+          <span class="tldr-claim">证据塞在长上下文正中间，准确率可能低于不给文档。</span>
+          <button class="tldr-go" type="button" onclick="triggerLab1Middle()">复现第 10 位丢失 →</button>
+        </li>
+        <li class="tldr-item">
+          <span class="tldr-num">03</span>
+          <span class="tldr-claim">多轮对话用滚动摘要保底，工具与文档靠 JIT 按需加载。</span>
+          <button class="tldr-go" type="button" onclick="bookJumpToLab('lab-2')">试试 3,000t 冲击 →</button>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <main class="prose">
+    <blockquote>
+      <p>“context engineering is the delicate art and science of filling the context window with just the right information for the next step.”</p>
+      <cite>来源：<a href="https://x.com/karpathy/status/1937902205765607626" target="_blank" rel="noopener">@karpathy，2025 年 6 月 25 日</a></cite>
+    </blockquote>
+
+    <div class="compare-grid wide-block">
+      <div class="compare-card">
+        <div class="compare-kicker">Prompt Engineering</div>
+        <div class="compare-title">关心“怎么写指令”</div>
+        <p class="compare-desc">设计系统角色、语气约束、Few-shot 示例与输出格式，决定模型以什么方式思考和回答。</p>
+      </div>
+      <div class="compare-card highlight">
+        <div class="compare-kicker">Context Engineering</div>
+        <div class="compare-title">关心“放什么信息、放哪里”</div>
+        <p class="compare-desc">在每一步动态筛选有用片段、控制 Token 预算并排列顺序，避免噪声稀释模型注意力。</p>
+      </div>
+    </div>
+
+    <h2 id="sources">上下文的四类来源</h2>
+    <p class="key">
+      上下文不是把所有文本混在一起，而是按生命周期分成四层。点击左侧任意一层，查看它的管理策略与真实片段（颜色与后文实验台一一对应）：
+    </p>
+
+    <div class="layer-explorer wide-block" id="layerExplorer">
+      <div class="layer-list">
+        <button class="layer-btn active" data-src="system" type="button">
+          <span class="layer-btn-left">
+            <span class="layer-swatch" style="background: var(--purple);"></span>
+            <span>
+              <span class="layer-name">System Prompt · 规则层</span>
+              <span class="layer-sub">角色定义与全局约束</span>
+            </span>
+          </span>
+          <span class="layer-badge">不增长</span>
+        </button>
+        <button class="layer-btn" data-src="history" type="button">
+          <span class="layer-btn-left">
+            <span class="layer-swatch" style="background: var(--blue);"></span>
+            <span>
+              <span class="layer-name">对话历史 · 记忆层</span>
+              <span class="layer-sub">短期会话与多轮状态</span>
+            </span>
+          </span>
+          <span class="layer-badge">随轮次增长</span>
+        </button>
+        <button class="layer-btn" data-src="knowledge" type="button">
+          <span class="layer-btn-left">
+            <span class="layer-swatch" style="background: var(--teal);"></span>
+            <span>
+              <span class="layer-name">RAG / 工具输出 · 知识层</span>
+              <span class="layer-sub">检索片段与 API 返回</span>
+            </span>
+          </span>
+          <span class="layer-badge">动态累积</span>
+        </button>
+        <button class="layer-btn" data-src="task" type="button">
+          <span class="layer-btn-left">
+            <span class="layer-swatch" style="background: var(--accent);"></span>
+            <span>
+              <span class="layer-name">用户当前输入 · 任务层</span>
+              <span class="layer-sub">本轮待处理指令</span>
+            </span>
+          </span>
+          <span class="layer-badge">始终保留</span>
+        </button>
+      </div>
+
+      <div class="layer-detail" id="layerDetail"></div>
+    </div>
+
+    <h2>为什么塞得越多，效果越差</h2>
+    <p class="key">
+      Liu 等人（2023 年，TACL 2024，<a href="https://arxiv.org/abs/2307.03172" target="_blank" rel="noopener">arXiv:2307.03172</a>）给模型 20 份文档、只把正确答案藏在其中一份里，测试 GPT-3.5-Turbo 在不同位置下的准确率：
+    </p>
+
+    <div class="stat-strip wide-block">
+      <div class="stat-card">
+        <div class="stat-pos">第 1 位（开头）</div>
+        <div class="stat-num" style="color: var(--teal);">75%</div>
+        <div class="stat-note">首部注意力集中</div>
+      </div>
+      <div class="stat-card dip">
+        <div class="stat-pos">第 10 位（中间）</div>
+        <div class="stat-num" style="color: var(--rose);">55%</div>
+        <div class="stat-note">低于无文档基线 56.1%</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-pos">第 20 位（结尾）</div>
+        <div class="stat-num" style="color: var(--teal);">72%</div>
+        <div class="stat-note">近因效应回升</div>
+      </div>
+    </div>
+
+    <p>
+      Chroma 在 2025 年测试 18 个主流模型也发现了长输入下的“Context Rot（上下文腐化）”（<a href="https://www.trychroma.com/research/context-rot" target="_blank" rel="noopener">Chroma Research</a>），另有研究指出厂商宣传的“最大上下文窗口”远大于“最大有效上下文窗口”（<a href="https://arxiv.org/abs/2509.21361" target="_blank" rel="noopener">arXiv:2509.21361</a>）。在下面实验台拖动证据位置，直接透视模型视野里的注意力衰减与真实 Payload：
+      <button class="inline-trigger" id="presetMiddleBtn" type="button">▶ 一键复现：20 份文档时把证据塞在中间</button>
+    </p>
+  </main>
+
+  <!-- INTERACTIVE LAB 1 -->
+  <section class="lab-wrap" id="lab-1">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <span class="lab-eyebrow">交互实验台 01 · Lost in the Middle &amp; Payload 透视</span>
+          <h3 class="lab-title">上下文组装、注意力热力图与请求预览</h3>
+          <p class="lab-desc">开关上下文层、调节噪声文档数量、移动关键证据位置，透视位置衰减与真实 Payload。<span class="sim-tag">示意曲线 · 非真实模型推理</span></p>
+        </div>
+        <button class="btn" id="lab1ResetBtn" type="button">恢复默认</button>
+      </div>
+      <div class="lab-body">
+        <div class="predict-hook" id="predictHook1">
+          <div class="predict-q">
+            <span class="predict-badge">先猜后验</span>
+            <span>20 份文档里把正确答案放在第 10 位（正中间），模型准确率比“完全不给任何文档”高还是低？</span>
+          </div>
+          <div class="predict-opts">
+            <button class="predict-opt" data-predict="high" type="button">A. 更高，毕竟给了正确答案</button>
+            <button class="predict-opt" data-predict="low" type="button">B. 更低，还不如不给文档</button>
+            <button class="predict-opt" data-predict="same" type="button">C. 差不多持平</button>
+          </div>
+          <div class="predict-feedback" id="predictFeedback1"></div>
+        <button class="predict-verify" type="button" onclick="triggerLab1Middle()">在热力图与 U 型曲线中复现第 10 位 →</button>
+        </div>
+        <div class="token-meter-wrap">
+          <div class="token-meter-head">
+            <span><strong>实时 Context Window 占用</strong>（模拟 16,000 Tokens 有效工作窗口）</span>
+            <span id="lab1TokenSummary" style="font-family: var(--font-mono); font-weight: 700;"></span>
+          </div>
+          <div class="token-bar">
+            <div class="seg-system" id="segSystem"></div>
+            <div class="seg-history" id="segHistory"></div>
+            <div class="seg-rag" id="segRag"></div>
+            <div class="seg-noise" id="segNoise"></div>
+            <div class="seg-task" id="segTask"></div>
+          </div>
+          <div class="legend-row">
+            <span class="legend-item"><span class="dot" style="background: var(--purple)"></span>规则层 System</span>
+            <span class="legend-item"><span class="dot" style="background: var(--blue)"></span>记忆层 历史</span>
+            <span class="legend-item"><span class="dot" style="background: var(--teal)"></span>知识层 关键证据</span>
+            <span class="legend-item"><span class="dot" style="background: #9ca3af"></span>干扰噪声文档</span>
+            <span class="legend-item"><span class="dot" style="background: var(--accent)"></span>任务层 当前输入</span>
+          </div>
+        </div>
+
+        <div class="lab1-grid">
+          <div>
+            <div class="control-group">
+              <div class="control-label"><span>1. 启用上下文层级</span></div>
+              <div class="toggle-chips">
+                <button class="chip-btn active" data-layer="system" type="button">System Prompt (600t)</button>
+                <button class="chip-btn active" data-layer="history" type="button">最近对话历史 (1,800t)</button>
+                <button class="chip-btn active" data-layer="task" type="button">用户当前输入 (200t)</button>
+              </div>
+            </div>
+
+            <div class="control-group">
+              <div class="control-label">
+                <span>2. 检索文档总数（1 份关键证据 + 噪声）</span>
+                <span id="docCountLabel" style="font-family: var(--font-mono);">20 份</span>
+              </div>
+              <input type="range" id="docCountSlider" min="3" max="20" value="20" />
+            </div>
+
+            <div class="control-group">
+              <div class="control-label">
+                <span>3. 点击槽位，移动“关键证据”位置</span>
+                <span id="answerPosLabel" style="font-family: var(--font-mono); color: var(--teal);">第 10 位（中间）</span>
+              </div>
+              <div class="doc-slots" id="docSlots"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="metric-cards">
+              <div class="metric-box">
+                <div class="metric-k">参考准确率（U 型曲线）</div>
+                <div class="metric-v" id="accVal">55%</div>
+              </div>
+              <div class="metric-box">
+                <div class="metric-k">预估首字延迟 / 成本</div>
+                <div class="metric-v" id="latencyVal"></div>
+              </div>
+            </div>
+
+            <div style="border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; background: var(--bg); margin-bottom: 12px;">
+              <svg id="uCurveSvg" viewBox="0 0 360 154" style="width: 100%; height: auto; display: block;">
+                <line x1="36" y1="120" x2="340" y2="120" stroke="var(--border-strong)" stroke-width="1" />
+                <line x1="36" y1="18" x2="36" y2="120" stroke="var(--border-strong)" stroke-width="1" />
+                <line x1="36" y1="95" x2="340" y2="95" stroke="var(--rose)" stroke-width="1.2" stroke-dasharray="4 4" opacity="0.7" />
+                <text x="336" y="112" text-anchor="end" fill="var(--rose)" font-size="10" font-family="monospace">无文档基线 56.1%</text>
+                <path id="uCurvePath" d="" fill="none" stroke="var(--teal)" stroke-width="2.5" stroke-linecap="round" />
+                <circle id="uCurveDot" cx="188" cy="90" r="6" fill="var(--accent)" stroke="var(--bg-elevated)" stroke-width="2" />
+                <text x="36" y="139" fill="var(--text-muted)" font-size="10.5">第 1 位（开头）</text>
+                <text x="168" y="139" fill="var(--text-muted)" font-size="10.5">中间</text>
+                <text x="304" y="139" fill="var(--text-muted)" font-size="10.5">末尾</text>
+              </svg>
+            </div>
+
+            <div class="diagnosis-box warn" id="lab1Diagnosis"></div>
+          </div>
+        </div>
+
+        <div class="xray-panel">
+          <div class="xray-tabs">
+            <div class="xray-tab-group">
+              <button class="xray-tab active" data-xray="heatmap" type="button">模型注意力热力图视野</button>
+              <button class="xray-tab" data-xray="payload" type="button">真实组装 Payload (JSON)</button>
+            </div>
+            <span style="font-size: 12px; color: var(--text-muted);">颜色越淡代表模型在长上下文中对该区域的关注度越低</span>
+          </div>
+          <div class="xray-content" id="xrayContent"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2>上下文的组织原则</h2>
+    <p class="key">
+      按优先级分层组装，并用 Reranker 把最相关的片段放到首尾。点击代码块顶部的层级标签，高亮查看四类来源在 Anthropic SDK 调用里的位置：
+    </p>
+
+    <div class="code-card wide-block" id="assemblyCodeCard">
+      <div class="code-header">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <span>context-assembly.ts</span>
+          <div class="code-layer-pills">
+            <button class="code-pill active" data-hl="all" type="button">全部</button>
+            <button class="code-pill" data-hl="system" type="button">规则层</button>
+            <button class="code-pill" data-hl="knowledge" type="button">知识层</button>
+            <button class="code-pill" data-hl="memory" type="button">记忆层</button>
+            <button class="code-pill" data-hl="task" type="button">任务层</button>
+          </div>
+        </div>
+        <button class="copy-btn" type="button">复制</button>
+      </div>
+      <pre><code id="assemblyCode"><span class="code-line">const response = await client.messages.create({</span><span class="code-line">  model: process.env.MODEL!,</span><span class="code-line">  max_tokens: 1024,</span><span class="code-line" data-layer-line="system">  // 规则层 + 历史摘要合并进 system</span><span class="code-line" data-layer-line="system">  system: `${systemRules}${summarizedHistory ? `\n\n[早期对话摘要]\n${summarizedHistory}` : ""}`,</span><span class="code-line">  messages: [</span><span class="code-line" data-layer-line="knowledge">    // 知识层：RAG 检索结果，最相关的排最前</span><span class="code-line" data-layer-line="knowledge">    ...(ragResults.length > 0 ? [</span><span class="code-line" data-layer-line="knowledge">      { role: "user" as const, content: `参考资料：\n${ragResults.map((r, i) => `[${i + 1}] ${r.content}`).join("\n\n")}` },</span><span class="code-line" data-layer-line="knowledge">      { role: "assistant" as const, content: "好的，我已阅读参考资料。" },</span><span class="code-line" data-layer-line="knowledge">    ] : []),</span><span class="code-line" data-layer-line="memory">    // 记忆层：最近几轮对话原文</span><span class="code-line" data-layer-line="memory">    ...recentMessages,</span><span class="code-line" data-layer-line="task">    // 任务层：用户当前输入</span><span class="code-line" data-layer-line="task">    { role: "user" as const, content: userInput },</span><span class="code-line">  ],</span><span class="code-line">});</span></code></pre>
+    </div>
+
+    <h2>多轮对话状态管理：试着把窗口“玩坏”</h2>
+    <p class="key">
+      多轮对话里，“按消息条数截断”有个常见陷阱：只要用户突然粘贴一段几千 token 的报错堆栈，按条数保留就会瞬间撑爆预算；而按 token 预算截断，这一条堆栈又会把前面所有对话全部挤出去。试试调整窗口大小，或者直接：
+      <button class="inline-trigger" id="presetSpikeBtn" type="button">▶ 一键复现：第 5 轮注入 3,000t 报错堆栈</button>
+    </p>
+  </main>
+
+  <!-- INTERACTIVE LAB 2 -->
+  <section class="lab-wrap" id="lab-2">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <span class="lab-eyebrow">交互实验台 02 · 多轮对话边界沙盒</span>
+          <h3 class="lab-title">滑动窗口 vs 滚动摘要：可调窗口与长日志冲击测试</h3>
+          <p class="lab-desc">推进 8 轮开发对话，调整窗口上限，或在第 5 轮注入一条 3,000 token 的报错堆栈，观察两边如何反应。</p>
+        </div>
+      </div>
+      <div class="lab-body">
+        <div class="lab2-toolbar">
+          <div class="btn-group">
+            <button class="btn" id="lab2Prev" type="button">上一轮</button>
+            <button class="btn btn-primary" id="lab2Next" type="button">下一轮对话 →</button>
+            <button class="btn" id="lab2Reset" type="button">重置</button>
+          </div>
+          <span class="turn-indicator" id="lab2TurnBadge">当前进度：第 1 / 8 轮</span>
+        </div>
+
+        <div class="lab2-sandbox-bar">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <strong>窗口保留上限：</strong>
+            <button class="chip-btn" data-win="1" type="button">近 1 轮</button>
+            <button class="chip-btn active" data-win="3" type="button">近 3 轮</button>
+            <button class="chip-btn" data-win="5" type="button">近 5 轮</button>
+          </div>
+          <button class="chip-btn" id="spikeToggleBtn" type="button">⚡ 在第 5 轮注入 3,000t 报错堆栈</button>
+        </div>
+
+        <div class="lab2-columns">
+          <div class="strategy-panel">
+            <div class="strategy-head">
+              <span id="swTitle">策略 1：滑动窗口（近 3 轮）</span>
+              <span class="strategy-badge badge-warn" id="swStatusBadge">正常运行</span>
+            </div>
+            <div class="strategy-body" id="swList"></div>
+            <div class="strategy-foot">
+              <span id="swTokens">当前窗口：0 tokens</span>
+              <span id="swConstraintState">第 1 轮约束：保留中</span>
+            </div>
+          </div>
+
+          <div class="strategy-panel">
+            <div class="strategy-head">
+              <span id="rsTitle">策略 2：滚动摘要（摘要 + 近 3 轮）</span>
+              <span class="strategy-badge badge-good" id="rsStatusBadge">推荐方案</span>
+            </div>
+            <div class="strategy-body" id="rsList"></div>
+            <div class="strategy-foot">
+              <span id="rsTokens">当前窗口：0 tokens</span>
+              <span id="rsConstraintState">第 1 轮约束：摘要保留</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <p>
+      增量更新摘要的核心在于把“旧摘要 + 刚被挤出的几条消息”合并压缩（完整 TypeScript 实现见上方折叠代码块）。如果使用 Anthropic 官方 Claude API，也可以用 Beta 能力 <code>compact_20260112</code> 在服务端自动完成压缩（见 <a href="https://platform.claude.com/docs/en/build-with-claude/compaction" target="_blank" rel="noopener">Compaction 官方文档</a>）。
+    </p>
+
+    <details class="code-fold wide-block" id="multiTurnCodeFold">
+      <summary>工程实现参考：按 Token 截断 / 增量滚动摘要 / Compaction Beta 代码</summary>
+      <div class="code-fold-body">
+        <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 12px;">
+          <strong>1. 滑动窗口（按 Token 预算从尾部倒推，避免单条长日志撑爆）：</strong>
+        </p>
+        <div class="code-card">
+          <div class="code-header">
+            <span>trim-history.ts</span>
+            <button class="copy-btn" type="button">复制</button>
+          </div>
+          <pre><code>function trimHistory(messages: Message[], maxTokenBudget: number): Message[] {
+  const estimateTokens = (text: string) => Math.ceil(text.length / 3.5);
+  let total = 0;
+  const result: Message[] = [];
+
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const tokens = estimateTokens(messages[i].content);
+    if (total + tokens > maxTokenBudget) break;
+    total += tokens;
+    result.unshift(messages[i]);
+  }
+  return result;
+}</code></pre>
+        </div>
+
+        <p style="font-size: 14px; color: var(--text-secondary); margin: 18px 0 12px;">
+          <strong>2. 增量滚动摘要（旧摘要 + 刚被挤出的头部消息合并压缩）：</strong>
+        </p>
+        <div class="code-card">
+          <div class="code-header">
+            <span>rolling-summary.ts</span>
+            <button class="copy-btn" type="button">复制</button>
+          </div>
+          <pre><code>const maxMessages = RECENT_TURNS_LIMIT * 2;
+if (updated.length > maxMessages) {
+  const toCompress = updated.slice(0, updated.length - maxMessages);
+  const toKeep = updated.slice(updated.length - maxMessages);
+  const prompt = state.summary
+    ? `当前摘要：\n${state.summary}\n\n新增对话：\n${format(toCompress)}\n\n请合并更新成简洁摘要。`
+    : `请将以下对话压缩成简洁摘要。\n\n${format(toCompress)}`;
+  const newSummary = await summarize(prompt);
+  return { reply, newState: { summary: newSummary, recentMessages: toKeep } };
+}</code></pre>
+        </div>
+
+        <p style="font-size: 14px; color: var(--text-secondary); margin: 18px 0 12px;">
+          <strong>3. Anthropic 官方服务端 Compaction Beta：</strong>
+        </p>
+        <div class="code-card" style="margin-bottom: 0;">
+          <div class="code-header">
+            <span>anthropic-compaction.ts</span>
+            <button class="copy-btn" type="button">复制</button>
+          </div>
+          <pre><code>const response = await client.beta.messages.create({
+  model: process.env.MODEL!,
+  max_tokens: 1024,
+  betas: ["compact-2026-01-12"],
+  context_management: { edits: [{ type: "compact_20260112" }] },
+  system: systemPrompt,
+  messages,
+});
+messages.push({ role: "assistant", content: response.content });</code></pre>
+        </div>
+      </div>
+    </details>
+
+    <div class="callout callout-warn">
+      <span class="callout-title">兼容端点说明</span>
+      <code>compact_20260112</code> 与后文的 <code>clear_tool_uses_20250919</code> 均为 Anthropic 官方 Claude API 的 Beta 能力，阿里云百炼等兼容端点暂不支持，仍需在应用层自行实现滚动摘要或清理逻辑。
+    </div>
+
+    <h2>动态加载 vs 一次性塞满</h2>
+    <p class="key">
+      把整个仓库或知识库一次性塞进上下文，叫“Context Stuffing（上下文堆填）”。更好的方式是 <strong>Just-In-Time（按需加载）</strong>：Agent 执行多步任务时，只在需要的那一步拉取对应文件，工具输出用完后即可清除（参考 <a href="https://platform.claude.com/docs/en/build-with-claude/context-editing" target="_blank" rel="noopener">Context editing 官方文档</a>）。
+    </p>
+  </main>
+
+  <!-- INTERACTIVE LAB 3 -->
+  <section class="lab-wrap" id="lab-3">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <span class="lab-eyebrow">交互实验台 03 · 上下文积木实时装卸台</span>
+          <h3 class="lab-title">排查登录 500 报错：一次性塞满 vs Just-In-Time</h3>
+          <p class="lab-desc">切换加载策略，观察左侧仓库文件的读取状态与右侧上下文窗口里实际驻留的信息积木块。</p>
+        </div>
+      </div>
+      <div class="lab-body">
+        <div class="lab3-modes">
+          <button class="chip-btn active" id="modeStuffingBtn" type="button">模式 A：一次性塞满（Context Stuffing）</button>
+          <button class="chip-btn" id="modeJitBtn" type="button">模式 B：Just-In-Time 按需加载</button>
+          <button class="btn btn-primary" id="jitStepBtn" type="button" style="display: none; margin-left: auto;">推进 Agent 下一步 →</button>
+        </div>
+
+        <div class="jit-layout">
+          <div class="file-pool">
+            <div style="font-size: 13.5px; font-weight: 700;">项目代码库（8 个文件）</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">绿框 = 当前在窗口内且相关 · 红框 = 无关噪声 · 虚线 = 用完已清除</div>
+            <div class="file-grid" id="fileGrid"></div>
+          </div>
+
+          <div class="jit-timeline">
+            <div>
+              <div style="font-size: 13.5px; font-weight: 700;" id="timelineTitle">当前上下文窗口内的积木块</div>
+              <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;" id="timelineSub">开局把全部文件一次性拼接进 Prompt</div>
+              <div class="context-blocks-stack" id="contextBlocksStack"></div>
+            </div>
+            <div class="jit-stats">
+              <div>
+                <div class="jit-stat-val" id="jitTokens">14,200</div>
+                <div class="jit-stat-lbl">上下文 Token 占用</div>
+              </div>
+              <div>
+                <div class="jit-stat-val" id="jitDensity" style="color: var(--rose);">15%</div>
+                <div class="jit-stat-lbl">有效信息密度</div>
+              </div>
+              <div>
+                <div class="jit-stat-val" id="jitSignal">极高噪声</div>
+                <div class="jit-stat-lbl">干扰风险</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose" id="decision">
+    <h2>快速选型：你的场景该用哪种策略</h2>
+    <p class="key">所有常见场景的推荐组合直接平铺在下方，一眼对比；也可以点击特征标签快速高亮匹配项：</p>
+
+    <div class="decision-filter-bar">
+      <div class="decision-chips" id="decisionChips">
+        <button class="chip-btn active" data-filter="all" type="button">全部场景（横向对比）</button>
+        <button class="chip-btn" data-filter="history" type="button">涉及多轮状态</button>
+        <button class="chip-btn" data-filter="retrieval" type="button">涉及外部检索 / 工具</button>
+        <button class="chip-btn" data-filter="static" type="button">无状态 / 短背景</button>
+      </div>
+    </div>
+
+    <div class="decision-grid" id="decisionGrid">
+      <div class="decision-card" data-tags="retrieval">
+        <span class="dc-tag">知识库问答 · 文档量大</span>
+        <div class="dc-title">动态检索（RAG）+ Reranker 重排</div>
+        <p class="dc-desc">绝不硬塞全文。先粗排召回候选，再用 Reranker 把最相关的 Top 3~5 片段放到首尾位置。</p>
+      </div>
+      <div class="decision-card" data-tags="static">
+        <span class="dc-tag">固定短背景知识</span>
+        <div class="dc-title">一次性放进 System Prompt</div>
+        <p class="dc-desc">几百到一两千 token 的稳定规范直接放进 System，配合服务端缓存既稳定又省钱。</p>
+      </div>
+      <div class="decision-card" data-tags="history">
+        <span class="dc-tag">长多轮对话</span>
+        <div class="dc-title">增量滚动摘要 + 最近 N 轮原文</div>
+        <p class="dc-desc">最近 N 轮保指代清晰，早期历史增量合并进 System 摘要，守住第一轮定下的约束。</p>
+      </div>
+      <div class="decision-card" data-tags="history retrieval">
+        <span class="dc-tag">Agent 多步任务</span>
+        <div class="dc-title">Just-In-Time 按需加载 + 用完即清</div>
+        <p class="dc-desc">每步只拉取当前所需文件或目录片段，消化完的冗长工具输出及时清理或摘要。</p>
+      </div>
+      <div class="decision-card" data-tags="static">
+        <span class="dc-tag">单次独立任务</span>
+        <div class="dc-title">四层直接组装，不做历史管理</div>
+        <p class="dc-desc">无多轮膨胀问题，重点是精简 System Prompt、明确输出 Schema 并做好校验重试。</p>
+      </div>
+      <div class="decision-card is-summary" data-tags="all">
+        <span class="dc-tag">核心工程口诀</span>
+        <div class="dc-title">只放下一步真正需要的信息</div>
+        <p class="dc-desc">精简规则层、压缩记忆层、重排并清理知识层，把最强注意力留给首尾和当前任务。</p>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div>AI Agent Guide · 开源交互式工程指南</div>
+    <div class="next-card">
+      <div class="next-label">下一章预告</div>
+      <div><strong>Spec-Driven Development：先写规格，再让 AI 干活</strong> — 当任务复杂度上升，如何在任务层面把需求描述清楚，让 AI 的每一步执行都有清晰的输入规格。</div>
+    </div>
+  </footer>
+
+  <script>
+
+    // Interactive 4-Layer Explorer
+    const layerData = {
+      system: {
+        title: "System Prompt · 规则层",
+        color: "var(--purple)",
+        growth: "不随轮次增长",
+        retention: "始终保留，但必须精简",
+        tip: "常见误区是把几千 token 的规则全堆在 System Prompt 里。U 型注意力曲线同样适用于 System 内部，中间的规则遵循度会明显下降。",
+        example: `system: "你是严谨的后端架构师。只基于提供的代码片段回答，禁止编造未提及的 API。"`,
+      },
+      history: {
+        title: "对话历史 · 记忆层",
+        color: "var(--blue)",
+        growth: "随对话轮次线性增长",
+        retention: "需要主动截断或滚动摘要",
+        tip: "分为当前会话的“短期记忆”和外部数据库的“长期记忆”。直接无限追加不仅成本飙升，还会让早期约束跌入中间遗忘区。",
+        example: `summary: "[前 5 轮摘要] 约束：Node.js 22 + 原生 SQL..."\nrecentMessages: [turn6, turn7, turn8]`,
+      },
+      knowledge: {
+        title: "RAG / 工具输出 · 知识层",
+        color: "var(--teal)",
+        growth: "可能随工具调用快速膨胀",
+        retention: "按需注入，用完即可清除",
+        tip: "检索结果必须经过 Reranker 重排，最相关的放首尾；工具返回的原始日志在生成当前步回复后，不应长期留在历史里。",
+        example: `参考资料（Top 3 重排后）：\n[1] auth.ts 第 42 行连接池配置...`,
+      },
+      task: {
+        title: "用户当前输入 · 任务层",
+        color: "var(--accent)",
+        growth: "不随轮次累积",
+        retention: "当前轮必须完整保留",
+        tip: "位于整个 messages 数组的末尾（天然处于注意力最强的尾部位置），直接决定本轮模型要解决的目标。",
+        example: `{ role: "user", content: "为什么登录接口会返回 500？" }`,
+      },
+    };
+
+    const layerDetailEl = document.getElementById("layerDetail");
+    function renderLayerDetail(key) {
+      const d = layerData[key];
+      layerDetailEl.innerHTML = `
+        <div>
+          <div class="layer-detail-head">
+            <span class="layer-detail-title" style="color: ${d.color};">${d.title}</span>
+          </div>
+          <div class="layer-meta-tags" style="margin-top: 10px;">
+            <span class="meta-tag">增长性：${d.growth}</span>
+            <span class="meta-tag">保留策略：${d.retention}</span>
+          </div>
+          <p style="font-size: 14px; color: var(--text-secondary); margin: 12px 0 0; line-height: 1.6;">${d.tip}</p>
+        </div>
+        <div class="layer-example">${d.example.replace(/\n/g, "<br>")}</div>
+      `;
+    }
+
+    document.querySelectorAll(".layer-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".layer-btn").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        renderLayerDetail(btn.dataset.src);
+      });
+    });
+    renderLayerDetail("system");
+
+    // Interactive code layer highlighter
+    const assemblyCode = document.getElementById("assemblyCode");
+    document.querySelectorAll(".code-pill").forEach((pill) => {
+      pill.addEventListener("click", () => {
+        document.querySelectorAll(".code-pill").forEach((p) => p.classList.remove("active"));
+        pill.classList.add("active");
+        const target = pill.dataset.hl;
+        const lines = assemblyCode.querySelectorAll(".code-line");
+        if (target === "all") {
+          assemblyCode.classList.remove("code-dim");
+          lines.forEach((l) => l.classList.remove("hl"));
+        } else {
+          assemblyCode.classList.add("code-dim");
+          lines.forEach((l) => l.classList.toggle("hl", l.dataset.layerLine === target));
+        }
+      });
+    });
+
+    // 2. Lab 1: Context Window, U-Curve & X-Ray Inspector
+    const lab1State = {
+      system: true,
+      history: true,
+      task: true,
+      docCount: 20,
+      answerPos: 10,
+      xrayTab: "heatmap",
+    };
+
+    const MAX_WINDOW = 16000;
+    const docSlotsEl = document.getElementById("docSlots");
+    const docCountSlider = document.getElementById("docCountSlider");
+    const docCountLabel = document.getElementById("docCountLabel");
+    const answerPosLabel = document.getElementById("answerPosLabel");
+    const accValEl = document.getElementById("accVal");
+    const latencyValEl = document.getElementById("latencyVal");
+    const lab1DiagnosisEl = document.getElementById("lab1Diagnosis");
+    const lab1TokenSummaryEl = document.getElementById("lab1TokenSummary");
+    const xrayContentEl = document.getElementById("xrayContent");
+
+    document.querySelectorAll("[data-layer]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const key = btn.dataset.layer;
+        lab1State[key] = !lab1State[key];
+        btn.classList.toggle("active", lab1State[key]);
+        renderLab1();
+      });
+    });
+
+    document.querySelectorAll("[data-xray]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        lab1State.xrayTab = btn.dataset.xray;
+        document.querySelectorAll("[data-xray]").forEach((b) => b.classList.toggle("active", b === btn));
+        renderXray();
+      });
+    });
+
+    docCountSlider.addEventListener("input", (e) => {
+      lab1State.docCount = Number(e.target.value);
+      if (lab1State.answerPos > lab1State.docCount) {
+        lab1State.answerPos = lab1State.docCount;
+      }
+      renderLab1();
+    });
+
+    function estimateAccuracy(pos, total) {
+      if (total <= 3) return Math.round(82 - (pos === 2 ? 4 : 0));
+      const t = (pos - 1) / (total - 1);
+      const noiseFactor = (total - 3) / 17;
+      const startAcc = 80 - noiseFactor * 5;
+      const endAcc = 78 - noiseFactor * 6;
+      const midDrop = 6 + noiseFactor * 13;
+      const linear = startAcc * (1 - t) + endAcc * t;
+      const dip = 4 * t * (1 - t) * midDrop;
+      return Math.round(linear - dip);
+    }
+
+    function attentionWeight(pos, total) {
+      if (total <= 2) return 0.95;
+      const t = (pos - 1) / (total - 1);
+      const dip = 4 * t * (1 - t) * 0.65;
+      return Math.max(0.3, 1 - dip);
+    }
+
+    function renderXray() {
+      if (lab1State.xrayTab === "heatmap") {
+        let html = `<div class="heatmap-stream">`;
+        if (lab1State.system) {
+          html += `<div class="hm-block" style="border-left: 3px solid var(--purple);">
+            <span>[System] 严格基于参考资料回答，禁止编造未提及的接口字段 (600t)</span>
+            <span class="hm-badge">相对权重 98%（示意）</span>
+          </div>`;
+        }
+        for (let i = 1; i <= lab1State.docCount; i++) {
+          const isKey = i === lab1State.answerPos;
+          const attn = attentionWeight(i, lab1State.docCount);
+          const attnPct = Math.round(attn * 100);
+          const inDangerZone = isKey && attnPct < 60 && lab1State.docCount >= 10;
+          if (isKey) {
+            html += `<div class="hm-block ${inDangerZone ? "is-key-lost" : "is-key"}" style="opacity: ${Math.max(0.42, attn)};">
+              <span>[Doc #${i}] ★ 关键证据：生产环境数据库连接池上限为 20，超时阈值 5000ms</span>
+              <span class="hm-badge">${inDangerZone ? `权重衰减 ${attnPct}%（示意）` : `相对权重 ${attnPct}%（示意）`}</span>
+            </div>`;
+          } else {
+            html += `<div class="hm-block" style="opacity: ${attn.toFixed(2)};">
+              <span>[Doc #${i}] 噪声片段：无关的历史变更记录或冗余文档段落... (550t)</span>
+              <span class="hm-badge">相对权重 ${attnPct}%（示意）</span>
+            </div>`;
+          }
+        }
+        if (lab1State.history) {
+          html += `<div class="hm-block" style="border-left: 3px solid var(--blue);">
+            <span>[History] 最近 3 轮对话上下文 (1,800t)</span>
+            <span class="hm-badge">相对权重 90%（示意）</span>
+          </div>`;
+        }
+        if (lab1State.task) {
+          html += `<div class="hm-block" style="border-left: 3px solid var(--accent);">
+            <span>[User Input] 请告诉我生产环境数据库连接池上限是多少？ (200t)</span>
+            <span class="hm-badge">相对权重 99%（示意）</span>
+          </div>`;
+        }
+        html += `</div>`;
+        xrayContentEl.innerHTML = html;
+      } else {
+        const docsPreview = [];
+        for (let i = 1; i <= Math.min(lab1State.docCount, 4); i++) {
+          docsPreview.push(
+            i === lab1State.answerPos
+              ? `[${i}] ★ 关键证据：连接池上限为 20...`
+              : `[${i}] 噪声文档片段...`
+          );
+        }
+        if (lab1State.docCount > 4) {
+          docsPreview.push(`... (其余 ${lab1State.docCount - 4} 份文档，关键证据当前在第 ${lab1State.answerPos} 位) ...`);
+        }
+        const payload = {
+          model: "qwen-plus",
+          system: lab1State.system ? "严格基于参考资料回答..." : "(已关闭 System)",
+          messages: [
+            { role: "user", content: `参考资料（共 ${lab1State.docCount} 份）：\n${docsPreview.join("\n")}` },
+            ...(lab1State.history ? [{ role: "user", content: "...最近对话历史 (1,800t)..." }] : []),
+            ...(lab1State.task ? [{ role: "user", content: "生产环境数据库连接池上限是多少？" }] : []),
+          ],
+        };
+        const jsonStr = JSON.stringify(payload, null, 2);
+        const highlighted = (window.Prism && Prism.languages.json)
+          ? Prism.highlight(jsonStr, Prism.languages.json, "json")
+          : jsonStr.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+        xrayContentEl.innerHTML = `<pre class="payload-pre language-json"><code class="language-json">${highlighted}</code></pre>`;
+      }
+    }
+
+    function renderLab1() {
+      const sysTokens = lab1State.system ? 600 : 0;
+      const histTokens = lab1State.history ? 1800 : 0;
+      const taskTokens = lab1State.task ? 200 : 0;
+      const ragTokens = 550;
+      const noiseTokens = (lab1State.docCount - 1) * 550;
+      const total = sysTokens + histTokens + taskTokens + ragTokens + noiseTokens;
+
+      const pct = (v) => `${Math.min(100, (v / MAX_WINDOW) * 100).toFixed(1)}%`;
+      document.getElementById("segSystem").style.width = pct(sysTokens);
+      document.getElementById("segHistory").style.width = pct(histTokens);
+      document.getElementById("segRag").style.width = pct(ragTokens);
+      document.getElementById("segNoise").style.width = pct(noiseTokens);
+      document.getElementById("segTask").style.width = pct(taskTokens);
+
+      const usedRatio = Math.round((total / MAX_WINDOW) * 100);
+      lab1TokenSummaryEl.textContent = `${total.toLocaleString()} / ${MAX_WINDOW.toLocaleString()} (${usedRatio}%)`;
+      docCountLabel.textContent = `${lab1State.docCount} 份`;
+
+      const ratio = (lab1State.answerPos - 1) / Math.max(1, lab1State.docCount - 1);
+      let posTag = "中间区域";
+      if (ratio <= 0.2) posTag = "开头区域";
+      else if (ratio >= 0.8) posTag = "结尾区域";
+      answerPosLabel.textContent = `第 ${lab1State.answerPos} 位（${posTag}）`;
+
+      docSlotsEl.innerHTML = "";
+      for (let i = 1; i <= 20; i++) {
+        const slot = document.createElement("button");
+        slot.type = "button";
+        slot.className = "doc-slot";
+        slot.textContent = i;
+        if (i > lab1State.docCount) {
+          slot.classList.add("disabled");
+        } else if (i === lab1State.answerPos) {
+          slot.classList.add("is-answer");
+        } else {
+          slot.classList.add("is-noise");
+          slot.addEventListener("click", () => {
+            lab1State.answerPos = i;
+            renderLab1();
+          });
+        }
+        docSlotsEl.appendChild(slot);
+      }
+
+      const acc = estimateAccuracy(lab1State.answerPos, lab1State.docCount);
+      accValEl.textContent = `${acc}%`;
+      accValEl.style.color = acc < 62 ? "var(--rose)" : acc < 72 ? "var(--accent)" : "var(--teal)";
+
+      if (total > 10000) {
+        latencyValEl.innerHTML = `<span style="color: var(--rose);">高</span><span class="metric-sub">TTFT 明显变慢</span>`;
+      } else if (total > 5000) {
+        latencyValEl.innerHTML = `<span style="color: var(--accent);">中等</span><span class="metric-sub">成本可控</span>`;
+      } else {
+        latencyValEl.innerHTML = `<span style="color: var(--teal);">快</span><span class="metric-sub">低延迟 &amp; 省钱</span>`;
+      }
+
+      const xStart = 36, xEnd = 340, yTop = 18, yBot = 120;
+      const accToY = (a) => yBot - ((a - 45) / 45) * (yBot - yTop);
+      let d = "";
+      for (let i = 1; i <= lab1State.docCount; i++) {
+        const x = xStart + ((i - 1) / Math.max(1, lab1State.docCount - 1)) * (xEnd - xStart);
+        const y = accToY(estimateAccuracy(i, lab1State.docCount));
+        d += i === 1 ? `M ${x.toFixed(1)} ${y.toFixed(1)}` : ` L ${x.toFixed(1)} ${y.toFixed(1)}`;
+      }
+      document.getElementById("uCurvePath").setAttribute("d", d);
+      const curX = xStart + ((lab1State.answerPos - 1) / Math.max(1, lab1State.docCount - 1)) * (xEnd - xStart);
+      const curY = accToY(acc);
+      const dot = document.getElementById("uCurveDot");
+      dot.setAttribute("cx", curX.toFixed(1));
+      dot.setAttribute("cy", curY.toFixed(1));
+
+      if (acc <= 56 && lab1State.docCount >= 14) {
+        lab1DiagnosisEl.className = "diagnosis-box warn";
+        lab1DiagnosisEl.innerHTML = `<strong>诊断：触发严重“中间丢失”</strong><br>关键证据落在了中间噪声区，准确率（${acc}%）甚至低于不给文档直接回答的基线（56.1%）。下方热力图里可以看到该位置已经明显发灰。`;
+      } else if (lab1State.docCount <= 6 && acc >= 75) {
+        lab1DiagnosisEl.className = "diagnosis-box good";
+        lab1DiagnosisEl.innerHTML = `<strong>诊断：精简且位置合理</strong><br>只保留了少量高相关文档，总 Token 控制在 ${total.toLocaleString()} 左右，模型注意力集中、成本低、响应快。`;
+      } else {
+        lab1DiagnosisEl.className = "diagnosis-box";
+        lab1DiagnosisEl.innerHTML = `<strong>诊断：可继续优化</strong><br>当前关键证据位于${posTag}（准确率约 ${acc}%）。如果把噪声文档减到 5 份以内，效果和延迟都会明显改善。`;
+      }
+
+      renderXray();
+    }
+
+    // 3. Lab 2: Sliding Window vs Rolling Summary + Spike Injection
+    const conversationTurns = [
+      {
+        turn: 1,
+        user: "开发用户模块，硬性要求：只用 Node.js 22 + 原生 SQL，禁止引入 Prisma/TypeORM 等重型 ORM。",
+        assistant: "明白！全程使用 Node.js 22 原生能力与轻量 SQL 查询。",
+        tokens: 340,
+        isConstraint: true,
+      },
+      {
+        turn: 2,
+        user: "先设计一下 users 表字段，需要支持邮箱登录和软删除。",
+        assistant: "已生成含 id、email、password_hash、deleted_at 的建表 SQL。",
+        tokens: 310,
+      },
+      {
+        turn: 3,
+        user: "密码哈希用内置的 crypto.scrypt 还是 bcrypt？",
+        assistant: "直接用内置 node:crypto 的 scrypt，零额外依赖。",
+        tokens: 280,
+      },
+      {
+        turn: 4,
+        user: "补充登录接口的 Zod 参数校验逻辑。",
+        assistant: "已补充 email 与 password 的 Zod Schema 校验。",
+        tokens: 300,
+      },
+      {
+        turn: 5,
+        user: "刷新 Token 的过期时间怎么定比较合理？",
+        assistant: "建议 Access Token 15 分钟，Refresh Token 7 天。",
+        spikeUser: "⚡ [粘贴超长报错堆栈 3,000 tokens] Error: connect ECONNREFUSED 127.0.0.1:5432 at TCPConnectWrap.afterConnect ... (省略 140 行调用栈)",
+        spikeAssistant: "已定位：PostgreSQL 5432 端口未启动或连接池配置错误。",
+        tokens: 290,
+        spikeTokens: 3000,
+      },
+      {
+        turn: 6,
+        user: "加一个按邮箱模糊搜索的管理员分页接口。",
+        assistant: "使用 LIMIT / OFFSET 配合参数化绑定防注入。",
+        tokens: 310,
+      },
+      {
+        turn: 7,
+        user: "连接池超时怎么排查？",
+        assistant: "检查是否忘记释放 client.release()。",
+        tokens: 320,
+      },
+      {
+        turn: 8,
+        user: "把前面讨论的用户查询模块完整代码写出来吧。",
+        assistantSw: "好的！我用 PrismaClient 帮你写好了 UserRepository（含 prisma.user.findMany...）❌ 忘了第 1 轮约束！",
+        assistantRs: "好的！严格按 Node.js 22 + 原生参数化 SQL + node:crypto.scrypt 写好了 UserRepository ✅ 遵守约束！",
+        tokens: 360,
+        isFinal: true,
+      },
+    ];
+
+    let currentTurn = 1;
+    let windowLimit = 3;
+    let injectSpike = false;
+
+    const swListEl = document.getElementById("swList");
+    const rsListEl = document.getElementById("rsList");
+    const spikeToggleBtn = document.getElementById("spikeToggleBtn");
+
+    document.querySelectorAll("[data-win]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        windowLimit = Number(btn.dataset.win);
+        document.querySelectorAll("[data-win]").forEach((b) => b.classList.toggle("active", b === btn));
+        renderLab2();
+      });
+    });
+
+    spikeToggleBtn.addEventListener("click", () => {
+      injectSpike = !injectSpike;
+      spikeToggleBtn.classList.toggle("danger-active", injectSpike);
+      spikeToggleBtn.textContent = injectSpike ? "⚡ 已注入 3,000t 堆栈（点击取消）" : "⚡ 在第 5 轮注入 3,000t 报错堆栈";
+      if (injectSpike && currentTurn < 5) currentTurn = 5;
+      renderLab2();
+    });
+
+    document.getElementById("lab2Prev").addEventListener("click", () => {
+      if (currentTurn > 1) { currentTurn--; renderLab2(); }
+    });
+    document.getElementById("lab2Next").addEventListener("click", () => {
+      if (currentTurn < conversationTurns.length) { currentTurn++; renderLab2(); }
+    });
+    document.getElementById("lab2Reset").addEventListener("click", () => {
+      currentTurn = 1;
+      injectSpike = false;
+      spikeToggleBtn.classList.remove("danger-active");
+      spikeToggleBtn.textContent = "⚡ 在第 5 轮注入 3,000t 报错堆栈";
+      renderLab2();
+    });
+
+    function renderLab2() {
+      document.getElementById("lab2TurnBadge").textContent = `当前进度：第 ${currentTurn} / ${conversationTurns.length} 轮`;
+      document.getElementById("lab2Prev").disabled = currentTurn === 1;
+      document.getElementById("lab2Next").disabled = currentTurn === conversationTurns.length;
+      document.getElementById("swTitle").textContent = `策略 1：滑动窗口（近 ${windowLimit} 轮）`;
+      document.getElementById("rsTitle").textContent = `策略 2：滚动摘要（摘要 + 近 ${windowLimit} 轮）`;
+
+      const visible = conversationTurns.slice(0, currentTurn);
+      const keepStartIdx = Math.max(0, visible.length - windowLimit);
+
+      swListEl.innerHTML = "";
+      let swTokens = 0;
+      const constraintDropped = keepStartIdx > 0;
+
+      visible.forEach((item, idx) => {
+        const isDropped = idx < keepStartIdx;
+        const isSpikeTurn = injectSpike && item.turn === 5;
+        const t = isSpikeTurn ? item.spikeTokens : item.tokens;
+        if (!isDropped) swTokens += t;
+
+        const div = document.createElement("div");
+        div.className = `msg-item ${isDropped ? "dropped" : ""} ${isSpikeTurn && !isDropped ? "is-spike" : ""}`;
+        const userText = isSpikeTurn ? item.spikeUser : item.user;
+        const replyText = isSpikeTurn ? item.spikeAssistant : (item.isFinal ? (constraintDropped ? item.assistantSw : item.assistantRs) : item.assistant);
+
+        let tagHtml = "";
+        if (item.isConstraint) {
+          tagHtml = isDropped ? `<span class="msg-tag tag-lost">已被踢出</span>` : `<span class="msg-tag tag-constraint">核心约束</span>`;
+        } else if (isSpikeTurn) {
+          tagHtml = `<span class="msg-tag tag-lost">3,000t 撑爆窗口</span>`;
+        }
+
+        div.innerHTML = `
+          <div><span class="msg-role">U#${item.turn}</span>${userText}${tagHtml}</div>
+          <div style="margin-top: 4px; color: var(--text-secondary);"><span class="msg-role">A#${item.turn}</span>${replyText}</div>
+        `;
+        swListEl.appendChild(div);
+      });
+
+      document.getElementById("swTokens").textContent = `当前窗口：${swTokens.toLocaleString()} tokens`;
+      document.getElementById("swConstraintState").textContent = constraintDropped ? "第 1 轮约束：已丢失" : "第 1 轮约束：保留中";
+      const swBadge = document.getElementById("swStatusBadge");
+      if (swTokens > 2500) {
+        swBadge.textContent = "单条日志撑爆预算！";
+        swBadge.className = "strategy-badge badge-warn";
+      } else if (currentTurn === 8 && constraintDropped) {
+        swBadge.textContent = "输出违背约束";
+        swBadge.className = "strategy-badge badge-warn";
+      } else if (constraintDropped) {
+        swBadge.textContent = "早期约束已丢失";
+        swBadge.className = "strategy-badge badge-warn";
+      } else {
+        swBadge.textContent = "暂未超限";
+        swBadge.className = "strategy-badge badge-good";
+      }
+
+      rsListEl.innerHTML = "";
+      let rsTokens = 0;
+      if (keepStartIdx > 0) {
+        const summaryTokens = 160;
+        rsTokens += summaryTokens;
+        const sumCard = document.createElement("div");
+        sumCard.className = "summary-card";
+        sumCard.innerHTML = `
+          <span class="summary-card-title">[系统区 · 增量滚动摘要]（已压缩前 ${keepStartIdx} 轮 · ${summaryTokens} tokens）</span>
+          核心约束：Node.js 22 + 原生 SQL，<strong>严禁引入重型 ORM</strong>；已完成 users 软删除表设计、scrypt 加密${injectSpike && keepStartIdx >= 5 ? "；已提炼报错要点：PostgreSQL 5432 连接拒绝（原 3,000t 堆栈已压缩）" : ""}。
+        `;
+        rsListEl.appendChild(sumCard);
+      }
+
+      visible.forEach((item, idx) => {
+        if (idx < keepStartIdx) return;
+        const isSpikeTurn = injectSpike && item.turn === 5;
+        const t = isSpikeTurn ? 320 : item.tokens;
+        rsTokens += t;
+
+        const div = document.createElement("div");
+        div.className = "msg-item";
+        const userText = isSpikeTurn
+          ? "⚡ [入库前长日志预处理] 3,000t 堆栈已提炼关键报错行：Error: connect ECONNREFUSED 127.0.0.1:5432 (320t)"
+          : item.user;
+        const replyText = isSpikeTurn ? item.spikeAssistant : (item.isFinal ? item.assistantRs : item.assistant);
+
+        let tagHtml = "";
+        if (item.isConstraint) tagHtml = `<span class="msg-tag tag-constraint">核心约束</span>`;
+        if (item.isFinal) tagHtml = `<span class="msg-tag tag-ok">约束命中</span>`;
+        if (isSpikeTurn) tagHtml = `<span class="msg-tag tag-ok">预处理 + 滚动摘要</span>`;
+
+        div.innerHTML = `
+          <div><span class="msg-role">U#${item.turn}</span>${userText}${tagHtml}</div>
+          <div style="margin-top: 4px; color: var(--text-secondary);"><span class="msg-role">A#${item.turn}</span>${replyText}</div>
+        `;
+        rsListEl.appendChild(div);
+      });
+
+      document.getElementById("rsTokens").textContent = `当前窗口：${rsTokens.toLocaleString()} tokens`;
+      document.getElementById("rsConstraintState").textContent = "第 1 轮约束：摘要保留";
+      rsListEl.scrollTop = rsListEl.scrollHeight;
+      swListEl.scrollTop = swListEl.scrollHeight;
+    }
+
+    // 4. Lab 3: Stuffing vs JIT Context Blocks
+    const repoFiles = [
+      { name: "src/routes/auth.ts", tokens: 1200, relevant: true },
+      { name: "src/utils/jwt.ts", tokens: 900, relevant: true },
+      { name: "src/routes/billing.ts", tokens: 2400, relevant: false },
+      { name: "src/routes/orders.ts", tokens: 2800, relevant: false },
+      { name: "src/ui/Dashboard.tsx", tokens: 3100, relevant: false },
+      { name: "src/db/migrations.sql", tokens: 1900, relevant: false },
+      { name: "README.md", tokens: 1100, relevant: false },
+      { name: "package-lock.json", tokens: 800, relevant: false },
+    ];
+
+    const jitSteps = [
+      {
+        title: "Step 1：只注入目录树，不读文件内容",
+        loaded: [],
+        cleared: [],
+        tokens: 180,
+        density: "92%",
+        risk: "极低",
+        blocks: [{ label: "[目录树] src/routes/*, src/utils/*", tokens: "180t", state: "active" }],
+      },
+      {
+        title: "Step 2：grep 定位报错栈 -> 拉取 auth.ts",
+        loaded: ["src/routes/auth.ts"],
+        cleared: [],
+        tokens: 1380,
+        density: "88%",
+        risk: "极低",
+        blocks: [
+          { label: "[目录树] src/routes/*, src/utils/*", tokens: "180t", state: "active" },
+          { label: "[Tool 输出] read_file(src/routes/auth.ts)", tokens: "1,200t", state: "active" },
+        ],
+      },
+      {
+        title: "Step 3：顺藤摸瓜 -> 拉取关联文件 jwt.ts",
+        loaded: ["src/routes/auth.ts", "src/utils/jwt.ts"],
+        cleared: [],
+        tokens: 2280,
+        density: "86%",
+        risk: "低",
+        blocks: [
+          { label: "[目录树] src/routes/*, src/utils/*", tokens: "180t", state: "active" },
+          { label: "[Tool 输出] read_file(src/routes/auth.ts)", tokens: "1,200t", state: "active" },
+          { label: "[Tool 输出] read_file(src/utils/jwt.ts)", tokens: "900t", state: "active" },
+        ],
+      },
+      {
+        title: "Step 4：用完清除旧工具输出，输出精准修复",
+        loaded: ["src/utils/jwt.ts"],
+        cleared: ["src/routes/auth.ts"],
+        tokens: 1080,
+        density: "90%",
+        risk: "极低",
+        blocks: [
+          { label: "[目录树] src/routes/*, src/utils/*", tokens: "180t", state: "active" },
+          { label: "[已清除] auth.ts 原始输出（节省 1,200t）", tokens: "0t", state: "cleared" },
+          { label: "[Tool 输出] read_file(src/utils/jwt.ts)", tokens: "900t", state: "active" },
+        ],
+      },
+    ];
+
+    let lab3Mode = "stuffing";
+    let jitStepIdx = 0;
+    const modeStuffingBtn = document.getElementById("modeStuffingBtn");
+    const modeJitBtn = document.getElementById("modeJitBtn");
+    const jitStepBtn = document.getElementById("jitStepBtn");
+
+    modeStuffingBtn.addEventListener("click", () => {
+      lab3Mode = "stuffing";
+      modeStuffingBtn.classList.add("active");
+      modeJitBtn.classList.remove("active");
+      jitStepBtn.style.display = "none";
+      renderLab3();
+    });
+
+    modeJitBtn.addEventListener("click", () => {
+      lab3Mode = "jit";
+      jitStepIdx = 0;
+      modeJitBtn.classList.add("active");
+      modeStuffingBtn.classList.remove("active");
+      jitStepBtn.style.display = "inline-block";
+      renderLab3();
+    });
+
+    jitStepBtn.addEventListener("click", () => {
+      jitStepIdx = (jitStepIdx + 1) % jitSteps.length;
+      renderLab3();
+    });
+
+    function renderLab3() {
+      const fileGridEl = document.getElementById("fileGrid");
+      const blocksStackEl = document.getElementById("contextBlocksStack");
+      const tokensEl = document.getElementById("jitTokens");
+      const densityEl = document.getElementById("jitDensity");
+      const signalEl = document.getElementById("jitSignal");
+      const timelineTitleEl = document.getElementById("timelineTitle");
+      const timelineSubEl = document.getElementById("timelineSub");
+
+      fileGridEl.innerHTML = "";
+      blocksStackEl.innerHTML = "";
+
+      if (lab3Mode === "stuffing") {
+        timelineTitleEl.textContent = "当前上下文窗口内的积木块（全量塞入）";
+        timelineSubEl.textContent = "开局直接拼接全部 8 个文件，无关业务代码占满注意力";
+        repoFiles.forEach((f) => {
+          const pill = document.createElement("div");
+          pill.className = `file-pill ${f.relevant ? "loaded-relevant" : "loaded-noise"}`;
+          pill.innerHTML = `<span>${f.name}</span><span>${f.tokens}t</span>`;
+          fileGridEl.appendChild(pill);
+
+          const block = document.createElement("div");
+          block.className = `ctx-block ${f.relevant ? "active-block" : "noise-block"}`;
+          block.innerHTML = `<span>${f.name}${f.relevant ? "（关键）" : "（无关噪声）"}</span><span style="font-family:var(--font-mono);">${f.tokens}t</span>`;
+          blocksStackEl.appendChild(block);
+        });
+
+        tokensEl.textContent = "14,200";
+        densityEl.textContent = "15%";
+        densityEl.style.color = "var(--rose)";
+        signalEl.textContent = "极高噪声";
+      } else {
+        const cur = jitSteps[jitStepIdx];
+        timelineTitleEl.textContent = `当前上下文窗口内的积木块（Step ${jitStepIdx + 1} / 4）`;
+        timelineSubEl.textContent = cur.title;
+        jitStepBtn.textContent = jitStepIdx === jitSteps.length - 1 ? "重新演示 Step 1 ↺" : "推进 Agent 下一步 →";
+
+        repoFiles.forEach((f) => {
+          const pill = document.createElement("div");
+          let cls = "file-pill";
+          if (cur.loaded.includes(f.name)) cls += " loaded-relevant";
+          else if (cur.cleared.includes(f.name)) cls += " cleared";
+          pill.className = cls;
+          pill.innerHTML = `<span>${f.name}</span><span>${f.tokens}t</span>`;
+          fileGridEl.appendChild(pill);
+        });
+
+        cur.blocks.forEach((b) => {
+          const block = document.createElement("div");
+          block.className = `ctx-block ${b.state === "cleared" ? "cleared-block" : "active-block"}`;
+          block.innerHTML = `<span>${b.label}</span><span style="font-family:var(--font-mono);">${b.tokens}</span>`;
+          blocksStackEl.appendChild(block);
+        });
+
+        tokensEl.textContent = cur.tokens.toLocaleString();
+        densityEl.textContent = cur.density;
+        densityEl.style.color = "var(--teal)";
+        signalEl.textContent = cur.risk;
+      }
+    }
+
+    // 5. Scenario Decision Matrix Filter (highlights matching cards without hiding)
+    document.querySelectorAll("[data-filter]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const filter = btn.dataset.filter;
+        document.querySelectorAll("[data-filter]").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        document.querySelectorAll("#decisionGrid .decision-card").forEach((card) => {
+          const tags = (card.dataset.tags || "").split(" ");
+          if (filter === "all") {
+            card.classList.remove("is-match", "is-dim");
+          } else if (tags.includes(filter)) {
+            card.classList.add("is-match");
+            card.classList.remove("is-dim");
+          } else {
+            card.classList.remove("is-match");
+            card.classList.add("is-dim");
+          }
+        });
+      });
+    });
+
+    // 6. Predict-First Hook, Lab 1 Reset & Inline Narrative Triggers
+    function pulseLabCard(labId) {
+      const card = document.querySelector(`#${labId} .lab-card`);
+      if (!card) return;
+      card.classList.remove("is-pulsing");
+      void card.offsetWidth;
+      card.classList.add("is-pulsing");
+      setTimeout(() => card.classList.remove("is-pulsing"), 950);
+    }
+
+    function scrollToLab(labId) {
+      const el = document.getElementById(labId);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      setTimeout(() => pulseLabCard(labId), 320);
+    }
+
+    const predictFeedback1 = document.getElementById("predictFeedback1");
+    document.querySelectorAll("#predictHook1 .predict-opt").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const choice = btn.dataset.predict;
+        document.querySelectorAll("#predictHook1 .predict-opt").forEach((b) => {
+          b.classList.remove("is-right", "is-wrong");
+        });
+        if (choice === "low") {
+          btn.classList.add("is-right");
+          predictFeedback1.innerHTML = "<strong>猜对了：</strong>中间位置的噪声会把关键信息“淹没”，准确率降到 <strong>55%</strong>，反而低于不给任何文档的基线（56.1%）。";
+        } else {
+          btn.classList.add("is-wrong");
+          const rightBtn = document.querySelector('#predictHook1 .predict-opt[data-predict="low"]');
+          if (rightBtn) rightBtn.classList.add("is-right");
+          predictFeedback1.innerHTML = "<strong>反直觉结论：</strong>准确率反而<strong>更低</strong>（55% vs 无文档基线 56.1%）。下面已经把证据放在第 10 位，看左侧 U 型曲线和右侧发灰的热力图就能直观感受到。";
+        }
+        predictFeedback1.classList.add("show");
+      });
+    });
+
+    document.getElementById("lab1ResetBtn")?.addEventListener("click", () => {
+      lab1State.system = true;
+      lab1State.history = true;
+      lab1State.task = true;
+      lab1State.docCount = 20;
+      lab1State.answerPos = 10;
+      lab1State.xrayTab = "heatmap";
+      docCountSlider.value = "20";
+      document.querySelectorAll("[data-layer]").forEach((b) => b.classList.add("active"));
+      document.querySelectorAll("[data-xray]").forEach((b) => b.classList.toggle("active", b.dataset.xray === "heatmap"));
+      renderLab1();
+      pulseLabCard("lab-1");
+    });
+
+    document.getElementById("presetMiddleBtn")?.addEventListener("click", () => {
+      lab1State.system = true;
+      lab1State.history = true;
+      lab1State.task = true;
+      lab1State.docCount = 20;
+      lab1State.answerPos = 10;
+      lab1State.xrayTab = "heatmap";
+      docCountSlider.value = "20";
+      document.querySelectorAll("[data-layer]").forEach((b) => b.classList.add("active"));
+      document.querySelectorAll("[data-xray]").forEach((b) => b.classList.toggle("active", b.dataset.xray === "heatmap"));
+      renderLab1();
+      scrollToLab("lab-1");
+    });
+
+    document.getElementById("presetSpikeBtn")?.addEventListener("click", () => {
+      currentTurn = 5;
+      injectSpike = true;
+      spikeToggleBtn.classList.add("danger-active");
+      spikeToggleBtn.textContent = "⚡ 已注入 3,000t 堆栈（点击取消）";
+      renderLab2();
+      scrollToLab("lab-2");
+    });
+
+    renderLab1();
+    renderLab2();
+    renderLab3();
+
+    function highlightAllCode() {
+      window.bookHighlightCode && window.bookHighlightCode();
+      if (lab1State.xrayTab === "payload") renderXray();
+    }
+    window.addEventListener("load", () => { if (lab1State.xrayTab === "payload") renderXray(); });
+  </script>
+  <script src="../shared/site.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-json.min.js"></script>
+</body>
+</html>

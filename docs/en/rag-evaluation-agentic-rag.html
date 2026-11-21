@@ -1,0 +1,1469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RAG Evaluation &amp; Agentic RAG: Measure Failure Points Before Going Dynamic · AI Agent Guide</title>
+  <!-- SEO:START (auto-synced by scripts/generate-seo.mjs) -->
+  <meta name="description" content="Evaluating retrieval vs. generation quality and comparing fixed pipelines with Agentic RAG" />
+  <link rel="canonical" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/rag-evaluation-agentic-rag.html" />
+  <link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/rag-evaluation-agentic-rag.html" />
+  <link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/rag-evaluation-agentic-rag.html" />
+  <link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/rag-evaluation-agentic-rag.html" />
+  <meta property="og:type" content="article" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:locale:alternate" content="zh_CN" />
+  <meta property="og:title" content="RAG Evaluation &amp; Agentic RAG" />
+  <meta property="og:description" content="Evaluating retrieval vs. generation quality and comparing fixed pipelines with Agentic RAG" />
+  <meta property="og:url" content="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/rag-evaluation-agentic-rag.html" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "RAG Evaluation & Agentic RAG",
+    "description": "Evaluating retrieval vs. generation quality and comparing fixed pipelines with Agentic RAG",
+    "inLanguage": "en",
+    "url": "https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/rag-evaluation-agentic-rag.html",
+    "isPartOf": {
+      "@type": "Book",
+      "name": "AI Agent Guide"
+    }
+  }
+  </script>
+  <!-- SEO:END -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css" />
+  <link rel="stylesheet" href="../shared/tokens.css" />
+  <style>
+    /* Chapter-specific lab widgets */
+    .c-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+    }
+    .c-badge.ok { background: var(--green-soft); color: var(--green); }
+    .c-badge.warn { background: var(--accent-soft); color: var(--accent); }
+    .c-badge.bad { background: var(--rose-soft); color: var(--rose); }
+    .c-badge.info { background: var(--blue-soft); color: var(--blue); }
+
+    /* Lab 01: Top-K cutoff matrix */
+    .k-slider-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      margin-bottom: 16px;
+    }
+    .k-slider-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+      min-width: 220px;
+    }
+    .k-slider-group input[type="range"] {
+      flex: 1;
+      accent-color: var(--teal);
+      cursor: pointer;
+    }
+    .k-value-pill {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: var(--teal-soft);
+      color: var(--teal);
+      white-space: nowrap;
+    }
+    .kpi-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 720px) { .kpi-strip { grid-template-columns: 1fr; } }
+    .kpi-card {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+    }
+    .kpi-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .kpi-val {
+      font-family: var(--font-mono);
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1.2;
+      color: var(--text);
+    }
+    .kpi-sub {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .rank-table {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .rank-row {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+    }
+    .rank-row-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .rank-query {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .rank-scores {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-secondary);
+      display: flex;
+      gap: 10px;
+    }
+    .rank-slots {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+    }
+    @media (max-width: 760px) { .rank-slots { grid-template-columns: repeat(2, 1fr); } }
+    .doc-slot {
+      position: relative;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-size: 11.5px;
+      font-family: var(--font-mono);
+      background: var(--bg-muted);
+      color: var(--text-secondary);
+      transition: all 0.15s ease;
+    }
+    .doc-slot .slot-rank {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10.5px;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+    .doc-slot .slot-id {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 600;
+    }
+    .doc-slot.in-k.is-rel {
+      background: var(--green-soft);
+      border-color: var(--green);
+      color: var(--green);
+    }
+    .doc-slot.out-k {
+      opacity: 0.52;
+      border-style: dashed;
+    }
+    .doc-slot.out-k.is-rel {
+      opacity: 0.92;
+      background: var(--rose-soft);
+      border-color: var(--rose);
+      color: var(--rose);
+      border-style: dashed;
+    }
+    .doc-slot.cutoff-edge {
+      box-shadow: 2px 0 0 0 var(--teal);
+    }
+
+    /* Lab 02: RAGAS diagnostic workbench */
+    .case-context-box {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      margin-bottom: 14px;
+      font-size: 13.5px;
+      line-height: 1.65;
+    }
+    .case-context-box p { margin: 0 0 8px; }
+    .case-context-box p:last-child { margin-bottom: 0; }
+    .case-label {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 4px;
+      margin-right: 6px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+    .ragas-bars {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px 16px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 680px) { .ragas-bars { grid-template-columns: 1fr; } }
+    .metric-row {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+    }
+    .metric-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12.5px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .metric-track {
+      height: 8px;
+      border-radius: 999px;
+      background: var(--bg-muted);
+      overflow: hidden;
+    }
+    .metric-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.25s ease;
+    }
+    .metric-fill.ok { background: var(--green); }
+    .metric-fill.warn { background: var(--accent); }
+    .metric-fill.bad { background: var(--rose); }
+
+    /* Lab 03: Fixed vs Agentic step-by-step sandbox */
+    .lab3-sim-zone {
+      padding: 38px 14px 14px;
+    }
+    .trace-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 14px;
+      align-items: stretch;
+    }
+    @media (max-width: 680px) { .trace-grid { grid-template-columns: 1fr; } }
+    .trace-pane {
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+    }
+    .trace-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+      margin-bottom: 12px;
+    }
+    .trace-step {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--border-strong);
+      border-radius: 6px;
+      padding: 9px 11px;
+      font-size: 12.5px;
+      line-height: 1.55;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+    .trace-step.pending { opacity: 0.35; }
+    .trace-step.kind-tool { border-left-color: var(--blue); }
+    .trace-step.kind-grade { border-left-color: var(--accent); }
+    .trace-step.kind-ok { border-left-color: var(--green); }
+    .trace-step.kind-miss { border-left-color: var(--rose); }
+    .step-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .ledger-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      padding-top: 10px;
+      border-top: 1px dashed var(--border-strong);
+    }
+    .ledger-cell {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 8px;
+      text-align: center;
+    }
+    .ledger-k {
+      font-size: 10.5px;
+      color: var(--text-muted);
+      display: block;
+    }
+    .ledger-v {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    /* Decision matrix cards */
+    .decision-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      margin-top: 16px;
+    }
+    @media (max-width: 720px) { .decision-grid { grid-template-columns: 1fr; } }
+    .decision-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+    }
+    .decision-card h4 {
+      margin: 0 0 6px;
+      font-size: 15.5px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .decision-card p {
+      margin: 0 0 8px;
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      line-height: 1.65;
+    }
+    .decision-card p:last-child { margin-bottom: 0; }
+    .decision-card.is-dimmed { opacity: 0.32; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./index.html">
+        <span>AI Agent Guide</span>
+        <span class="brand-badge">Interactive</span>
+      </a>
+      <nav class="topbar-nav">
+        <a href="#section-retrieval">Retrieval Eval</a>
+        <a href="#lab-retrieval-metrics">Lab 01</a>
+        <a href="#section-ragas">RAGAS Metrics</a>
+        <a href="#section-agentic">Agentic RAG</a>
+        <a href="#decision">Rollout &amp; Choice</a>
+      </nav>
+      <button class="theme-btn" id="themeToggle" type="button">
+        <span id="themeIcon">☀</span>
+        <span id="themeText">Light</span>
+      </button>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-meta">
+      <span class="hero-pill">Module 3 · RAG Retrieval &amp; Grounding</span>
+      <span class="hero-pill">3 Interactive Labs</span>
+      <span class="hero-pill">Runnable TypeScript</span>
+    </div>
+    <h1>RAG Evaluation &amp; Agentic RAG: Measure Failure Points Before Going Dynamic</h1>
+    <p class="hero-lead">
+      You tweaked chunking, swapped the embedding model, and rewrote the prompt. Everyone felt the answers “looked better,” until multi-hop production queries kept dropping critical compliance clauses. Without layered evaluation, tuning is guesswork; without tracking latency and token budgets, blindly switching to Agentic RAG makes simple lookups 3x slower.
+    </p>
+  </section>
+
+  <section class="tldr">
+    <div class="tldr-card">
+      <div class="tldr-head">
+        <span>30-Second Takeaways</span>
+        <span>Diagnose first, upgrade second</span>
+      </div>
+      <div class="tldr-list">
+        <div class="tldr-item">
+          <div><strong>1. Evaluate retrieval and generation separately:</strong> If the right document never enters Top-K, no prompt rewrite can save the answer. Lock down Recall@K and MRR first.</div>
+          <a class="tldr-go" href="#lab-retrieval-metrics">Open Lab 01 →</a>
+        </div>
+        <div class="tldr-item">
+          <div><strong>2. Each RAGAS metric maps to a distinct fix:</strong> Low faithfulness points to prompt constraints or abstention; low context recall points to Top-K or chunking; low precision points to reranker thresholds.</div>
+          <a class="tldr-go" href="#lab-ragas-diagnose">Open Lab 02 →</a>
+        </div>
+        <div class="tldr-item">
+          <div><strong>3. Agentic RAG only pays off on multi-hop gaps:</strong> Single-document factual lookups belong on a fast fixed pipeline. Reserve iterative tool-driven retrieval for cross-document reasoning.</div>
+          <a class="tldr-go" href="#lab-agentic-rag">Open Lab 03 →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2 id="section-retrieval">1. Retrieval Evaluation: “Not Found” vs. “Ranked Too Low”</h2>
+    <p class="key">
+      RAG evaluation splits into two layers: <strong>retrieval quality</strong> checks whether evidence reached Top-K, and <strong>answer quality</strong> checks whether the model used that evidence properly. Blending both into a single score hides which layer broke.
+    </p>
+    <p>
+      Start with two deterministic metrics: <strong>Recall@K</strong> and <strong>MRR (Mean Reciprocal Rank)</strong>. Recall@K measures the fraction of ground-truth documents that land inside the Top-K window passed to the LLM. MRR averages the reciprocal rank of the first relevant hit: rank 1 scores 1.0, rank 2 scores 0.5, and rank 4 scores 0.25.
+    </p>
+    <p>
+      Reading them together prevents wasted work. <strong>Low Recall@3 paired with healthy Recall@5 and MRR</strong> means the retriever found the evidence, but the reranker buried it at positions 4 or 5. Only when both Recall@5 and MRR collapse should you blame the embedding model or chunking strategy.
+    </p>
+  </main>
+
+  <section class="lab-wrap" id="lab-retrieval-metrics">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div class="lab-eyebrow">LAB 01 · RETRIEVAL METRICS MATRIX</div>
+        <div class="lab-title">Top-K Cutoff &amp; Rank Position Workbench</div>
+        <div class="lab-desc">
+          Using the 5-query benchmark dataset (6 labeled ground-truth docs), drag the Top-K cutoff slider or switch retriever states to watch Recall@K and MRR diverge and trigger different fixes.
+        </div>
+      </div>
+      <div class="lab-body">
+        <div class="lab-toolbar">
+          <div class="toolbar-group">
+            <span class="toolbar-label">Retriever State</span>
+            <button class="chip-btn teal-active" data-ret-mode="baseline" type="button">Current Baseline</button>
+            <button class="chip-btn" data-ret-mode="rerank" type="button">Tuned Reranker</button>
+            <button class="chip-btn" data-ret-mode="drift" type="button">Embedding Drift</button>
+          </div>
+          <span class="src-tag">Live math from retrieval-metrics.ts</span>
+        </div>
+
+        <div class="k-slider-row">
+          <div class="k-slider-group">
+            <span class="toolbar-label">Top-K Window Sent to LLM</span>
+            <input id="lab1KSlider" type="range" min="1" max="5" step="1" value="3" aria-label="Top-K slider" />
+            <span class="k-value-pill" id="lab1KVal">K = 3</span>
+          </div>
+          <div style="font-size:12.5px;color:var(--text-secondary);">
+            Solid green = hit inside Top-K; dashed red = relevant doc cut off outside K
+          </div>
+        </div>
+
+        <div class="kpi-strip">
+          <div class="kpi-card">
+            <div class="kpi-label">
+              <span id="lab1RecallLabel">Recall@3</span>
+              <span class="c-badge" id="lab1RecallBadge">--</span>
+            </div>
+            <div class="kpi-val" id="lab1RecallVal">--</div>
+            <div class="kpi-sub">Starting gate: &ge; 80.0%</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">
+              <span>MRR</span>
+              <span class="c-badge" id="lab1MrrBadge">--</span>
+            </div>
+            <div class="kpi-val" id="lab1MrrVal">--</div>
+            <div class="kpi-sub">Starting gate: &ge; 0.600</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label"><span>Missed Ground-Truth Docs</span></div>
+            <div class="kpi-val" id="lab1MissVal">--</div>
+            <div class="kpi-sub" id="lab1MissSub">--</div>
+          </div>
+        </div>
+
+        <div class="rank-table" id="lab1Matrix"></div>
+
+        <div class="outcome" id="lab1Outcome" style="margin-top:14px;"></div>
+
+        <details class="code-fold" style="margin-top:16px;">
+          <summary>View TypeScript evaluation logic (synced with current K)</summary>
+          <div class="code-fold-body">
+            <div class="code-card">
+              <div class="code-header">
+                <span>examples/rag/rag-evaluation-agentic-rag/retrieval-metrics.ts</span>
+                <button class="copy-btn" type="button">Copy</button>
+              </div>
+              <pre><code class="language-typescript" id="lab1Code"></code></pre>
+            </div>
+            <p style="font-size:13px;color:var(--text-secondary);margin:10px 0 0;">
+              Full runnable script: <a href="https://github.com/qufei1993/ai-agent-fullstack-roadmap/blob/main/examples/rag/rag-evaluation-agentic-rag/retrieval-metrics.ts" target="_blank" rel="noopener">retrieval-metrics.ts</a>
+            </p>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2 id="section-ragas">2. Generation Evaluation: Pinpointing Breakpoints with RAGAS</h2>
+    <p class="key">
+      Passing retrieval checks does not guarantee trustworthy answers. RAGAS (<a href="https://docs.ragas.io" target="_blank" rel="noopener">docs.ragas.io</a>) decomposes end-to-end quality into four metrics, each watching one specific link in the pipeline.
+    </p>
+
+    <figure class="diagram-figure">
+      <svg viewBox="0 0 860 250" width="100%" role="img" aria-label="Mapping four RAGAS metrics to RAG pipeline breakpoints">
+        <defs>
+          <marker id="arrowHead" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--text-muted)" />
+          </marker>
+        </defs>
+        <rect x="20" y="34" width="130" height="54" rx="10" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="1.5" />
+        <text x="85" y="57" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="700">User Query</text>
+        <text x="85" y="75" text-anchor="middle" fill="var(--text-secondary)" font-size="11">Question</text>
+
+        <line x1="150" y1="61" x2="198" y2="61" stroke="var(--text-muted)" stroke-width="1.6" marker-end="url(#arrowHead)" />
+
+        <rect x="204" y="34" width="170" height="54" rx="10" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="1.5" />
+        <text x="289" y="57" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="700">Retrieve &amp; Rerank</text>
+        <text x="289" y="75" text-anchor="middle" fill="var(--text-secondary)" font-size="11">Top-K Contexts</text>
+
+        <line x1="374" y1="61" x2="422" y2="61" stroke="var(--text-muted)" stroke-width="1.6" marker-end="url(#arrowHead)" />
+
+        <rect x="428" y="34" width="170" height="54" rx="10" fill="var(--purple-soft)" stroke="var(--purple)" stroke-width="1.5" />
+        <text x="513" y="57" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="700">LLM Generation</text>
+        <text x="513" y="75" text-anchor="middle" fill="var(--text-secondary)" font-size="11">Grounded Answer</text>
+
+        <line x1="598" y1="61" x2="646" y2="61" stroke="var(--text-muted)" stroke-width="1.6" marker-end="url(#arrowHead)" />
+
+        <rect x="652" y="34" width="188" height="54" rx="10" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5" />
+        <text x="746" y="57" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="700">Reference Answer</text>
+        <text x="746" y="75" text-anchor="middle" fill="var(--text-secondary)" font-size="11">Ground Truth (Offline)</text>
+
+        <line x1="250" y1="88" x2="120" y2="146" stroke="var(--teal)" stroke-width="1.4" stroke-dasharray="4 3" />
+        <rect x="20" y="148" width="196" height="76" rx="10" fill="var(--bg-elevated)" stroke="var(--teal)" stroke-width="1.4" />
+        <text x="118" y="172" text-anchor="middle" fill="var(--teal)" font-size="12.5" font-weight="700">Context Precision</text>
+        <text x="118" y="192" text-anchor="middle" fill="var(--text)" font-size="12">Too much noise?</text>
+        <text x="118" y="210" text-anchor="middle" fill="var(--text-muted)" font-size="11">Low → trim K / raise rerank cut</text>
+
+        <line x1="330" y1="88" x2="326" y2="146" stroke="var(--accent)" stroke-width="1.4" stroke-dasharray="4 3" />
+        <rect x="228" y="148" width="196" height="76" rx="10" fill="var(--bg-elevated)" stroke="var(--accent)" stroke-width="1.4" />
+        <text x="326" y="172" text-anchor="middle" fill="var(--accent)" font-size="12.5" font-weight="700">Context Recall</text>
+        <text x="326" y="192" text-anchor="middle" fill="var(--text)" font-size="12">Missing key facts?</text>
+        <text x="326" y="210" text-anchor="middle" fill="var(--text-muted)" font-size="11">Low → grow K / re-chunk / hop</text>
+
+        <line x1="485" y1="88" x2="534" y2="146" stroke="var(--rose)" stroke-width="1.4" stroke-dasharray="4 3" />
+        <rect x="436" y="148" width="196" height="76" rx="10" fill="var(--bg-elevated)" stroke="var(--rose)" stroke-width="1.4" />
+        <text x="534" y="172" text-anchor="middle" fill="var(--rose)" font-size="12.5" font-weight="700">Faithfulness</text>
+        <text x="534" y="192" text-anchor="middle" fill="var(--text)" font-size="12">Claims unsupported?</text>
+        <text x="534" y="210" text-anchor="middle" fill="var(--text-muted)" font-size="11">Low → strict prompt / abstain</text>
+
+        <line x1="555" y1="88" x2="742" y2="146" stroke="var(--purple)" stroke-width="1.4" stroke-dasharray="4 3" />
+        <rect x="644" y="148" width="196" height="76" rx="10" fill="var(--bg-elevated)" stroke="var(--purple)" stroke-width="1.4" />
+        <text x="742" y="172" text-anchor="middle" fill="var(--purple)" font-size="12.5" font-weight="700">Answer Relevancy</text>
+        <text x="742" y="192" text-anchor="middle" fill="var(--text)" font-size="12">Actually answers ask?</text>
+        <text x="742" y="210" text-anchor="middle" fill="var(--text-muted)" font-size="11">Low → focus prompt / cut fluff</text>
+      </svg>
+      <figcaption>Figure 1: Two RAGAS metrics audit retrieval (Precision, Recall) and two audit generation (Faithfulness, Relevancy). Fixing the wrong layer wastes iterations.</figcaption>
+    </figure>
+
+    <p>
+      Keep three ground rules in mind: 1) <strong>Build eval sets from real user logs</strong>—synthetic questions generated from your docs mirror doc phrasing and inflate Recall artificially. 2) 0.8 is a community starting point, not an official RAGAS law; more importantly, <strong>no single metric should drop below 0.6</strong>. 3) When Precision and Recall trade off, <strong>prioritize Context Recall</strong>: missing a required step is far riskier than including two extra paragraphs of context.
+    </p>
+  </main>
+
+  <section class="lab-wrap" id="lab-ragas-diagnose">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div class="lab-eyebrow">LAB 02 · RAGAS FAILURE DIAGNOSIS</div>
+        <div class="lab-title">RAG Incident Triage Workbench</div>
+        <div class="lab-desc">
+          Inspect three failing eval tickets and their four RAGAS scores. Pick the first engineering fix you would ship and verify whether you targeted the right layer.
+        </div>
+      </div>
+      <div class="lab-body">
+        <div class="lab-toolbar">
+          <div class="toolbar-group">
+            <span class="toolbar-label">Select Ticket</span>
+            <button class="chip-btn active" data-case-id="missing" type="button">Case A: Token Refresh (Missing Doc)</button>
+            <button class="chip-btn" data-case-id="offtopic" type="button">Case B: Faithful but Off-Topic</button>
+            <button class="chip-btn" data-case-id="noisy" type="button">Case C: Top-8 Noise Flood</button>
+          </div>
+          <span class="sim-tag">Diagnostic samples · Typical production failure modes</span>
+        </div>
+
+        <div class="case-context-box" id="lab2CaseBox"></div>
+        <div class="ragas-bars" id="lab2Bars"></div>
+
+        <div style="font-size:13px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;">
+          As the on-call engineer, what is your first fix?
+        </div>
+        <div class="pick-options" id="lab2Options"></div>
+        <div class="outcome" id="lab2Outcome" style="display:none;margin-top:14px;"></div>
+
+        <details class="code-fold" style="margin-top:16px;">
+          <summary>View concurrent LLM-as-Judge evaluation code (OpenAI-compatible)</summary>
+          <div class="code-fold-body">
+            <div class="code-card">
+              <div class="code-header">
+                <span>examples/rag/rag-evaluation-agentic-rag/ragas-evaluation.ts</span>
+                <button class="copy-btn" type="button">Copy</button>
+              </div>
+              <pre><code class="language-typescript">async function evaluateSample(sample: EvalSample): Promise&lt;RagasScore&gt; {
+  const [faithfulness, answerRelevancy, contextPrecision, contextRecall] =
+    await Promise.all([
+      scoreFaithfulness(sample.contexts, sample.answer),
+      scoreAnswerRelevancy(sample.question, sample.answer),
+      scoreContextPrecision(sample.question, sample.contexts),
+      scoreContextRecall(sample.contexts, sample.groundTruth),
+    ]);
+
+  const overall = (faithfulness + answerRelevancy + contextPrecision + contextRecall) / 4;
+  return { faithfulness, answerRelevancy, contextPrecision, contextRecall, overall };
+}</code></pre>
+            </div>
+            <p style="font-size:13px;color:var(--text-secondary);margin:10px 0 0;">
+              Full runnable script: <a href="https://github.com/qufei1993/ai-agent-fullstack-roadmap/blob/main/examples/rag/rag-evaluation-agentic-rag/ragas-evaluation.ts" target="_blank" rel="noopener">ragas-evaluation.ts</a>
+            </p>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2 id="section-agentic">3. The Fixed-Pipeline Ceiling &amp; the Real Cost of Agentic RAG</h2>
+    <p class="key">
+      After a few tuning cycles, you will hit a class of queries where single-shot retrieval stalls: <strong>cross-document multi-hop reasoning</strong>. If Document A says “see the SOC2 Audit Retention Policy,” a single-pass retriever cannot know it needs to search for “SOC2 7-year archive” until after it reads Document A.
+    </p>
+    <p>
+      <strong>Agentic RAG</strong> turns the retriever into a callable tool. Instead of hardcoding one retrieval pass, the model inspects what it retrieved, decides whether evidence is complete, and issues follow-up sub-queries until it can answer or hits a hard step cap (<code>MAX_STEPS</code>).
+    </p>
+    <p>
+      That flexibility is never free. Every extra tool round adds another full-context LLM call, another latency hop, and another failure surface. Make a prediction below, then inspect the side-by-side ledger in Lab 03.
+    </p>
+
+    <div class="predict-hook" id="predictAgentic">
+      <div class="predict-q">
+        <span class="predict-badge">Predict First</span>
+        For the multi-hop query “When deleteAccount returns 409, which deletion flow should we use, and can audit logs be physically deleted together?” (spanning 3 documents), what happens if you compare Fixed RAG bumped to Top-15 against a 2-hop Agentic RAG loop?
+      </div>
+      <div class="predict-opts">
+        <button class="predict-opt" data-p="wrong1" type="button">A. Bumping Fixed RAG to Top-15 solves it cleanly and uses fewer tokens</button>
+        <button class="predict-opt" data-p="right" type="button">B. Fixed RAG still risks missing deep referenced docs while flooding noise; Agentic RAG raises recall at higher latency and call count</button>
+        <button class="predict-opt" data-p="wrong2" type="button">C. Agentic RAG is faster and cheaper across every query type</button>
+      </div>
+      <div class="predict-feedback" id="predictFeedback"></div>
+      <button class="predict-verify" id="predictVerifyBtn" type="button" style="display:none;">Verify side-by-side in Lab 03 →</button>
+    </div>
+  </main>
+
+  <section class="lab-wrap" id="lab-agentic-rag">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div class="lab-eyebrow">LAB 03 · FIXED PIPELINE VS. AGENTIC RAG</div>
+        <div class="lab-title">Fixed vs. Agentic Retrieval: Step-by-Step Trajectory &amp; Cost Sandbox</div>
+        <div class="lab-desc">
+          Switch across three query complexities and step through both execution traces to compare evidence coverage, LLM calls, latency, and token cost.
+        </div>
+      </div>
+      <div class="lab-body">
+        <div class="lab-toolbar">
+          <div class="toolbar-group">
+            <span class="toolbar-label">Query Type</span>
+            <button class="chip-btn active" data-q-type="simple" type="button">1. Single-Doc Fact</button>
+            <button class="chip-btn" data-q-type="ambiguous" type="button">2. Ambiguous Phrasing</button>
+            <button class="chip-btn" data-q-type="multihop" type="button">3. Cross-Doc Multi-Hop</button>
+          </div>
+          <div class="toolbar-group">
+            <button class="btn btn-primary" id="lab3StepBtn" type="button">Next Step</button>
+            <button class="btn" id="lab3RunAllBtn" type="button">Run All</button>
+            <button class="btn" id="lab3ResetBtn" type="button">Reset</button>
+          </div>
+        </div>
+
+        <div class="case-context-box" id="lab3PromptBox" style="margin-bottom:14px;"></div>
+
+        <div class="sim-zone lab3-sim-zone" data-sim-label="Simulated · Pedagogical latency, call count &amp; token ledger">
+          <div class="trace-grid">
+            <div class="trace-pane">
+              <div class="pane-head">
+                <span>Fixed RAG (Single-Pass Top-2)</span>
+                <span class="c-badge" id="lab3FixedStatus">Idle</span>
+              </div>
+              <div class="trace-steps" id="lab3FixedSteps"></div>
+              <div class="ledger-row" id="lab3FixedLedger"></div>
+            </div>
+            <div class="trace-pane">
+              <div class="pane-head">
+                <span>Agentic RAG (Tool Loop, MAX_STEPS=4)</span>
+                <span class="c-badge" id="lab3AgentStatus">Idle</span>
+              </div>
+              <div class="trace-steps" id="lab3AgentSteps"></div>
+              <div class="ledger-row" id="lab3AgentLedger"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="outcome" id="lab3Outcome" style="margin-top:14px;"></div>
+
+        <details class="code-fold" style="margin-top:16px;">
+          <summary>View minimal bounded Agentic RAG loop (TypeScript)</summary>
+          <div class="code-fold-body">
+            <div class="code-card">
+              <div class="code-header">
+                <span>examples/rag/rag-evaluation-agentic-rag/agentic-rag-loop.ts</span>
+                <button class="copy-btn" type="button">Copy</button>
+              </div>
+              <pre><code class="language-typescript">for (let step = 1; step &lt;= MAX_STEPS; step++) {
+  const res = await client.chat.completions.create({
+    model: MODEL,
+    temperature: 0,
+    messages,
+    tools,
+  });
+
+  const msg = res.choices[0]?.message;
+  if (!msg) break;
+  messages.push(msg);
+
+  // Evidence is sufficient when the model stops issuing tool calls
+  if (!msg.tool_calls || msg.tool_calls.length === 0) {
+    return msg.content;
+  }
+
+  for (const call of msg.tool_calls) {
+    const { query } = JSON.parse(call.function.arguments);
+    const docs = searchKnowledgeBase(query, 2);
+    messages.push({
+      role: "tool",
+      tool_call_id: call.id,
+      content: JSON.stringify(docs),
+    });
+  }
+}</code></pre>
+            </div>
+            <p style="font-size:13px;color:var(--text-secondary);margin:10px 0 0;">
+              Full runnable script: <a href="https://github.com/qufei1993/ai-agent-fullstack-roadmap/blob/main/examples/rag/rag-evaluation-agentic-rag/agentic-rag-loop.ts" target="_blank" rel="noopener">agentic-rag-loop.ts</a>
+            </p>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2 id="decision">4. Pragmatic Rollout Order &amp; Architecture Selection</h2>
+    <p class="key">
+      Do not build a full eval platform and multi-step Agent on day one. The highest-leverage rollout is: <strong>20 real queries with Recall@5 baseline first, RAGAS on production bad cases second, and selective routing to Agentic RAG only for multi-hop traffic</strong>.
+    </p>
+    <p>
+      Avoid overfitting your tuning set. If you have 100 labeled queries, hold out 20 as a frozen validation set and only run it before shipping, so your improvements actually generalize to unseen phrasing.
+    </p>
+
+    <div class="lab-toolbar" style="margin-top:18px;border-bottom:none;padding-bottom:0;">
+      <div class="toolbar-group">
+        <span class="toolbar-label">Filter by Workload</span>
+        <button class="chip-btn active" data-filter="all" type="button">All Patterns</button>
+        <button class="chip-btn" data-filter="low-latency" type="button">Low Latency / High QPS</button>
+        <button class="chip-btn" data-filter="multi-hop" type="button">Multi-Hop Reasoning</button>
+        <button class="chip-btn" data-filter="eval-first" type="button">Cold-Start Eval</button>
+      </div>
+    </div>
+
+    <div class="decision-grid" id="decisionGrid">
+      <div class="decision-card" data-tags="low-latency eval-first">
+        <h4>Fixed RAG (Hybrid + Reranker) <span class="c-badge ok">Default Start</span></h4>
+        <p><strong>Best for:</strong> FAQs, API docs, and single-doc policy lookups with strict P95 &lt; 2s latency budgets.</p>
+        <p><strong>Key focus:</strong> Push Recall@5 above 80% and MRR above 0.6. Around 90% of enterprise KB queries never need a dynamic loop.</p>
+      </div>
+      <div class="decision-card" data-tags="low-latency multi-hop">
+        <h4>Router + Conditional Escalation <span class="c-badge info">Production Pick</span></h4>
+        <p><strong>Best for:</strong> Mixed traffic where 80% of questions are straightforward and 20% span multiple linked policies.</p>
+        <p><strong>Key focus:</strong> Gate entry with a lightweight classifier or first-pass confidence score so simple queries stay fast while hard ones escalate.</p>
+      </div>
+      <div class="decision-card" data-tags="multi-hop">
+        <h4>Full Agentic RAG <span class="c-badge warn">Use Selectively</span></h4>
+        <p><strong>Best for:</strong> Root-cause incident triage, cross-clause compliance audits, and deep codebase investigations.</p>
+        <p><strong>Key focus:</strong> Enforce <code>MAX_STEPS</code>, token caps, query deduplication, and explicit abstention fallbacks so loops cannot run away.</p>
+      </div>
+      <div class="decision-card" data-tags="eval-first">
+        <h4>Minimal Offline Eval Gate <span class="c-badge ok">Required Guard</span></h4>
+        <p><strong>Best for:</strong> Every change to chunk size, embedding model, prompt wording, or agentic routing rules.</p>
+        <p><strong>Key focus:</strong> Start with 20–50 real queries for Recall@K &amp; MRR; add RAGAS when users report hallucinations or off-topic replies, keeping every metric &ge; 0.6.</p>
+      </div>
+    </div>
+
+    <p style="margin-top:26px;">
+      This closes the RAG module from parsing and hybrid retrieval through grounding, layered evaluation, and bounded Agentic RAG. Turning the retriever into a tool is also the natural bridge into Module 2’s core Agent Runtime, tool calling loops, and trajectory evaluation.
+    </p>
+  </main>
+
+  <footer>
+    <p>AI Agent Guide · Open-Source Interactive Engineering Handbook</p>
+  </footer>
+
+  <script>
+    (function () {
+      /* ================= LAB 01: Retrieval Metrics ================= */
+      const LAB1_DATASETS = {
+        baseline: {
+          label: "Current Baseline",
+          records: [
+            {
+              query: "Why does deleteAccount API return 409?",
+              relevant: ["api-error-codes-001", "account-deletion-flow-003"],
+              retrieved: ["api-error-codes-001", "auth-token-refresh-007", "account-deletion-flow-003", "user-permissions-012", "session-management-004"]
+            },
+            {
+              query: "What is the difference between soft and hard delete?",
+              relevant: ["account-deletion-flow-003"],
+              retrieved: ["account-deletion-flow-003", "data-retention-policy-009", "gdpr-compliance-011", "user-permissions-012", "audit-log-schema-006"]
+            },
+            {
+              query: "How long are audit logs retained?",
+              relevant: ["audit-log-schema-006", "data-retention-policy-009"],
+              retrieved: ["data-retention-policy-009", "gdpr-compliance-011", "audit-log-schema-006", "backup-strategy-015", "auth-token-refresh-007"]
+            },
+            {
+              query: "How do I refresh an expired auth token?",
+              relevant: ["auth-token-refresh-007"],
+              retrieved: ["session-management-004", "user-permissions-012", "api-error-codes-001", "auth-token-refresh-007", "account-deletion-flow-003"]
+            },
+            {
+              query: "Which user data must be erased for GDPR?",
+              relevant: ["gdpr-compliance-011", "data-retention-policy-009", "audit-log-schema-006"],
+              retrieved: ["gdpr-compliance-011", "data-retention-policy-009", "user-permissions-012", "account-deletion-flow-003", "backup-strategy-015"]
+            }
+          ]
+        },
+        rerank: {
+          label: "Tuned Reranker",
+          records: [
+            {
+              query: "Why does deleteAccount API return 409?",
+              relevant: ["api-error-codes-001", "account-deletion-flow-003"],
+              retrieved: ["api-error-codes-001", "account-deletion-flow-003", "auth-token-refresh-007", "user-permissions-012", "session-management-004"]
+            },
+            {
+              query: "What is the difference between soft and hard delete?",
+              relevant: ["account-deletion-flow-003"],
+              retrieved: ["account-deletion-flow-003", "data-retention-policy-009", "gdpr-compliance-011", "user-permissions-012", "audit-log-schema-006"]
+            },
+            {
+              query: "How long are audit logs retained?",
+              relevant: ["audit-log-schema-006", "data-retention-policy-009"],
+              retrieved: ["audit-log-schema-006", "data-retention-policy-009", "gdpr-compliance-011", "backup-strategy-015", "auth-token-refresh-007"]
+            },
+            {
+              query: "How do I refresh an expired auth token?",
+              relevant: ["auth-token-refresh-007"],
+              retrieved: ["auth-token-refresh-007", "session-management-004", "user-permissions-012", "api-error-codes-001", "account-deletion-flow-003"]
+            },
+            {
+              query: "Which user data must be erased for GDPR?",
+              relevant: ["gdpr-compliance-011", "data-retention-policy-009", "audit-log-schema-006"],
+              retrieved: ["gdpr-compliance-011", "data-retention-policy-009", "audit-log-schema-006", "account-deletion-flow-003", "backup-strategy-015"]
+            }
+          ]
+        },
+        drift: {
+          label: "Embedding Drift",
+          records: [
+            {
+              query: "Why does deleteAccount API return 409?",
+              relevant: ["api-error-codes-001", "account-deletion-flow-003"],
+              retrieved: ["session-management-004", "user-permissions-012", "backup-strategy-015", "api-error-codes-001", "auth-token-refresh-007"]
+            },
+            {
+              query: "What is the difference between soft and hard delete?",
+              relevant: ["account-deletion-flow-003"],
+              retrieved: ["backup-strategy-015", "data-retention-policy-009", "account-deletion-flow-003", "user-permissions-012", "audit-log-schema-006"]
+            },
+            {
+              query: "How long are audit logs retained?",
+              relevant: ["audit-log-schema-006", "data-retention-policy-009"],
+              retrieved: ["backup-strategy-015", "gdpr-compliance-011", "session-management-004", "data-retention-policy-009", "user-permissions-012"]
+            },
+            {
+              query: "How do I refresh an expired auth token?",
+              relevant: ["auth-token-refresh-007"],
+              retrieved: ["session-management-004", "user-permissions-012", "api-error-codes-001", "backup-strategy-015", "account-deletion-flow-003"]
+            },
+            {
+              query: "Which user data must be erased for GDPR?",
+              relevant: ["gdpr-compliance-011", "data-retention-policy-009", "audit-log-schema-006"],
+              retrieved: ["user-permissions-012", "account-deletion-flow-003", "gdpr-compliance-011", "backup-strategy-015", "session-management-004"]
+            }
+          ]
+        }
+      };
+
+      let lab1Mode = "baseline";
+      let lab1K = 3;
+
+      const kSlider = document.getElementById("lab1KSlider");
+      const kValEl = document.getElementById("lab1KVal");
+      const recallLabelEl = document.getElementById("lab1RecallLabel");
+      const recallValEl = document.getElementById("lab1RecallVal");
+      const recallBadgeEl = document.getElementById("lab1RecallBadge");
+      const mrrValEl = document.getElementById("lab1MrrVal");
+      const mrrBadgeEl = document.getElementById("lab1MrrBadge");
+      const missValEl = document.getElementById("lab1MissVal");
+      const missSubEl = document.getElementById("lab1MissSub");
+      const matrixEl = document.getElementById("lab1Matrix");
+      const lab1OutcomeEl = document.getElementById("lab1Outcome");
+      const lab1CodeEl = document.getElementById("lab1Code");
+
+      function calcRecall(retrieved, relevant, k) {
+        const topK = retrieved.slice(0, k);
+        const hits = topK.filter((id) => relevant.includes(id)).length;
+        return hits / relevant.length;
+      }
+
+      function calcRR(retrieved, relevant) {
+        for (let i = 0; i < retrieved.length; i++) {
+          if (relevant.includes(retrieved[i])) return 1 / (i + 1);
+        }
+        return 0;
+      }
+
+      function renderLab1() {
+        const records = LAB1_DATASETS[lab1Mode].records;
+        kValEl.textContent = "K = " + lab1K;
+        recallLabelEl.textContent = "Recall@" + lab1K;
+
+        let recallSum = 0;
+        let rrSum = 0;
+        let totalRel = 0;
+        let missedInK = 0;
+        let missedOutsideTop5 = 0;
+
+        matrixEl.innerHTML = records.map((rec) => {
+          const r = calcRecall(rec.retrieved, rec.relevant, lab1K);
+          const rr = calcRR(rec.retrieved, rec.relevant);
+          recallSum += r;
+          rrSum += rr;
+          totalRel += rec.relevant.length;
+
+          const topK = rec.retrieved.slice(0, lab1K);
+          const hitsK = rec.relevant.filter((id) => topK.includes(id)).length;
+          const hits5 = rec.relevant.filter((id) => rec.retrieved.includes(id)).length;
+          missedInK += rec.relevant.length - hitsK;
+          missedOutsideTop5 += rec.relevant.length - hits5;
+
+          const slotsHtml = rec.retrieved.map((docId, idx) => {
+            const rank = idx + 1;
+            const inK = rank <= lab1K;
+            const isRel = rec.relevant.includes(docId);
+            const cls = [
+              "doc-slot",
+              inK ? "in-k" : "out-k",
+              isRel ? "is-rel" : "",
+              rank === lab1K ? "cutoff-edge" : ""
+            ].join(" ");
+            const tag = isRel ? (inK ? "Hit" : "Cut off") : "Noise";
+            return (
+              '<div class="' + cls + '" title="' + docId + '">' +
+                '<div class="slot-rank"><span>#' + rank + '</span><span>' + tag + '</span></div>' +
+                '<span class="slot-id">' + docId + '</span>' +
+              '</div>'
+            );
+          }).join("");
+
+          return (
+            '<div class="rank-row">' +
+              '<div class="rank-row-head">' +
+                '<span class="rank-query">' + rec.query + '</span>' +
+                '<span class="rank-scores">' +
+                  '<span>Recall@' + lab1K + ' = <strong>' + (r * 100).toFixed(0) + '%</strong></span>' +
+                  '<span>RR = <strong>' + rr.toFixed(2) + '</strong></span>' +
+                '</span>' +
+              '</div>' +
+              '<div class="rank-slots">' + slotsHtml + '</div>' +
+            '</div>'
+          );
+        }).join("");
+
+        const avgRecall = recallSum / records.length;
+        const avgMrr = rrSum / records.length;
+
+        recallValEl.textContent = (avgRecall * 100).toFixed(1) + "%";
+        mrrValEl.textContent = avgMrr.toFixed(3);
+        missValEl.textContent = missedInK + " / " + totalRel;
+        missSubEl.textContent = missedOutsideTop5 > 0
+          ? missedOutsideTop5 + " doc(s) missed Top-5 entirely"
+          : "All relevant docs are in Top-5, just ranked lower";
+
+        recallBadgeEl.className = "c-badge " + (avgRecall >= 0.8 ? "ok" : "bad");
+        recallBadgeEl.textContent = avgRecall >= 0.8 ? "Pass" : "Fail";
+        mrrBadgeEl.className = "c-badge " + (avgMrr >= 0.6 ? "ok" : "bad");
+        mrrBadgeEl.textContent = avgMrr >= 0.6 ? "Pass" : "Fail";
+
+        if (avgRecall >= 0.8 && avgMrr >= 0.6) {
+          lab1OutcomeEl.className = "outcome good";
+          lab1OutcomeEl.innerHTML =
+            '<div class="outcome-title">Diagnosis: Healthy Retrieval (Both Recall@' + lab1K + ' &amp; MRR Pass)</div>' +
+            'Most relevant documents land inside Top-' + lab1K + ' near the top. If answers still disappoint, inspect generation prompts and faithfulness instead of swapping embeddings.';
+        } else if (avgRecall < 0.8 && avgMrr >= 0.6) {
+          lab1OutcomeEl.className = "outcome meh";
+          lab1OutcomeEl.innerHTML =
+            '<div class="outcome-title">Diagnosis: Found but Ranked Too Low (Recall@' + lab1K + ' Fails, MRR Passes)</div>' +
+            'Notice “refresh an expired auth token” sits at rank #4 and gets clipped at K=' + lab1K + '. Try raising K to 5 or tuning the reranker before touching your embedding model.';
+        } else {
+          lab1OutcomeEl.className = "outcome bad";
+          lab1OutcomeEl.innerHTML =
+            '<div class="outcome-title">Diagnosis: Recall Collapse (Both Recall@' + lab1K + ' &amp; MRR Fail)</div>' +
+            'Relevant docs are missing from the candidate pool altogether. Audit embedding domain fit, add BM25 hybrid retrieval, and check whether chunks split key facts apart.';
+        }
+
+        lab1CodeEl.textContent =
+          '// Synced with lab state: K = ' + lab1K + ', mode = ' + LAB1_DATASETS[lab1Mode].label + '\n' +
+          'function recallAtK(retrieved: string[], relevant: string[], k = ' + lab1K + '): number {\n' +
+          '  const topK = retrieved.slice(0, k);\n' +
+          '  const hits = topK.filter((id) => relevant.includes(id)).length;\n' +
+          '  return hits / relevant.length;\n' +
+          '}\n\n' +
+          'function reciprocalRank(retrieved: string[], relevant: string[]): number {\n' +
+          '  for (let i = 0; i < retrieved.length; i++) {\n' +
+          '    if (relevant.includes(retrieved[i])) return 1 / (i + 1);\n' +
+          '  }\n' +
+          '  return 0;\n' +
+          '}\n\n' +
+          '// Live result: Recall@' + lab1K + ' = ' + (avgRecall * 100).toFixed(1) + '% | MRR = ' + avgMrr.toFixed(3);
+
+        if (window.bookHighlightCode) window.bookHighlightCode(document.getElementById("lab-retrieval-metrics"));
+      }
+
+      document.querySelectorAll("[data-ret-mode]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll("[data-ret-mode]").forEach((b) => b.classList.remove("teal-active"));
+          btn.classList.add("teal-active");
+          lab1Mode = btn.getAttribute("data-ret-mode");
+          renderLab1();
+        });
+      });
+
+      kSlider.addEventListener("input", () => {
+        lab1K = Number(kSlider.value);
+        renderLab1();
+      });
+
+      /* ================= LAB 02: RAGAS Failure Diagnosis ================= */
+      const LAB2_CASES = {
+        missing: {
+          question: "How do I refresh an expired auth token?",
+          context: "[1] deleteAccount API verifies a second-factor confirmation token before deletion. Expired tokens return 401; DB constraint conflicts return 409.",
+          answer: "Expired tokens return 401. Call the /oauth/token endpoint with your refresh_token to obtain a new access_token.",
+          scores: [
+            { name: "Faithfulness", val: 0.15 },
+            { name: "Answer Relevancy", val: 0.78 },
+            { name: "Context Precision", val: 0.10 },
+            { name: "Context Recall", val: 0.00 }
+          ],
+          options: [
+            {
+              kicker: "Action 1",
+              title: "Fix retrieval recall first, and enforce abstention when evidence is missing",
+              sub: "Pull the token-refresh doc into Top-K and refuse to guess when unsupported",
+              grade: "good",
+              feedback: "Spot on. Context Recall = 0.00 proves the refresh guide never entered context, forcing the LLM to hallucinate /oauth/token from pretraining memory (Faithfulness 0.15). Fix retrieval and add an abstention guardrail."
+            },
+            {
+              kicker: "Action 2",
+              title: "Shorten the generation prompt",
+              sub: "Ask the model to respond in two sentences",
+              grade: "bad",
+              feedback: "Wrong layer. Answer Relevancy is already 0.78; the broken metrics are Context Recall and Faithfulness. Styling the prompt cannot recover missing evidence."
+            },
+            {
+              kicker: "Action 3",
+              title: "Shrink Top-K from 5 to 2",
+              sub: "Cut context length to reduce noise",
+              grade: "bad",
+              feedback: "Opposite direction. The right document is already missing from the candidate window; shrinking Top-K worsens recall."
+            },
+            {
+              kicker: "Action 4",
+              title: "Lower Temperature to 0",
+              sub: "Make output deterministic",
+              grade: "meh",
+              feedback: "Treats the symptom only. At Temperature 0, the model will simply hallucinate the same unsupported endpoint more consistently."
+            }
+          ]
+        },
+        offtopic: {
+          question: "What is the minimum retention period for audit logs?",
+          context: "[1] Account deletion uses soft delete (30-day grace period) followed by hard delete. [2] Audit logs are archived independently for 7 years for SOC2 compliance and are never purged on account deletion.",
+          answer: "Our platform takes security seriously. Account deletion runs in two stages: soft delete keeps a 30-day grace window for user recovery, and the system follows SOC2 compliance standards.",
+          scores: [
+            { name: "Faithfulness", val: 0.95 },
+            { name: "Answer Relevancy", val: 0.32 },
+            { name: "Context Precision", val: 0.50 },
+            { name: "Context Recall", val: 0.95 }
+          ],
+          options: [
+            {
+              kicker: "Action 1",
+              title: "Upgrade to a more expensive embedding model",
+              sub: "Improve semantic vector quality",
+              grade: "bad",
+              feedback: "Wasted spend. Context Recall is already 0.95—the 7-year retention clause is right there in chunk [2]."
+            },
+            {
+              kicker: "Action 2",
+              title: "Tighten the prompt to answer the exact question in sentence one",
+              sub: "Forbid background filler and focus directly on the asked metric",
+              grade: "good",
+              feedback: "Direct hit. Every word in the answer is faithful (0.95), yet it completely missed “7 years” (Relevancy 0.32). Constraining the generation prompt fixes this immediately."
+            },
+            {
+              kicker: "Action 3",
+              title: "Increase Top-K to 12",
+              sub: "Provide richer background context",
+              grade: "bad",
+              feedback: "Makes it worse. More background chunks give the model even more room to ramble off-topic."
+            },
+            {
+              kicker: "Action 4",
+              title: "Switch to an Agentic RAG loop",
+              sub: "Let the agent run a second retrieval pass",
+              grade: "bad",
+              feedback: "Over-engineering. Pass 1 already retrieved the exact answer; adding agent steps only adds latency and cost."
+            }
+          ]
+        },
+        noisy: {
+          question: "Why does the deleteAccount API return 409?",
+          context: "Chunk [1] explains 409 foreign-key constraint conflicts, while chunks [2]–[8] cover login timeouts, billing exports, email templates, and webhook retries.",
+          answer: "deleteAccount returns 409 due to a database foreign-key constraint conflict, typically when audit records are still referenced by another service.",
+          scores: [
+            { name: "Faithfulness", val: 0.92 },
+            { name: "Answer Relevancy", val: 0.90 },
+            { name: "Context Precision", val: 0.22 },
+            { name: "Context Recall", val: 0.94 }
+          ],
+          options: [
+            {
+              kicker: "Action 1",
+              title: "Reduce Top-K or raise the reranker score cutoff",
+              sub: "Drop low-relevance chunks before feeding the LLM",
+              grade: "good",
+              feedback: "Right call. The model got lucky this time, but Context Precision at 0.22 means ~80% of your prompt tokens are noise—burning budget and risking attention dilution on harder queries."
+            },
+            {
+              kicker: "Action 2",
+              title: "Do nothing since the final answer looks fine",
+              sub: "Ship as-is",
+              grade: "meh",
+              feedback: "Fragile shortcut. A single metric at 0.22 violates the 0.6 floor; a slightly harder question or cheaper model will drown in those 7 noisy chunks."
+            },
+            {
+              kicker: "Action 3",
+              title: "Expand Top-K to 15",
+              sub: "Maximize candidate coverage",
+              grade: "bad",
+              feedback: "Wrong direction. Context Recall is already 0.94; raising K will crush Context Precision further."
+            },
+            {
+              kicker: "Action 4",
+              title: "Add “do not hallucinate” to the system prompt",
+              sub: "Strengthen faithfulness wording",
+              grade: "bad",
+              feedback: "Misses the bottleneck. Faithfulness is already 0.92; the problem is noisy retrieval inputs."
+            }
+          ]
+        }
+      };
+
+      let lab2CaseId = "missing";
+      const lab2CaseBox = document.getElementById("lab2CaseBox");
+      const lab2Bars = document.getElementById("lab2Bars");
+      const lab2Options = document.getElementById("lab2Options");
+      const lab2Outcome = document.getElementById("lab2Outcome");
+
+      function renderLab2() {
+        const c = LAB2_CASES[lab2CaseId];
+        lab2CaseBox.innerHTML =
+          '<p><span class="case-label">Question</span>' + c.question + '</p>' +
+          '<p><span class="case-label">Contexts</span>' + c.context + '</p>' +
+          '<p><span class="case-label">Answer</span>' + c.answer + '</p>';
+
+        lab2Bars.innerHTML = c.scores.map((s) => {
+          const cls = s.val >= 0.8 ? "ok" : (s.val >= 0.6 ? "warn" : "bad");
+          return (
+            '<div class="metric-row">' +
+              '<div class="metric-top">' +
+                '<span>' + s.name + '</span>' +
+                '<span class="c-badge ' + cls + '">' + s.val.toFixed(2) + '</span>' +
+              '</div>' +
+              '<div class="metric-track"><div class="metric-fill ' + cls + '" style="width:' + Math.round(s.val * 100) + '%"></div></div>' +
+            '</div>'
+          );
+        }).join("");
+
+        lab2Outcome.style.display = "none";
+        lab2Options.innerHTML = c.options.map((opt, idx) => (
+          '<button class="pick-card" data-opt-idx="' + idx + '" type="button">' +
+            '<div class="pick-kicker">' + opt.kicker + '</div>' +
+            '<div class="pick-title">' + opt.title + '</div>' +
+            '<div class="pick-sub">' + opt.sub + '</div>' +
+          '</button>'
+        )).join("");
+
+        lab2Options.querySelectorAll(".pick-card").forEach((card) => {
+          card.addEventListener("click", () => {
+            lab2Options.querySelectorAll(".pick-card").forEach((el) => el.classList.remove("active"));
+            card.classList.add("active");
+            const opt = c.options[Number(card.getAttribute("data-opt-idx"))];
+            lab2Outcome.style.display = "block";
+            lab2Outcome.className = "outcome " + opt.grade;
+            const prefix = opt.grade === "good" ? "✓ Best diagnosis: " : (opt.grade === "meh" ? "⚠ Partial fix: " : "✕ Wrong layer: ");
+            lab2Outcome.innerHTML = '<div class="outcome-title">' + prefix + opt.title + '</div>' + opt.feedback;
+          });
+        });
+      }
+
+      document.querySelectorAll("[data-case-id]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll("[data-case-id]").forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          lab2CaseId = btn.getAttribute("data-case-id");
+          renderLab2();
+        });
+      });
+
+      /* ================= PREDICT HOOK ================= */
+      const predictHook = document.getElementById("predictAgentic");
+      const predictFb = document.getElementById("predictFeedback");
+      const predictVerifyBtn = document.getElementById("predictVerifyBtn");
+
+      predictHook.querySelectorAll(".predict-opt").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          predictHook.querySelectorAll(".predict-opt").forEach((b) => b.classList.remove("is-right", "is-wrong"));
+          const p = btn.getAttribute("data-p");
+          if (p === "right") {
+            btn.classList.add("is-right");
+            predictFb.textContent = "Spot on. Until the retriever reads the cross-reference inside Document A, a single pass struggles to pull the deep compliance doc cleanly; Agentic RAG closes that gap, at the cost of 2–3x latency and token spend.";
+          } else {
+            btn.classList.add("is-wrong");
+            predictFb.textContent = "Look closer: inflating Top-K to 15 injects heavy noise while still missing terms that only surface after reading the first document; conversely, Agentic RAG is slower and pricier on simple lookups.";
+          }
+          predictFb.classList.add("show");
+          predictVerifyBtn.style.display = "inline-flex";
+        });
+      });
+
+      predictVerifyBtn.addEventListener("click", () => {
+        lab3QueryType = "multihop";
+        document.querySelectorAll("[data-q-type]").forEach((b) => {
+          b.classList.toggle("active", b.getAttribute("data-q-type") === "multihop");
+        });
+        lab3Step = LAB3_SCENARIOS.multihop.maxSteps;
+        renderLab3();
+        if (window.bookJumpToLab) window.bookJumpToLab("lab-agentic-rag");
+      });
+
+      /* ================= LAB 03: Fixed vs Agentic Sandbox ================= */
+      const LAB3_SCENARIOS = {
+        simple: {
+          question: "How many years are audit logs retained?",
+          requiredDocs: ["audit-log-schema-006"],
+          maxSteps: 3,
+          fixed: {
+            steps: [
+              { kind: "tool", title: "Step 1 · Single Hybrid Search", text: "Hits [audit-log-schema-006, data-retention-policy-009] on the first pass." },
+              { kind: "ok", title: "Step 2 · Generate Grounded Answer", text: "Answers directly: Audit logs are archived for 7 years under SOC2 [audit-log-schema-006]." }
+            ],
+            ledger: { recall: "100%", calls: "1", latency: "680 ms", tokens: "920" },
+            status: { text: "Clean Hit", cls: "ok" }
+          },
+          agentic: {
+            steps: [
+              { kind: "tool", title: "Step 1 · Agent Tool Call", text: "Calls search_knowledge_base(\"audit log retention years\") -> hits [audit-log-schema-006]." },
+              { kind: "grade", title: "Step 2 · Evidence Sufficiency Check", text: "Confirms 7-year policy and source are present; stops looping." },
+              { kind: "ok", title: "Step 3 · Final Synthesis", text: "Produces the exact same answer as Fixed RAG after an extra round-trip." }
+            ],
+            ledger: { recall: "100%", calls: "2", latency: "1,650 ms", tokens: "2,180" },
+            status: { text: "Overkill", cls: "warn" }
+          },
+          verdict: {
+            cls: "meh",
+            title: "Verdict: Agentic RAG is pure overhead on single-doc facts",
+            body: "Both architectures hit 100% recall, yet Agentic RAG spent more than 2x the tokens and 2.4x the latency. Keep high-frequency factual lookups on a fixed pipeline."
+          }
+        },
+        ambiguous: {
+          question: "Our delete-user endpoint keeps throwing conflict errors—how do we fix it?",
+          requiredDocs: ["api-error-codes-001", "account-deletion-flow-003"],
+          maxSteps: 4,
+          fixed: {
+            steps: [
+              { kind: "tool", title: "Step 1 · Raw Query Search", text: "Hits [account-deletion-flow-003, user-permissions-012], missing the 409 error code doc." },
+              { kind: "miss", title: "Step 2 · Incomplete Answer", text: "Explains soft delete generically but misses the 409 foreign-key constraint root cause." }
+            ],
+            ledger: { recall: "50%", calls: "1", latency: "710 ms", tokens: "980" },
+            status: { text: "Missed 409 Doc", cls: "bad" }
+          },
+          agentic: {
+            steps: [
+              { kind: "tool", title: "Step 1 · Initial Search", text: "search_knowledge_base(\"delete user conflict\") -> hits [account-deletion-flow-003]." },
+              { kind: "grade", title: "Step 2 · Gap Detection", text: "Spots missing HTTP error code and conflict cause; rewrites query." },
+              { kind: "tool", title: "Step 3 · Follow-Up Search", text: "search_knowledge_base(\"deleteAccount 409 foreign key\") -> hits [api-error-codes-001]." },
+              { kind: "ok", title: "Step 4 · Complete Synthesis", text: "Combines the 409 foreign-key root cause with the soft-delete fallback path." }
+            ],
+            ledger: { recall: "100%", calls: "3", latency: "2,420 ms", tokens: "3,340" },
+            status: { text: "Recovered", cls: "ok" }
+          },
+          verdict: {
+            cls: "good",
+            title: "Verdict: Iterative rewriting recovers ambiguous phrasing",
+            body: "Note the engineering trade-off: if single-turn slang is your only failure mode, a cheap Query Rewrite step in front of Fixed RAG often solves it without a full agent loop."
+          }
+        },
+        multihop: {
+          question: "When deleteAccount returns 409, which deletion flow applies and can audit logs be physically deleted together?",
+          requiredDocs: ["api-error-codes-001", "account-deletion-flow-003", "audit-log-schema-006"],
+          maxSteps: 4,
+          fixed: {
+            steps: [
+              { kind: "tool", title: "Step 1 · Single-Pass Top-2", text: "Hits [api-error-codes-001, account-deletion-flow-003]; the 3rd compliance doc misses Top-2." },
+              { kind: "miss", title: "Step 2 · Broken Evidence Chain", text: "Captures the 30-day soft-delete rule, but never sees the SOC2 7-year non-deletion + user_hash anonymization rule." }
+            ],
+            ledger: { recall: "66.7%", calls: "1", latency: "740 ms", tokens: "1,050" },
+            status: { text: "Broken Chain", cls: "bad" }
+          },
+          agentic: {
+            steps: [
+              { kind: "tool", title: "Step 1 · Hop 1 (Error & Flow)", text: "search_knowledge_base(\"deleteAccount 409 deletion flow\") -> hits [api-error-codes-001, account-deletion-flow-003]." },
+              { kind: "grade", title: "Step 2 · Follow Cross-Reference", text: "Doc references “SOC2 Audit Log Compliance” before hard deletion, which is not yet in context." },
+              { kind: "tool", title: "Step 3 · Hop 2 (Compliance Doc)", text: "search_knowledge_base(\"SOC2 audit log physical deletion\") -> hits [audit-log-schema-006]." },
+              { kind: "ok", title: "Step 4 · Full 3-Doc Answer", text: "Links all 3 docs: use 30-day soft delete on 409; keep audit logs for 7 years and break FK via anonymized user_hash." }
+            ],
+            ledger: { recall: "100%", calls: "3", latency: "2,680 ms", tokens: "3,890" },
+            status: { text: "Multi-Hop Solved", cls: "ok" }
+          },
+          verdict: {
+            cls: "good",
+            title: "Verdict: Cross-document multi-hop is where Agentic RAG earns its keep",
+            body: "When an answer lives across linked policies, single-shot retrieval hits a hard ceiling. Paying ~3.7x tokens and ~2s extra latency turns a compliance gap into 100% grounded coverage."
+          }
+        }
+      };
+
+      let lab3QueryType = "simple";
+      let lab3Step = 0;
+
+      const lab3PromptBox = document.getElementById("lab3PromptBox");
+      const lab3FixedSteps = document.getElementById("lab3FixedSteps");
+      const lab3AgentSteps = document.getElementById("lab3AgentSteps");
+      const lab3FixedLedger = document.getElementById("lab3FixedLedger");
+      const lab3AgentLedger = document.getElementById("lab3AgentLedger");
+      const lab3FixedStatus = document.getElementById("lab3FixedStatus");
+      const lab3AgentStatus = document.getElementById("lab3AgentStatus");
+      const lab3Outcome = document.getElementById("lab3Outcome");
+
+      function renderSteps(steps, shownCount) {
+        return steps.map((s, i) => {
+          const isShown = i < shownCount;
+          return (
+            '<div class="trace-step kind-' + s.kind + (isShown ? "" : " pending") + '">' +
+              '<div class="step-head"><span>' + s.title + '</span><span>' + (isShown ? "Done" : "Queued") + '</span></div>' +
+              '<div>' + s.text + '</div>' +
+            '</div>'
+          );
+        }).join("");
+      }
+
+      function renderLedger(ledger, ready) {
+        const val = (v) => ready ? v : "--";
+        return (
+          '<div class="ledger-cell"><span class="ledger-k">Coverage</span><span class="ledger-v">' + val(ledger.recall) + '</span></div>' +
+          '<div class="ledger-cell"><span class="ledger-k">LLM Calls</span><span class="ledger-v">' + val(ledger.calls) + '</span></div>' +
+          '<div class="ledger-cell"><span class="ledger-k">Sim Latency</span><span class="ledger-v">' + val(ledger.latency) + '</span></div>' +
+          '<div class="ledger-cell"><span class="ledger-k">Sim Tokens</span><span class="ledger-v">' + val(ledger.tokens) + '</span></div>'
+        );
+      }
+
+      function renderLab3() {
+        const sc = LAB3_SCENARIOS[lab3QueryType];
+        lab3PromptBox.innerHTML =
+          '<p><span class="case-label">Query</span><strong>' + sc.question + '</strong></p>' +
+          '<p><span class="case-label">Required Docs</span><code>' + sc.requiredDocs.join("</code> + <code>") + '</code></p>';
+
+        const fixedDone = lab3Step >= sc.fixed.steps.length;
+        const agentDone = lab3Step >= sc.agentic.steps.length;
+
+        lab3FixedSteps.innerHTML = renderSteps(sc.fixed.steps, lab3Step);
+        lab3AgentSteps.innerHTML = renderSteps(sc.agentic.steps, lab3Step);
+        lab3FixedLedger.innerHTML = renderLedger(sc.fixed.ledger, fixedDone);
+        lab3AgentLedger.innerHTML = renderLedger(sc.agentic.ledger, agentDone);
+
+        lab3FixedStatus.className = "c-badge " + (fixedDone ? sc.fixed.status.cls : "info");
+        lab3FixedStatus.textContent = fixedDone ? sc.fixed.status.text : "Step " + Math.min(lab3Step, sc.fixed.steps.length) + "/" + sc.fixed.steps.length;
+        lab3AgentStatus.className = "c-badge " + (agentDone ? sc.agentic.status.cls : "info");
+        lab3AgentStatus.textContent = agentDone ? sc.agentic.status.text : "Step " + Math.min(lab3Step, sc.agentic.steps.length) + "/" + sc.agentic.steps.length;
+
+        if (agentDone) {
+          lab3Outcome.style.display = "block";
+          lab3Outcome.className = "outcome " + sc.verdict.cls;
+          lab3Outcome.innerHTML = '<div class="outcome-title">' + sc.verdict.title + '</div>' + sc.verdict.body;
+        } else {
+          lab3Outcome.style.display = "block";
+          lab3Outcome.className = "outcome";
+          lab3Outcome.innerHTML = '<div class="outcome-title">Click “Next Step” or “Run All” to compare both traces</div>Watch where evidence coverage and token spend diverge.';
+        }
+      }
+
+      document.querySelectorAll("[data-q-type]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll("[data-q-type]").forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          lab3QueryType = btn.getAttribute("data-q-type");
+          lab3Step = 0;
+          renderLab3();
+        });
+      });
+
+      document.getElementById("lab3StepBtn").addEventListener("click", () => {
+        const max = LAB3_SCENARIOS[lab3QueryType].maxSteps;
+        if (lab3Step < max) lab3Step += 1;
+        renderLab3();
+      });
+      document.getElementById("lab3RunAllBtn").addEventListener("click", () => {
+        lab3Step = LAB3_SCENARIOS[lab3QueryType].maxSteps;
+        renderLab3();
+      });
+      document.getElementById("lab3ResetBtn").addEventListener("click", () => {
+        lab3Step = 0;
+        renderLab3();
+      });
+
+      // Init all 3 labs
+      renderLab1();
+      renderLab2();
+      renderLab3();
+    })();
+  </script>
+  <script src="../shared/site.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-json.min.js"></script>
+</body>
+</html>

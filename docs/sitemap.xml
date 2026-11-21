@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/index.html</loc>
+    <lastmod>2026-11-21</lastmod>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/index.html" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/index.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/index.html" />
+  </url>
+  <url>
+    <loc>https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/index.html</loc>
+    <lastmod>2026-11-21</lastmod>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/index.html" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/index.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/index.html" />
+  </url>
+  <url>
+    <loc>https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/prompt-engineering.html</loc>
+    <lastmod>2026-11-21</lastmod>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/prompt-engineering.html" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/prompt-engineering.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/prompt-engineering.html" />
+  </url>
+  <url>
+    <loc>https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/prompt-engineering.html</loc>
+    <lastmod>2026-11-21</lastmod>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/prompt-engineering.html" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/prompt-engineering.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/prompt-engineering.html" />
+  </url>
+  <url>
+    <loc>https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/structured-output.html</loc>
+    <lastmod>2026-11-21</lastmod>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/structured-output.html" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/structured-output.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/structured-output.html" />
+  </url>
+  <url>
+    <loc>https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/structured-output.html</loc>
+    <lastmod>2026-11-21</lastmod>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/structured-output.html" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/structured-output.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/structured-output.html" />
+  </url>
+  <url>
+    <loc>https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/context-engineering.html</loc>
+    <lastmod>2026-11-21</lastmod>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/context-engineering.html" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/context-engineering.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/context-engineering.html" />
+  </url>
+  <url>
+    <loc>https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/context-engineering.html</loc>
+    <lastmod>2026-11-21</lastmod>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/context-engineering.html" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/context-engineering.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/context-engineering.html" />
+  </url>
+  <url>
+    <loc>https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/prompt-regression.html</loc>
+    <lastmod>2026-11-21</lastmod>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/prompt-regression.html" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/prompt-regression.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/prompt-regression.html" />
+  </url>
+  <url>
+    <loc>https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/prompt-regression.html</loc>
+    <lastmod>2026-11-21</lastmod>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/prompt-regression.html" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/prompt-regression.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/prompt-regression.html" />
+  </url>
+  <url>
+    <loc>https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/document-parsing-chunking.html</loc>
+    <lastmod>2026-11-21</lastmod>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/document-parsing-chunking.html" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/document-parsing-chunking.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/document-parsing-chunking.html" />
+  </url>
+  <url>
+    <loc>https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/document-parsing-chunking.html</loc>
+    <lastmod>2026-11-21</lastmod>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/document-parsing-chunking.html" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/document-parsing-chunking.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/document-parsing-chunking.html" />
+  </url>
+  <url>
+    <loc>https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/embedding-vector-search.html</loc>
+    <lastmod>2026-11-21</lastmod>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/embedding-vector-search.html" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/embedding-vector-search.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/embedding-vector-search.html" />
+  </url>
+  <url>
+    <loc>https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/embedding-vector-search.html</loc>
+    <lastmod>2026-11-21</lastmod>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/embedding-vector-search.html" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/embedding-vector-search.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/embedding-vector-search.html" />
+  </url>
+  <url>
+    <loc>https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/hybrid-search-reranking.html</loc>
+    <lastmod>2026-11-21</lastmod>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/hybrid-search-reranking.html" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/hybrid-search-reranking.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/hybrid-search-reranking.html" />
+  </url>
+  <url>
+    <loc>https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/hybrid-search-reranking.html</loc>
+    <lastmod>2026-11-21</lastmod>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/hybrid-search-reranking.html" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/hybrid-search-reranking.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/hybrid-search-reranking.html" />
+  </url>
+  <url>
+    <loc>https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/citation-hallucination.html</loc>
+    <lastmod>2026-11-21</lastmod>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/citation-hallucination.html" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/citation-hallucination.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/citation-hallucination.html" />
+  </url>
+  <url>
+    <loc>https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/citation-hallucination.html</loc>
+    <lastmod>2026-11-21</lastmod>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/citation-hallucination.html" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/citation-hallucination.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/citation-hallucination.html" />
+  </url>
+  <url>
+    <loc>https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/rag-evaluation-agentic-rag.html</loc>
+    <lastmod>2026-11-21</lastmod>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/rag-evaluation-agentic-rag.html" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/rag-evaluation-agentic-rag.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/rag-evaluation-agentic-rag.html" />
+  </url>
+  <url>
+    <loc>https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/rag-evaluation-agentic-rag.html</loc>
+    <lastmod>2026-11-21</lastmod>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/rag-evaluation-agentic-rag.html" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/rag-evaluation-agentic-rag.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/rag-evaluation-agentic-rag.html" />
+  </url>
+</urlset>

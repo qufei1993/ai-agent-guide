@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prompt 回归评测：建立用例集、断言规则与版本门禁 · AI Agent Guide</title>
+  <!-- SEO:START (auto-synced by scripts/generate-seo.mjs) -->
+  <meta name="description" content="建立用例集、评分规则与版本门禁，验证 Prompt、模型和参数改动是否带来退步" />
+  <link rel="canonical" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/prompt-regression.html" />
+  <link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/prompt-regression.html" />
+  <link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/prompt-regression.html" />
+  <link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/prompt-regression.html" />
+  <meta property="og:type" content="article" />
+  <meta property="og:locale" content="zh_CN" />
+  <meta property="og:locale:alternate" content="en_US" />
+  <meta property="og:title" content="Prompt 回归评测" />
+  <meta property="og:description" content="建立用例集、评分规则与版本门禁，验证 Prompt、模型和参数改动是否带来退步" />
+  <meta property="og:url" content="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/prompt-regression.html" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "Prompt 回归评测",
+    "description": "建立用例集、评分规则与版本门禁，验证 Prompt、模型和参数改动是否带来退步",
+    "inLanguage": "zh-CN",
+    "url": "https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/prompt-regression.html",
+    "isPartOf": {
+      "@type": "Book",
+      "name": "AI Agent Guide"
+    }
+  }
+  </script>
+  <!-- SEO:END -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css" />
+  <link rel="stylesheet" href="../shared/tokens.css" />
+  <style>
+    /* Chapter-specific components */
+    .drift-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      margin: 20px 0 26px;
+    }
+    @media (max-width: 760px) { .drift-grid { grid-template-columns: 1fr; } }
+
+    .drift-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: var(--shadow-sm);
+    }
+    .drift-tag {
+      display: inline-block;
+      align-self: flex-start;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 9px;
+      border-radius: 999px;
+      background: var(--rose-soft);
+      color: var(--rose);
+    }
+    .drift-tag.warn { background: var(--accent-soft); color: var(--accent); }
+    .drift-tag.blue { background: var(--blue-soft); color: var(--blue); }
+    .drift-tag.purple { background: var(--purple-soft); color: var(--purple); }
+    .drift-title { font-size: 16px; font-weight: 700; color: var(--text); }
+    .drift-desc { font-size: 13.5px; color: var(--text-secondary); line-height: 1.6; margin: 0; }
+    .drift-example {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .callout {
+      margin: 22px 0;
+      padding: 15px 18px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      font-size: 14.5px;
+      color: var(--text-secondary);
+    }
+    .callout.note { border-left: 4px solid var(--teal); background: var(--teal-soft); }
+    .callout.warn { border-left: 4px solid var(--accent); background: var(--accent-soft); }
+    .callout-title {
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+
+    /* Lab 1 layout */
+    .lab-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 18px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .toolbar-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+    .toolbar-label {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-right: 2px;
+    }
+
+    .lab1-split {
+      display: grid;
+      grid-template-columns: 0.95fr 1.15fr;
+      gap: 16px;
+      align-items: start;
+    }
+    @media (max-width: 840px) { .lab1-split { grid-template-columns: 1fr; } }
+
+    .pane-box {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+    }
+    .pane-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text-secondary);
+    }
+    .code-snippet {
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      line-height: 1.55;
+      background: var(--bg-code);
+      color: #e6edf3;
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      overflow-x: auto;
+      margin: 0 0 12px;
+      white-space: pre;
+    }
+    .expect-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 12px;
+    }
+    .expect-pill {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 3px 8px;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+    }
+
+    .check-list {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .check-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 13px;
+      line-height: 1.5;
+      padding: 7px 10px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+    }
+    .check-item.pass { border-left: 3px solid var(--green); }
+    .check-item.fail { border-left: 3px solid var(--rose); background: var(--rose-soft); }
+    .check-icon { font-weight: 800; flex-shrink: 0; }
+    .check-item.pass .check-icon { color: var(--green); }
+    .check-item.fail .check-icon { color: var(--rose); }
+
+    .score-bar-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px dashed var(--border);
+    }
+    .badge-pass {
+      background: var(--green-soft);
+      color: var(--green);
+      font-weight: 700;
+      font-size: 12px;
+      padding: 2px 9px;
+      border-radius: 999px;
+    }
+    .badge-fail {
+      background: var(--rose-soft);
+      color: var(--rose);
+      font-weight: 700;
+      font-size: 12px;
+      padding: 2px 9px;
+      border-radius: 999px;
+    }
+
+    /* Lab 2 Sandbox */
+    .gate-controls {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 780px) { .gate-controls { grid-template-columns: 1fr; } }
+
+    .control-card {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+    }
+    .control-title {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .gate-table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-elevated);
+      margin-bottom: 14px;
+    }
+    .gate-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+      text-align: left;
+    }
+    .gate-table th, .gate-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .gate-table th {
+      background: var(--bg-muted);
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text-secondary);
+    }
+    .gate-table tr:last-child td { border-bottom: none; }
+    .gate-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+    .gate-banner.blocked {
+      background: var(--rose-soft);
+      border-color: color-mix(in srgb, var(--rose) 45%, var(--border));
+    }
+    .gate-banner.passed {
+      background: var(--green-soft);
+      border-color: color-mix(in srgb, var(--green) 45%, var(--border));
+    }
+
+    /* Lab 3 Layered Eval */
+    .layer-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 780px) { .layer-cards { grid-template-columns: 1fr; } }
+
+    .layer-card {
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      cursor: pointer;
+      text-align: left;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .layer-card.active {
+      border-color: var(--teal);
+      box-shadow: 0 0 0 3px var(--teal-soft);
+    }
+    .layer-card-kicker {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--teal);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .layer-card-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .layer-card-desc { font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; margin: 0; }
+
+    .metric-bars {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .metric-row {
+      display: grid;
+      grid-template-columns: 110px 1fr 78px;
+      gap: 10px;
+      align-items: center;
+      font-size: 13px;
+    }
+    .metric-track {
+      height: 12px;
+      background: var(--bg-muted);
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .metric-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.25s ease;
+    }
+
+    /* Decision matrix */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 18px 0 16px;
+    }
+    .decision-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+    @media (max-width: 760px) { .decision-grid { grid-template-columns: 1fr; } }
+    .decision-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      box-shadow: var(--shadow-sm);
+    }
+    .decision-card.is-hidden { display: none; }
+    .decision-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .decision-name { font-size: 16px; font-weight: 700; color: var(--text); }
+    .decision-fit {
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--teal-soft);
+      color: var(--teal);
+    }
+    .decision-body { font-size: 13.5px; color: var(--text-secondary); line-height: 1.6; margin: 0 0 10px; }
+    .decision-link { font-size: 12.5px; font-weight: 600; }
+
+    .workflow-table-wrap {
+      overflow-x: auto;
+      margin: 18px 0 26px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg-elevated);
+    }
+    .workflow-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+      text-align: left;
+    }
+    .workflow-table th, .workflow-table td {
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    .workflow-table th { background: var(--bg-muted); font-weight: 700; }
+    .workflow-table tr:last-child td { border-bottom: none; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./index.html">
+        <span>AI Agent Guide</span>
+        <span class="brand-badge">交互版</span>
+      </a>
+      <nav class="topbar-nav">
+        <a href="#drift">什么是输出退化</a>
+        <a href="#lab-1">实验一：反例诊断</a>
+        <a href="#lab-2">实验二：版本门禁</a>
+        <a href="#lab-3">实验三：分层评测</a>
+        <a href="#tools">工具与工作流</a>
+      </nav>
+      <button class="theme-btn" id="themeToggle" type="button">
+        <span id="themeIcon">☀</span>
+        <span id="themeText">浅色</span>
+      </button>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-meta">
+      <span class="hero-pill">模块一 · LLM 工程基础</span>
+      <span class="hero-pill">TypeScript + Zod + output_config.format</span>
+      <span class="hero-pill">含 3 个交互实验台</span>
+    </div>
+    <h1>Prompt 回归评测：把“我感觉变好了”变成可比较的数字</h1>
+    <p class="hero-lead">
+      你把 Prompt 里一句“请简洁回答”改成“请详细分析”，或者把模型升级到新版本。接口依然返回 200 OK，JSON 也能正常解析，但代码评审助手开始把正常格式化函数判成高危漏洞，或者漏掉了真正的 SQL 注入。没有固定用例集和断言规则，你根本分不清这是模型抖动，还是新改动的退步。
+    </p>
+  </section>
+
+  <section class="tldr">
+    <div class="tldr-card">
+      <div class="tldr-title">30 秒核心脉络</div>
+      <ul class="tldr-list">
+        <li class="tldr-item">
+          <span><strong>回归不只测报错：</strong>AI 应用的退步常表现为格式漂移、漏报风险、过度挑刺或 Token 翻倍，必须先用代码断言拦住硬指标。</span>
+          <a class="tldr-go" href="#lab-1">去实验一 →</a>
+        </li>
+        <li class="tldr-item">
+          <span><strong>测试集必须包含反例：</strong>只放有 bug 的代码会把 Prompt 调成“过度评审”，正常代码也要作为反例验证模型能不能克制。</span>
+          <a class="tldr-go" href="#lab-2">去实验二 →</a>
+        </li>
+        <li class="tldr-item">
+          <span><strong>先规则后裁判：</strong>先用 Schema 与关键点规则把 60 分问题拦住，再按需叠加 <code>usage</code> 成本门禁和 LLM-as-Judge。</span>
+          <a class="tldr-go" href="#lab-3">去实验三 →</a>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2 id="drift">一、什么叫“输出变差”：别急着上另一个模型打分</h2>
+    <p class="key">
+      AI 工程里的回归测试，本质是把不完全确定的模型当成被测函数：<strong>固定输入 + 固定 Prompt + 固定检查规则 = 可比较的实验结果</strong>。
+    </p>
+    <p>
+      很多人一听说“评测”，第一反应就是再找一个更贵的模型当裁判。这当然有用，但顺序错了。工程上应该先把最容易确定、成本最低的硬问题用代码拦住，把变差拆成 4 个可观测维度：
+    </p>
+
+    <div class="drift-grid">
+      <div class="drift-card">
+        <span class="drift-tag">维度 1 · 最硬指标</span>
+        <div class="drift-title">格式变差</div>
+        <p class="drift-desc">新 Prompt 让模型多包了一层 Markdown 代码块，或者把数值字段 <code>score</code> 输出成了字符串，下游解析直接崩溃。</p>
+        <div class="drift-example">检查手段：output_config.format + Zod Schema 强约束</div>
+      </div>
+      <div class="drift-card">
+        <span class="drift-tag warn">维度 2 · 核心业务</span>
+        <div class="drift-title">内容变差</div>
+        <p class="drift-desc">JSON 格式完全合法，但原本能抓出的 SQL 注入被忽略，模型只泛泛地说“代码风格可以优化”。</p>
+        <div class="drift-example">检查手段：mustMention 关键词 + issueTypes 分类断言</div>
+      </div>
+      <div class="drift-card">
+        <span class="drift-tag blue">维度 3 · 体验与克制</span>
+        <div class="drift-title">风格与边界变差</div>
+        <p class="drift-desc">要求一句话总结却吐出 800 字，或者把一段完全正常的工具函数硬生生审出 3 条“安全风险”。</p>
+        <div class="drift-example">检查手段：字符上限 + 反例（clean-code）零误报检查</div>
+      </div>
+      <div class="drift-card">
+        <span class="drift-tag purple">维度 4 · 生产成本</span>
+        <div class="drift-title">成本变差</div>
+        <p class="drift-desc">Prompt 加长了 600 字规则后，通过率只涨了 2%，但单次调用的输入与输出 Token 成本直接翻倍。</p>
+        <div class="drift-example">检查手段：记录 usage.input_tokens / output_tokens 与耗时</div>
+      </div>
+    </div>
+
+    <figure class="diagram-figure">
+      <svg viewBox="0 0 760 210" width="100%" height="auto" role="img" aria-label="Prompt 回归评测三层漏斗流程图">
+        <rect x="12" y="12" width="736" height="186" rx="14" fill="var(--bg-elevated)" stroke="var(--border)" stroke-width="1.5"/>
+        <!-- Step 1 -->
+        <rect x="34" y="42" width="160" height="126" rx="10" fill="var(--bg-muted)" stroke="var(--border-strong)" stroke-width="1.5"/>
+        <text x="114" y="72" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">固定输入集</text>
+        <text x="114" y="96" text-anchor="middle" font-size="11.5" fill="var(--text-secondary)">cases.json (4 条)</text>
+        <text x="114" y="118" text-anchor="middle" font-size="11" fill="var(--text-muted)">3 条典型故障</text>
+        <text x="114" y="136" text-anchor="middle" font-size="11" fill="var(--text-muted)">+ 1 条正常反例</text>
+        <!-- Arrow 1 -->
+        <path d="M198 105 L234 105" stroke="var(--text-muted)" stroke-width="2" marker-end="url(#arrowHead)"/>
+        <!-- Step 2 -->
+        <rect x="240" y="42" width="150" height="126" rx="10" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="1.5"/>
+        <text x="315" y="72" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">L1 · 硬契约</text>
+        <text x="315" y="96" text-anchor="middle" font-size="11.5" fill="var(--text-secondary)">output_config.format</text>
+        <text x="315" y="118" text-anchor="middle" font-size="11" fill="var(--text-muted)">Zod 保证字段合法</text>
+        <text x="315" y="136" text-anchor="middle" font-size="11" fill="var(--text-muted)">失败即刻拦截</text>
+        <!-- Arrow 2 -->
+        <path d="M394 105 L430 105" stroke="var(--text-muted)" stroke-width="2" marker-end="url(#arrowHead)"/>
+        <!-- Step 3 -->
+        <rect x="436" y="42" width="150" height="126" rx="10" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="1.5"/>
+        <text x="511" y="72" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">L2 · 语义断言</text>
+        <text x="511" y="96" text-anchor="middle" font-size="11.5" fill="var(--text-secondary)">代码规则脚本</text>
+        <text x="511" y="118" text-anchor="middle" font-size="11" fill="var(--text-muted)">关键词 / 类型 / 分数</text>
+        <text x="511" y="136" text-anchor="middle" font-size="11" fill="var(--text-muted)">零额外调用成本</text>
+        <!-- Arrow 3 -->
+        <path d="M590 105 L626 105" stroke="var(--text-muted)" stroke-width="2" marker-end="url(#arrowHead)"/>
+        <!-- Step 4 -->
+        <rect x="632" y="42" width="96" height="126" rx="10" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+        <text x="680" y="72" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">L3 · 门禁</text>
+        <text x="680" y="96" text-anchor="middle" font-size="11.5" fill="var(--text-secondary)">版本对比</text>
+        <text x="680" y="118" text-anchor="middle" font-size="11" fill="var(--text-muted)">通过率 &amp; P0</text>
+        <text x="680" y="136" text-anchor="middle" font-size="11" fill="var(--text-muted)">决定是否放行</text>
+        <defs>
+          <marker id="arrowHead" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+            <path d="M0,1 L7,4 L0,7 Z" fill="var(--text-muted)"/>
+          </marker>
+        </defs>
+      </svg>
+      <figcaption>图 1：先用 L1 Schema 和 L2 代码断言拦截 60 分的硬退步，再决定版本是否放行。</figcaption>
+    </figure>
+
+    <div class="predict-hook" data-answer="b">
+      <div class="predict-badge">先猜后验</div>
+      <div class="predict-q">
+        假如你的代码评审测试集里有 4 条用例，全部都是包含真实 Bug 或安全漏洞的代码。新版 Prompt 在这 4 条用例上拿到了 100% 通过率，能直接放心上线吗？
+      </div>
+      <div class="predict-opts">
+        <button class="predict-opt" type="button" data-opt="a">A. 可以，100% 召回率说明模型已经抓住了所有风险</button>
+        <button class="predict-opt" type="button" data-opt="b">B. 不能，缺少“正常代码”反例，模型可能变得过度挑刺</button>
+        <button class="predict-opt" type="button" data-opt="c">C. 只要把 temperature 设为 0 就足够安全了</button>
+      </div>
+      <div class="predict-feedback">
+        <strong>判断正确：</strong>只放有问题输入的测试集，会诱导你不断把 Prompt 改得越来越严厉。结果就是模型连正常代码也强行编造出“安全漏洞”和“性能隐患”。下方实验一可以直接看到真实模型输出。
+        <button class="predict-verify" type="button" id="verifyCleanCodeBtn">在实验一中验证 clean-code 反例 →</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- LAB 1 -->
+  <section class="lab-wrap" id="lab-1">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div class="lab-eyebrow">交互实验台 01 · 真实输出溯源与反例诊断</div>
+        <h3 class="lab-title">为什么 <code>review-v1</code> 在“正常代码”上翻车了？</h3>
+        <p class="lab-desc">
+          本实验展示 <code>examples/core-methods/prompt-regression/run-eval.ts</code> 在 <code>qwen-plus</code>（<code>temperature: 0</code>）上的真实运行报告。切换 Prompt 版本与 4 条用例，观察模型输出与断言结果的变化。
+          <span class="src-tag">真实运行数据 · prompt-regression-report.md</span>
+        </p>
+      </div>
+      <div class="lab-body">
+        <div class="lab-toolbar">
+          <div class="toolbar-group">
+            <span class="toolbar-label">Prompt 版本：</span>
+            <button class="chip-btn active" type="button" data-prompt="v1">review-v1.md（宽泛要求）</button>
+            <button class="chip-btn" type="button" data-prompt="v2">review-v2.md（生产约束 + 反编造规则）</button>
+          </div>
+          <div class="toolbar-group">
+            <span class="toolbar-label">测试用例：</span>
+            <button class="chip-btn active" type="button" data-case="missing-null-check">1. 空值判断</button>
+            <button class="chip-btn" type="button" data-case="sql-injection">2. SQL 注入</button>
+            <button class="chip-btn" type="button" data-case="n-plus-one">3. 循环查询</button>
+            <button class="chip-btn" type="button" data-case="clean-code">4. 正常代码（反例）</button>
+          </div>
+        </div>
+
+        <div class="lab1-split">
+          <div class="pane-box">
+            <div class="pane-head">
+              <span id="lab1CaseTitle">用例：missing-null-check</span>
+              <span id="lab1PromptNote">使用 review-v1.md</span>
+            </div>
+            <pre class="code-snippet" id="lab1InputCode"></pre>
+            <div class="pane-head" style="margin-bottom:6px;">
+              <span>预期断言（cases.json）</span>
+            </div>
+            <div class="expect-list" id="lab1ExpectedPills"></div>
+            <div class="score-bar-row">
+              <span>当前版本总通过率：<strong id="lab1SummaryScore">3 / 4 (75%)</strong></span>
+              <span id="lab1CaseBadge" class="badge-pass">PASS</span>
+            </div>
+          </div>
+
+          <div class="pane-box">
+            <div class="pane-head">
+              <span>断言检查清单</span>
+              <span id="lab1ScoreReadout">模型评分：30</span>
+            </div>
+            <ul class="check-list" id="lab1Checks"></ul>
+            <div class="pane-head" style="margin-bottom:6px;">
+              <span>qwen-plus 实际返回 JSON</span>
+            </div>
+            <pre class="code-snippet" id="lab1OutputJson" style="max-height:240px; margin-bottom:0;"></pre>
+          </div>
+        </div>
+
+        <div id="lab1OutcomeBox" class="outcome meh" style="margin-top:14px;">
+          <div class="outcome-title" id="lab1OutcomeTitle">诊断结论</div>
+          <p id="lab1OutcomeText" style="margin:0;"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2>二、从失败用例里长出 Prompt 规则</h2>
+    <p class="key">
+      <code>review-v2.md</code> 里的约束不是拍脑袋写出来的，而是从失败 case 里长出来的。
+    </p>
+    <p>
+      在上面的实验里，<code>review-v1</code> 面对一段普通的 <code>Intl.NumberFormat</code> 价格格式化函数，硬是编造了三条问题：把未校验的 <code>currency</code> 参数说成“安全漏洞（信息泄露）”，又批评它缺少 JSDoc 注释，最终只给了 72 分。
+    </p>
+    <p>
+      定位到“过度评审”这个失败模式后，<code>review-v2.md</code> 针对性地增加了三条护栏：
+    </p>
+    <ol>
+      <li>明确评审优先级：运行时错误 &gt; 安全风险 &gt; 性能问题 &gt; 可维护性。</li>
+      <li>明确零问题出口：如果代码整体没有明显问题，<code>issues</code> 输出空数组，<code>score</code> 应在 80 到 100 之间。</li>
+      <li>划定安全与性能的判定边界：没有看到外部输入、数据库、文件或网络边界时，不要默认判定为安全漏洞；不要把普通对象创建或格式化函数判定为性能问题。</li>
+    </ol>
+    <p>
+      加完规则后重跑同一批 4 条 case，<code>clean-code</code> 通过了（评分 95，<code>issues: []</code>），同时前 3 条故障用例没有出现退步。这就是回归测试的核心价值：<strong>修掉一个已知失败模式，并证明没有破坏已有能力</strong>。
+    </p>
+
+    <h2>三、把断言规则与版本门禁接进工作流</h2>
+    <p class="key">
+      不要只盯着总通过率。如果一个 P0 高危用例从通过变成失败，即使总通过率看起来没怎么掉，这个版本也必须被门禁拦住。
+    </p>
+    <p>
+      同时，真实项目里只有“关键词 + 类型 + 分数”还不够，工程上通常会逐步补上两道防线：第一道是<strong>输出长度/格式冗余检查</strong>（防止模型突然变得极其啰嗦，撑爆界面或预算）；第二道是<strong>关键用例多次重复运行</strong>（即使 <code>temperature: 0</code>，不同服务端版本仍可能出现轻微波动）。
+    </p>
+  </main>
+
+  <!-- LAB 2 -->
+  <section class="lab-wrap" id="lab-2">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div class="lab-eyebrow">交互实验台 02 · 断言沙盒与发布门禁</div>
+        <h3 class="lab-title">调整检查规则与模拟抖动，看门禁何时拦截发布</h3>
+        <p class="lab-desc">
+          在真实 <code>run-eval.ts</code> 骨架上叠加输出长度上限与重复运行策略，观察版本门禁的放行/拦截判定，右侧代码块会同步更新对应的 TypeScript 实现。
+          <span class="sim-tag">门禁规则与抖动为教学模拟</span>
+        </p>
+      </div>
+      <div class="lab-body">
+        <div class="gate-controls">
+          <div class="control-card">
+            <div class="control-title">
+              <span>待评测 Prompt</span>
+            </div>
+            <div class="toolbar-group">
+              <button class="chip-btn active" type="button" data-gate-prompt="v1">review-v1</button>
+              <button class="chip-btn" type="button" data-gate-prompt="v2">review-v2</button>
+            </div>
+          </div>
+          <div class="control-card">
+            <div class="control-title">
+              <span>JSON 长度上限（maxChars）</span>
+              <strong id="gateMaxCharsVal">1000 字符</strong>
+            </div>
+            <div class="toolbar-group">
+              <button class="chip-btn" type="button" data-max-chars="500">500（严苛）</button>
+              <button class="chip-btn active" type="button" data-max-chars="1000">1000（推荐）</button>
+              <button class="chip-btn" type="button" data-max-chars="2000">2000（宽松）</button>
+            </div>
+          </div>
+          <div class="control-card">
+            <div class="control-title">
+              <span>稳定性策略与 P0 门禁</span>
+            </div>
+            <div class="toolbar-group">
+              <button class="chip-btn active" type="button" data-runs="1">单次运行</button>
+              <button class="chip-btn" type="button" data-runs="3">重复 3 次取均</button>
+              <button class="chip-btn" type="button" id="toggleNoiseBtn">模拟模型抖动：关</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="gate-table-wrap sim-zone" data-sim-label="模拟门禁计算">
+          <table class="gate-table">
+            <thead>
+              <tr>
+                <th>用例 ID</th>
+                <th>优先级</th>
+                <th>输出字符数</th>
+                <th>语义断言</th>
+                <th>长度检查</th>
+                <th>门禁状态</th>
+              </tr>
+            </thead>
+            <tbody id="gateTableBody"></tbody>
+          </table>
+        </div>
+
+        <div id="gateBanner" class="gate-banner blocked">
+          <div>
+            <strong id="gateBannerTitle" style="font-size:15px;">发布门禁：BLOCKED（拦截发布）</strong>
+            <div id="gateBannerDesc" style="font-size:13px; color:var(--text-secondary); margin-top:2px;"></div>
+          </div>
+          <span id="gatePassRatePill" class="badge-fail">3 / 4 通过</span>
+        </div>
+
+        <details class="code-fold" style="margin-top:16px;">
+          <summary>查看同步生成的 TypeScript 评测脚本（<code>run-eval.ts</code> 片段）</summary>
+          <div class="code-fold-body">
+            <div class="code-card">
+              <div class="code-header">
+                <span>evaluateCase + 长度门禁 + 重复运行</span>
+                <button class="copy-btn" type="button">复制代码</button>
+              </div>
+              <pre><code class="language-typescript" id="lab2CodeBlock"></code></pre>
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2>四、不要神化最小脚本：5 个工程局限</h2>
+    <p class="key">
+      自己写几十行 TypeScript 断言能解决 60 分的问题，但它不是完整的评测平台。
+    </p>
+    <ol>
+      <li><strong>关键词检查很粗糙</strong>：模型可能提到了“SQL 注入”，但给出的修复建议是错的；也可能换了同义词描述同一个风险，导致关键词误杀。</li>
+      <li><strong>分数不是绝对标准</strong>：不同 Prompt 对 60 分的定义完全不同，必须配合清晰的评分标准说明使用。</li>
+      <li><strong>单次运行不够稳定</strong>：即便设置 <code>temperature: 0</code>，服务端升级或浮点非确定性仍会带来波动，关键用例需要多次重复运行。</li>
+      <li><strong>没有 LLM-as-Judge</strong>：对于“解释是否清晰”“建议是否可执行”这类软指标，代码规则很难覆盖，需要另一个模型按 Rubric 打分。</li>
+      <li><strong>没有统计 Token 成本</strong>：生产脚本应该把 <code>response.usage.input_tokens</code> 和 <code>output_tokens</code> 写入报告，避免质量涨了 2%、账单翻倍。</li>
+    </ol>
+  </main>
+
+  <!-- LAB 3 -->
+  <section class="lab-wrap" id="lab-3">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div class="lab-eyebrow">交互实验台 03 · 三阶段评测演进模拟</div>
+        <h3 class="lab-title">从 60 分脚本到生产评测：每加一层得到什么、付出什么</h3>
+        <p class="lab-desc">
+          点击切换不同评测成熟度，对比缺陷拦截能力、单次运行成本与可解释性。工程上的原则永远是：<strong>先把硬规则铺好，再按需引入模型裁判</strong>。
+          <span class="sim-tag">成本与覆盖度为示意对比</span>
+        </p>
+      </div>
+      <div class="lab-body">
+        <div class="layer-cards">
+          <button class="layer-card active" type="button" data-eval-tier="tier1">
+            <div class="layer-card-kicker">阶段 1 · 最小可用</div>
+            <div class="layer-card-title">Schema + 代码规则断言</div>
+            <p class="layer-card-desc">用 <code>zodOutputFormat</code> 锁结构，用关键词、类型和反例防退步。</p>
+          </button>
+          <button class="layer-card" type="button" data-eval-tier="tier2">
+            <div class="layer-card-kicker">阶段 2 · 成本与稳定性</div>
+            <div class="layer-card-title">+ 长度门禁与 Usage 追踪</div>
+            <p class="layer-card-desc">记录输入输出 Token 与耗时，关键用例重复 3 次验证稳定性。</p>
+          </button>
+          <button class="layer-card" type="button" data-eval-tier="tier3">
+            <div class="layer-card-kicker">阶段 3 · 软指标覆盖</div>
+            <div class="layer-card-title">+ LLM-as-Judge 裁判模型</div>
+            <p class="layer-card-desc">对通过硬规则的样本，用高阶模型按 Rubric 评估建议可执行性。</p>
+          </button>
+        </div>
+
+        <div class="pane-box sim-zone" data-sim-label="示意对比">
+          <div class="pane-head">
+            <span id="tierDetailTitle">阶段 1：Schema + 代码规则断言</span>
+            <span id="tierCostTag">额外评测调用：0 次 / 用例</span>
+          </div>
+          <p id="tierDetailDesc" style="font-size:13.5px; color:var(--text-secondary); margin:0 0 12px;"></p>
+          <div class="metric-bars">
+            <div class="metric-row">
+              <span>硬退步拦截</span>
+              <div class="metric-track"><div class="metric-fill bar-sim" id="barHard" style="width:75%; background:var(--teal);"></div></div>
+              <strong id="valHard">75%</strong>
+            </div>
+            <div class="metric-row">
+              <span>软质量识别</span>
+              <div class="metric-track"><div class="metric-fill bar-sim" id="barSoft" style="width:25%; background:var(--blue);"></div></div>
+              <strong id="valSoft">25%</strong>
+            </div>
+            <div class="metric-row">
+              <span>评测时间/成本</span>
+              <div class="metric-track"><div class="metric-fill bar-sim" id="barCost" style="width:20%; background:var(--accent);"></div></div>
+              <strong id="valCost">低 (1x)</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2 id="tools">五、现成工具怎么选与日常开发流程</h2>
+    <p class="key">
+      自己写脚本是为了看懂 eval 的骨架；当用例突破几十条、需要接入 CI 或团队协作时，再切换到成熟工具。
+    </p>
+
+    <div class="filter-bar" id="decisionFilters">
+      <button class="chip-btn active" type="button" data-filter="all">全部工具</button>
+      <button class="chip-btn" type="button" data-filter="ts">TypeScript / CI</button>
+      <button class="chip-btn" type="button" data-filter="python">Python / RAG</button>
+      <button class="chip-btn" type="button" data-filter="platform">团队观测平台</button>
+      <button class="chip-btn" type="button" data-filter="opt">自动优化</button>
+    </div>
+
+    <div class="decision-grid" id="decisionGrid">
+      <div class="decision-card" data-tags="ts">
+        <div class="decision-head">
+          <span class="decision-name">Promptfoo</span>
+          <span class="decision-fit">Prompt 对比 &amp; CI</span>
+        </div>
+        <p class="decision-body">最接近本章主线。通过 YAML 配置组织 Prompts、Providers 与断言，自带 Web 对比界面，适合在 CI 里跑多模型、多 Prompt 版本回归。</p>
+        <a class="decision-link" href="https://www.promptfoo.dev/docs/getting-started/" target="_blank" rel="noopener">官方文档：promptfoo.dev →</a>
+      </div>
+      <div class="decision-card" data-tags="python">
+        <div class="decision-head">
+          <span class="decision-name">DeepEval</span>
+          <span class="decision-fit">Python / RAG / Agent</span>
+        </div>
+        <p class="decision-body">类似 Pytest 的 LLM 测试框架，内置 Faithfulness、Answer Relevancy 等指标，适合进入 RAG 检索与 Agent 评测阶段后使用。</p>
+        <a class="decision-link" href="https://deepeval.com/docs/introduction" target="_blank" rel="noopener">官方文档：deepeval.com →</a>
+      </div>
+      <div class="decision-card" data-tags="platform">
+        <div class="decision-head">
+          <span class="decision-name">LangSmith</span>
+          <span class="decision-fit">团队 Trace &amp; 数据集</span>
+        </div>
+        <p class="decision-body">平台化方案，适合系统上线后把真实用户的失败 Trace 一键沉淀回测试数据集，做跨版本的线上线下联动对比。</p>
+        <a class="decision-link" href="https://docs.langchain.com/langsmith/evaluation" target="_blank" rel="noopener">官方文档：LangSmith Evaluation →</a>
+      </div>
+      <div class="decision-card" data-tags="opt python">
+        <div class="decision-head">
+          <span class="decision-name">DSPy</span>
+          <span class="decision-fit">编程式 Prompt 优化</span>
+        </div>
+        <p class="decision-body">定位是“programming, not prompting”，根据你定义的 Metric 自动优化指令与 Few-shot。前提是先拥有稳定的测试集与评测指标。</p>
+        <a class="decision-link" href="https://dspy.ai/" target="_blank" rel="noopener">官方文档：dspy.ai →</a>
+      </div>
+    </div>
+
+    <h3>把回归评测放进日常开发闭环</h3>
+    <p>
+      脚本能跑只是起点，真正有价值的是把它固定成 4 步习惯：改 Prompt 前先跑基线保存报告；改 Prompt 后用同一批 case 重跑对比；线上或手测发现离谱输出时，先把输入加进 <code>cases.json</code> 再动手改 Prompt；每次发布不只看总通过率，还要盯住高优先级用例是否退步。
+    </p>
+
+    <div class="workflow-table-wrap">
+      <table class="workflow-table">
+        <thead>
+          <tr>
+            <th>任务类型</th>
+            <th>先做什么</th>
+            <th>AI 适合做什么</th>
+            <th>工程师必须盯什么</th>
+            <th>验收方式</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>AI 功能迭代</strong></td>
+            <td>准备正例与反例 case</td>
+            <td>调 Prompt、写解析和重试逻辑</td>
+            <td>输出质量、Token 成本、失败兜底</td>
+            <td>用固定 case 做版本对比</td>
+          </tr>
+          <tr>
+            <td><strong>Bug 修复</strong></td>
+            <td>复现离谱输出</td>
+            <td>读日志、定位规则冲突</td>
+            <td>根因是否成立、是否误伤其他用例</td>
+            <td>先加回归用例，再验证修复</td>
+          </tr>
+          <tr>
+            <td><strong>Agent 能力</strong></td>
+            <td>定义工具与权限边界</td>
+            <td>生成执行循环和工具封装</td>
+            <td>越权、死循环、不可恢复失败</td>
+            <td>看工具调用轨迹与最终状态</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout note">
+      <div class="callout-title">完整可运行源码</div>
+      示例位于仓库 <code>examples/core-methods/prompt-regression/</code>（包含 <code>cases.json</code>、<code>prompts/review-v1.md</code>、<code>prompts/review-v2.md</code> 与 <code>run-eval.ts</code>），使用阿里云百炼 Qwen（支持 <code>output_config.format</code>）可直接运行 <code>npx tsx --env-file=.env examples/core-methods/prompt-regression/run-eval.ts</code>。
+    </div>
+
+    <p>
+      Prompt 回归评测本质上是一种工程判断习惯，而不是工具堆砌。测试 case 远比 eval 框架值钱：先有几条真实、带反例的代表性数据，再谈自动化评测才有意义。进入后续的 RAG 知识库与 Agent 实战后，你会看到完全相同的闭环在更大的链路上复现，只不过检查对象从一段 JSON 输出，扩展到了检索召回率、引用忠实度以及工具调用的执行轨迹。
+    </p>
+  </main>
+
+  <footer></footer>
+
+  <script>
+    // Real outputs captured from examples/core-methods/prompt-regression/reports/prompt-regression-report.md (qwen-plus)
+    const EVAL_CASES = {
+      "missing-null-check": {
+        title: "missing-null-check：缺少空值判断",
+        priority: "P1 · 运行时",
+        input: "function getUserName(user?: { name?: string }) {\n  return user.name.toUpperCase();\n}",
+        expected: ["关键词: 空, undefined", "类型: bug", "评分: 0-80"],
+        v1: {
+          passed: true,
+          score: 30,
+          checks: [
+            { pass: true, text: "output_config.format 返回结果符合 ReviewResult Schema" },
+            { pass: true, text: "命中关键词：空、undefined" },
+            { pass: true, text: "问题类型符合预期：bug" },
+            { pass: true, text: "评分 30 在预期范围内：0-80" }
+          ],
+          output: {
+            summary: "代码存在运行时错误风险，未处理空值情况",
+            issues: [{
+              type: "bug",
+              message: "当 user 为 undefined 或 user.name 为 undefined/null 时，调用 toUpperCase() 会抛出 TypeError",
+              suggestion: "添加空值检查，例如：return user?.name?.toUpperCase() ?? ''"
+            }],
+            score: 30
+          },
+          outcomeType: "good",
+          outcomeTitle: "v1 通过：基础空值缺陷很容易被捕获",
+          outcomeText: "对于这种明显的 TypeError 风险，宽泛的 review-v1 就能准确识别并返回合法 JSON。"
+        },
+        v2: {
+          passed: true,
+          score: 40,
+          checks: [
+            { pass: true, text: "output_config.format 返回结果符合 ReviewResult Schema" },
+            { pass: true, text: "命中关键词：空、undefined" },
+            { pass: true, text: "问题类型符合预期：bug" },
+            { pass: true, text: "评分 40 在预期范围内：0-80" }
+          ],
+          output: {
+            summary: "代码存在运行时空指针异常风险，未处理 user 或 user.name 为 undefined 的情况。",
+            issues: [{
+              type: "bug",
+              message: "当 user 为 undefined 或 user.name 为 undefined 时，调用 toUpperCase() 会抛出 TypeError。",
+              suggestion: "添加空值检查，例如：return user?.name?.toUpperCase() ?? ''; 或显式判断并提供默认值。"
+            }],
+            score: 40
+          },
+          outcomeType: "good",
+          outcomeTitle: "v2 保持通过：没有因为增加克制规则而漏报",
+          outcomeText: "加入反编造规则后，真实的运行时错误依然被稳定识别，未发生回归。"
+        }
+      },
+      "sql-injection": {
+        title: "sql-injection：SQL 注入风险",
+        priority: "P0 · 安全",
+        input: "async function findUser(name: string) {\n  return db.query(`select * from users where name = '${name}'`);\n}",
+        expected: ["关键词: SQL, 注入", "类型: security", "评分: 0-70"],
+        v1: {
+          passed: true,
+          score: 20,
+          checks: [
+            { pass: true, text: "output_config.format 返回结果符合 ReviewResult Schema" },
+            { pass: true, text: "命中关键词：SQL、注入" },
+            { pass: true, text: "问题类型符合预期：security" },
+            { pass: true, text: "评分 20 在预期范围内：0-70" }
+          ],
+          output: {
+            summary: "存在严重SQL注入漏洞，代码安全性极差",
+            issues: [
+              {
+                type: "security",
+                message: "直接将用户输入的 name 拼接到 SQL 查询字符串中，导致严重的 SQL 注入漏洞",
+                suggestion: "使用参数化查询（如 db.query('select * from users where name = ?', [name])）"
+              },
+              {
+                type: "bug",
+                message: "函数缺少对数据库连接、错误处理和返回值类型的定义",
+                suggestion: "添加 try-catch 错误处理，明确返回类型"
+              }
+            ],
+            score: 20
+          },
+          outcomeType: "good",
+          outcomeTitle: "v1 通过：抓出了高危 SQL 注入",
+          outcomeText: "核心安全问题已命中，但 v1 顺带挑了一条相对次要的“缺少类型定义”。"
+        },
+        v2: {
+          passed: true,
+          score: 30,
+          checks: [
+            { pass: true, text: "output_config.format 返回结果符合 ReviewResult Schema" },
+            { pass: true, text: "命中关键词：SQL、注入" },
+            { pass: true, text: "问题类型符合预期：security" },
+            { pass: true, text: "评分 30 在预期范围内：0-70" }
+          ],
+          output: {
+            summary: "存在严重SQL注入漏洞，且缺少错误处理和输入校验",
+            issues: [
+              {
+                type: "security",
+                message: "直接将用户输入的 name 拼接到 SQL 查询字符串中，导致 SQL 注入风险。",
+                suggestion: "使用参数化查询（如 db.query('select * from users where name = ?', [name])）"
+              },
+              {
+                type: "bug",
+                message: "未处理数据库查询失败情况，可能导致 Promise rejection 未被捕获。",
+                suggestion: "添加 try/catch 包裹 db.query 调用。"
+              }
+            ],
+            score: 30
+          },
+          outcomeType: "good",
+          outcomeTitle: "v2 通过：高危漏洞与异步异常处理均准确命中",
+          outcomeText: "因为代码里明确出现了 db.query 与外部参数拼接，v2 的安全边界规则正常触发。"
+        }
+      },
+      "n-plus-one": {
+        title: "n-plus-one：循环内重复查询",
+        priority: "P1 · 性能",
+        input: "async function listOrders(users: User[]) {\n  const result = [];\n  for (const user of users) {\n    const orders = await db.orders.findMany({ where: { userId: user.id } });\n    result.push({ user, orders });\n  }\n  return result;\n}",
+        expected: ["关键词: 循环, 查询", "类型: performance", "评分: 0-80"],
+        v1: {
+          passed: true,
+          score: 45,
+          checks: [
+            { pass: true, text: "output_config.format 返回结果符合 ReviewResult Schema" },
+            { pass: true, text: "命中关键词：循环、查询" },
+            { pass: true, text: "问题类型符合预期：performance" },
+            { pass: true, text: "评分 45 在预期范围内：0-80" }
+          ],
+          output: {
+            summary: "存在严重的性能问题（N+1 查询）和类型缺失",
+            issues: [
+              { type: "performance", message: "循环内执行异步数据库查询，导致 N+1 查询问题", suggestion: "改为一次性批量查询所有用户的订单" },
+              { type: "bug", message: "函数缺少返回类型注解，且未声明 db 和 User 类型", suggestion: "添加明确的返回类型注解" },
+              { type: "style", message: "变量命名 result 过于宽泛", suggestion: "改用语义化名称如 userOrders" }
+            ],
+            score: 45
+          },
+          outcomeType: "meh",
+          outcomeTitle: "v1 通过但噪音多：混入了无关的 style 挑刺",
+          outcomeText: "虽然通过了断言，但 v1 把示例代码里省略的 import 类型和变量名 result 也当成问题报了出来。"
+        },
+        v2: {
+          passed: true,
+          score: 45,
+          checks: [
+            { pass: true, text: "output_config.format 返回结果符合 ReviewResult Schema" },
+            { pass: true, text: "命中关键词：循环、查询" },
+            { pass: true, text: "问题类型符合预期：performance" },
+            { pass: true, text: "评分 45 在预期范围内：0-80" }
+          ],
+          output: {
+            summary: "存在严重的性能问题：N+1 查询，循环内发起独立数据库请求。",
+            issues: [
+              {
+                type: "performance",
+                message: "循环中对每个用户执行独立的 db.orders.findMany 查询，导致 N+1 查询问题。",
+                suggestion: "改用一次性批量查询（where: { userId: { in: ... } }），再按 userId 分组。"
+              }
+            ],
+            score: 45
+          },
+          outcomeType: "good",
+          outcomeTitle: "v2 通过且信噪比显著提升",
+          outcomeText: "v2 只保留了真正影响生产环境的 N+1 查询问题，去掉了无关紧要的命名和类型挑刺。"
+        }
+      },
+      "clean-code": {
+        title: "clean-code：基本正常的代码（反例）",
+        priority: "P1 · 反例",
+        input: "function formatPrice(value: number, currency = 'CNY') {\n  return new Intl.NumberFormat('zh-CN', {\n    style: 'currency',\n    currency,\n  }).format(value);\n}",
+        expected: ["关键词: 无", "类型: 空数组 []", "评分: 80-100"],
+        v1: {
+          passed: false,
+          score: 72,
+          checks: [
+            { pass: true, text: "output_config.format 返回结果符合 ReviewResult Schema" },
+            { pass: true, text: "命中关键词：无" },
+            { pass: false, text: "正常代码不应输出问题：实际输出了 bug、security、style" },
+            { pass: false, text: "评分 72 不在预期范围 80-100" }
+          ],
+          output: {
+            summary: "代码简洁但存在潜在 bug 和国际化健壮性问题",
+            issues: [
+              { type: "bug", message: "Intl.NumberFormat 在传入不支持的 currency 值时可能抛出 RangeError", suggestion: "验证 ISO 4217 货币代码" },
+              { type: "security", message: "直接将用户可控的 currency 参数传入可能引发非预期行为或信息泄露", suggestion: "应白名单校验 currency" },
+              { type: "style", message: "缺少 JSDoc 注释", suggestion: "添加完整 JSDoc" }
+            ],
+            score: 72
+          },
+          outcomeType: "bad",
+          outcomeTitle: "v1 失败（过度评审）：把正常格式化函数判成了安全漏洞",
+          outcomeText: "这就是缺少反例和边界约束的典型后果：模型为了“显得专业”，自己脑补了外部恶意输入，硬生生凑出 3 条问题并拉低评分。"
+        },
+        v2: {
+          passed: true,
+          score: 95,
+          checks: [
+            { pass: true, text: "output_config.format 返回结果符合 ReviewResult Schema" },
+            { pass: true, text: "命中关键词：无" },
+            { pass: true, text: "问题类型符合预期：无明显问题（issues 为空）" },
+            { pass: true, text: "评分 95 在预期范围内：80-100" }
+          ],
+          output: {
+            summary: "代码简洁、类型安全，功能正确，无明显运行时错误或安全风险。",
+            issues: [],
+            score: 95
+          },
+          outcomeType: "good",
+          outcomeTitle: "v2 修复成功：学会了“没问题就不乱报”",
+          outcomeText: "加入反编造规则后，模型输出空数组 issues: []，给出 95 分。同时前 3 条真实故障用例全部保持通过。"
+        }
+      }
+    };
+
+    // Lab 1 State
+    let curPrompt = "v1";
+    let curCase = "missing-null-check";
+
+    function renderLab1() {
+      const c = EVAL_CASES[curCase];
+      const r = c[curPrompt];
+      document.getElementById("lab1CaseTitle").textContent = "用例：" + c.title;
+      document.getElementById("lab1PromptNote").textContent = "使用 review-" + curPrompt + ".md";
+      document.getElementById("lab1InputCode").textContent = c.input;
+      document.getElementById("lab1ExpectedPills").innerHTML = c.expected
+        .map((t) => `<span class="expect-pill">${t}</span>`)
+        .join("");
+
+      document.getElementById("lab1SummaryScore").textContent = curPrompt === "v1" ? "3 / 4 (75%)" : "4 / 4 (100%)";
+      const badge = document.getElementById("lab1CaseBadge");
+      badge.textContent = r.passed ? "PASS" : "FAIL";
+      badge.className = r.passed ? "badge-pass" : "badge-fail";
+
+      document.getElementById("lab1ScoreReadout").textContent = "模型评分：" + r.score;
+      document.getElementById("lab1Checks").innerHTML = r.checks
+        .map((chk) => `<li class="check-item ${chk.pass ? "pass" : "fail"}"><span class="check-icon">${chk.pass ? "✓" : "✕"}</span><span>${chk.text}</span></li>`)
+        .join("");
+      document.getElementById("lab1OutputJson").textContent = JSON.stringify(r.output, null, 2);
+
+      const box = document.getElementById("lab1OutcomeBox");
+      box.className = "outcome " + r.outcomeType;
+      document.getElementById("lab1OutcomeTitle").textContent = r.outcomeTitle;
+      document.getElementById("lab1OutcomeText").textContent = r.outcomeText;
+    }
+
+    document.querySelectorAll("#lab-1 [data-prompt]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        curPrompt = btn.dataset.prompt;
+        document.querySelectorAll("#lab-1 [data-prompt]").forEach((b) => b.classList.toggle("active", b === btn));
+        renderLab1();
+      });
+    });
+    document.querySelectorAll("#lab-1 [data-case]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        curCase = btn.dataset.case;
+        document.querySelectorAll("#lab-1 [data-case]").forEach((b) => b.classList.toggle("active", b === btn));
+        renderLab1();
+      });
+    });
+    renderLab1();
+
+    // Predict hook
+    document.querySelectorAll(".predict-hook").forEach((hook) => {
+      const answer = hook.dataset.answer;
+      const fb = hook.querySelector(".predict-feedback");
+      hook.querySelectorAll(".predict-opt").forEach((opt) => {
+        opt.addEventListener("click", () => {
+          hook.querySelectorAll(".predict-opt").forEach((o) => o.classList.remove("is-right", "is-wrong"));
+          opt.classList.add(opt.dataset.opt === answer ? "is-right" : "is-wrong");
+          fb.classList.add("show");
+        });
+      });
+    });
+    document.getElementById("verifyCleanCodeBtn")?.addEventListener("click", () => {
+      curPrompt = "v1";
+      curCase = "clean-code";
+      document.querySelectorAll("#lab-1 [data-prompt]").forEach((b) => b.classList.toggle("active", b.dataset.prompt === "v1"));
+      document.querySelectorAll("#lab-1 [data-case]").forEach((b) => b.classList.toggle("active", b.dataset.case === "clean-code"));
+      renderLab1();
+      if (window.bookJumpToLab) window.bookJumpToLab("lab-1");
+    });
+
+    // Lab 2 Gate Sandbox
+    let gatePrompt = "v1";
+    let gateMaxChars = 1000;
+    let gateRuns = 1;
+    let gateNoise = false;
+
+    const CASE_ORDER = ["missing-null-check", "sql-injection", "n-plus-one", "clean-code"];
+
+    function renderLab2() {
+      const tbody = document.getElementById("gateTableBody");
+      let passedCount = 0;
+      let p0Failed = false;
+
+      const rows = CASE_ORDER.map((id) => {
+        const c = EVAL_CASES[id];
+        const r = c[gatePrompt];
+        const jsonLen = JSON.stringify(r.output).length;
+        const lenOk = jsonLen <= gateMaxChars;
+
+        // Simulated fluctuation when noise is ON and runs === 1 on sql-injection or n-plus-one
+        let semanticOk = r.passed;
+        let runNote = gateRuns === 3 ? "3/3 稳定" : "1/1";
+        if (gateNoise) {
+          if (id === "sql-injection" && gatePrompt === "v1") {
+            if (gateRuns === 1) {
+              semanticOk = false;
+              runNote = "单次漏报 (抖动)";
+            } else {
+              runNote = "2/3 通过 (均值)";
+            }
+          } else if (id === "n-plus-one" && gateRuns === 3) {
+            runNote = "3/3 通过";
+          }
+        }
+
+        const finalOk = semanticOk && lenOk;
+        if (finalOk) passedCount += 1;
+        if (!finalOk && c.priority.startsWith("P0")) p0Failed = true;
+
+        return `<tr>
+          <td><code>${id}</code></td>
+          <td>${c.priority}</td>
+          <td>${jsonLen} 字符</td>
+          <td>${semanticOk ? `<span class="badge-pass">通过 (${runNote})</span>` : `<span class="badge-fail">失败 (${runNote})</span>`}</td>
+          <td>${lenOk ? `<span class="badge-pass">≤ ${gateMaxChars}</span>` : `<span class="badge-fail">超限 (&gt; ${gateMaxChars})</span>`}</td>
+          <td>${finalOk ? `<span class="badge-pass">PASS</span>` : `<span class="badge-fail">FAIL</span>`}</td>
+        </tr>`;
+      });
+
+      tbody.innerHTML = rows.join("");
+
+      const allPassed = passedCount === CASE_ORDER.length && !p0Failed;
+      const banner = document.getElementById("gateBanner");
+      const title = document.getElementById("gateBannerTitle");
+      const desc = document.getElementById("gateBannerDesc");
+      const pill = document.getElementById("gatePassRatePill");
+
+      banner.className = "gate-banner " + (allPassed ? "passed" : "blocked");
+      pill.className = allPassed ? "badge-pass" : "badge-fail";
+      pill.textContent = `${passedCount} / ${CASE_ORDER.length} 通过`;
+
+      if (allPassed) {
+        title.textContent = "发布门禁：PASSED（允许合入）";
+        desc.textContent = `review-${gatePrompt}.md 通过了全部语义断言、长度上限（≤ ${gateMaxChars} 字符）与 P0 用例检查。`;
+      } else if (p0Failed) {
+        title.textContent = "发布门禁：BLOCKED（P0 高危退步拦截）";
+        desc.textContent = "P0 安全用例未通过！即使总通过率不低，高优先级用例退步也必须阻断发布。";
+      } else {
+        title.textContent = "发布门禁：BLOCKED（存在断言或长度超限失败）";
+        desc.textContent = `当前有 ${CASE_ORDER.length - passedCount} 条用例未通过检查，请先修复 Prompt 或调整阈值。`;
+      }
+
+      const codeEl = document.getElementById("lab2CodeBlock");
+      codeEl.textContent = `const MAX_OUTPUT_CHARS = ${gateMaxChars};
+const REPEAT_RUNS = ${gateRuns};
+
+function evaluateCase(testCase: EvalCase, parsed: ReviewResult): CaseReport {
+  const failures: string[] = [];
+  const rawJson = JSON.stringify(parsed);
+
+  // 1. 输出长度门禁（防止模型变啰嗦撑爆界面与预算）
+  if (rawJson.length > MAX_OUTPUT_CHARS) {
+    failures.push(\`输出字符数 \${rawJson.length} 超过上限 \${MAX_OUTPUT_CHARS}\`);
+  }
+
+  // 2. 关键词、问题类型与评分范围检查
+  if (!includesAll(rawJson, testCase.expected.mustMention)) {
+    failures.push("未命中全部预期关键词");
+  }
+  // ... issueTypes 与 scoreRange 检查
+  return { caseId: testCase.id, title: testCase.title, passed: failures.length === 0, checks: [], failures, output: parsed };
+}
+
+// 重复运行 ${gateRuns} 次，降低单次采样波动误判
+async function runWithStability(prompt: string, testCase: EvalCase) {
+  let passCount = 0;
+  for (let i = 0; i < REPEAT_RUNS; i++) {
+    const report = await runSingleCase(prompt, testCase);
+    if (report.passed) passCount++;
+  }
+  return passCount >= Math.ceil(REPEAT_RUNS / 2);
+}`;
+      if (window.bookHighlightCode) window.bookHighlightCode(document.getElementById("lab-2"));
+    }
+
+    document.querySelectorAll("#lab-2 [data-gate-prompt]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        gatePrompt = btn.dataset.gatePrompt;
+        document.querySelectorAll("#lab-2 [data-gate-prompt]").forEach((b) => b.classList.toggle("active", b === btn));
+        renderLab2();
+      });
+    });
+    document.querySelectorAll("#lab-2 [data-max-chars]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        gateMaxChars = Number(btn.dataset.maxChars);
+        document.getElementById("gateMaxCharsVal").textContent = gateMaxChars + " 字符";
+        document.querySelectorAll("#lab-2 [data-max-chars]").forEach((b) => b.classList.toggle("active", b === btn));
+        renderLab2();
+      });
+    });
+    document.querySelectorAll("#lab-2 [data-runs]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        gateRuns = Number(btn.dataset.runs);
+        document.querySelectorAll("#lab-2 [data-runs]").forEach((b) => b.classList.toggle("active", b === btn));
+        renderLab2();
+      });
+    });
+    document.getElementById("toggleNoiseBtn")?.addEventListener("click", (e) => {
+      gateNoise = !gateNoise;
+      e.target.classList.toggle("danger-active", gateNoise);
+      e.target.textContent = "模拟模型抖动：" + (gateNoise ? "开" : "关");
+      renderLab2();
+    });
+    renderLab2();
+
+    // Lab 3 Tier Explorer
+    const EVAL_TIERS = {
+      tier1: {
+        title: "阶段 1：Schema + 代码规则断言",
+        cost: "额外评测调用：0 次 / 用例",
+        desc: "适合个人项目与早期功能迭代。用最简单的代码规则把“JSON 挂掉、漏掉核心词、反例乱报错”这 60 分的硬退步先拦下来，跑一次只需几秒钟。",
+        hard: 75, soft: 25, costPct: 20, costLabel: "低 (1x)"
+      },
+      tier2: {
+        title: "阶段 2：+ 长度门禁与 Usage 追踪",
+        cost: "额外评测调用：0 次（仅重复抽样）",
+        desc: "上线前必加。把 response.usage.input_tokens / output_tokens 和耗时写入报告，防止 Prompt 越改越长导致成本失控；对 P0 用例重复运行 3 次排除抖动。",
+        hard: 90, soft: 40, costPct: 45, costLabel: "中 (1-3x)"
+      },
+      tier3: {
+        title: "阶段 3：+ LLM-as-Judge 裁判模型",
+        cost: "额外评测调用：+1 次裁判 / 用例",
+        desc: "当前两道硬规则全部通过后，再引入高阶模型按 Rubric 评分，专门检查“修改建议是否真的可执行”“语气是否客观”等代码无法量化的软指标。",
+        hard: 92, soft: 85, costPct: 80, costLabel: "高 (4x+)"
+      }
+    };
+
+    document.querySelectorAll("#lab-3 [data-eval-tier]").forEach((card) => {
+      card.addEventListener("click", () => {
+        document.querySelectorAll("#lab-3 [data-eval-tier]").forEach((c) => c.classList.remove("active"));
+        card.classList.add("active");
+        const t = EVAL_TIERS[card.dataset.evalTier];
+        document.getElementById("tierDetailTitle").textContent = t.title;
+        document.getElementById("tierCostTag").textContent = t.cost;
+        document.getElementById("tierDetailDesc").textContent = t.desc;
+        document.getElementById("barHard").style.width = t.hard + "%";
+        document.getElementById("valHard").textContent = t.hard + "%";
+        document.getElementById("barSoft").style.width = t.soft + "%";
+        document.getElementById("valSoft").textContent = t.soft + "%";
+        document.getElementById("barCost").style.width = t.costPct + "%";
+        document.getElementById("valCost").textContent = t.costLabel;
+      });
+    });
+  </script>
+  <script src="../shared/site.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-json.min.js"></script>
+</body>
+</html>

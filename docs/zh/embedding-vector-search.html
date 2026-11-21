@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Embedding 与向量检索基础 · AI Agent Guide</title>
+  <!-- SEO:START (auto-synced by scripts/generate-seo.mjs) -->
+  <meta name="description" content="理解语义向量、相似度与召回边界，跑通索引、查询、元数据过滤和内容更新" />
+  <link rel="canonical" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/embedding-vector-search.html" />
+  <link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/embedding-vector-search.html" />
+  <link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/embedding-vector-search.html" />
+  <link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/embedding-vector-search.html" />
+  <meta property="og:type" content="article" />
+  <meta property="og:locale" content="zh_CN" />
+  <meta property="og:locale:alternate" content="en_US" />
+  <meta property="og:title" content="Embedding 与向量检索" />
+  <meta property="og:description" content="理解语义向量、相似度与召回边界，跑通索引、查询、元数据过滤和内容更新" />
+  <meta property="og:url" content="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/embedding-vector-search.html" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "Embedding 与向量检索",
+    "description": "理解语义向量、相似度与召回边界，跑通索引、查询、元数据过滤和内容更新",
+    "inLanguage": "zh-CN",
+    "url": "https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/embedding-vector-search.html",
+    "isPartOf": {
+      "@type": "Book",
+      "name": "AI Agent Guide"
+    }
+  }
+  </script>
+  <!-- SEO:END -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css" />
+  <link rel="stylesheet" href="../shared/tokens.css" />
+  <style>
+
+
+    /* Lab 1: 2D Vector Space Explorer */
+    .vec-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      gap: 20px;
+      align-items: stretch;
+    }
+    @media (max-width: 820px) { .vec-grid { grid-template-columns: 1fr; } }
+
+    .vec-canvas-box {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .vec-svg {
+      width: 100%;
+      height: auto;
+      display: block;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: crosshair;
+      user-select: none;
+    }
+    .vec-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12.5px;
+      color: var(--text-secondary);
+    }
+    .vec-rank-list {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+    .vec-rank-item {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .vec-rank-item.is-hit {
+      border-color: var(--teal);
+      background: var(--teal-soft);
+    }
+    .vec-rank-item.is-filtered {
+      opacity: 0.55;
+    }
+    .vec-rank-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+    .vec-bar-bg {
+      height: 6px;
+      background: var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+    .vec-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.25s ease;
+    }
+    .vec-meta {
+      font-size: 12px;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Lab 2: Model picking — choice → consequence */
+    .pick-banner {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--text-secondary);
+      margin-bottom: 14px;
+    }
+    .pick-options {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 820px) { .pick-options { grid-template-columns: 1fr; } }
+    .pick-opt {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      text-align: left;
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-strong);
+      background: var(--bg-elevated);
+      color: var(--text-secondary);
+      font-size: 13.5px;
+      line-height: 1.5;
+      cursor: pointer;
+      font-family: var(--font-sans);
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .pick-opt:hover { border-color: var(--text-muted); }
+    .pick-opt.active { border-color: var(--text); background: var(--bg-muted); color: var(--text); }
+    .pick-letter {
+      flex: none;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 12px; font-weight: 700;
+      background: var(--bg-muted);
+      border: 1px solid var(--border-strong);
+      color: var(--text);
+    }
+    .pick-opt.active .pick-letter { background: var(--text); color: var(--bg); border-color: var(--text); }
+    .pick-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.15fr;
+      gap: 16px;
+      align-items: start;
+    }
+    @media (max-width: 820px) { .pick-grid { grid-template-columns: 1fr; } }
+    .pick-board {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-muted);
+      padding: 14px;
+    }
+    .pick-board-head {
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+      font-size: 13px; font-weight: 700; margin-bottom: 10px;
+    }
+    .pick-board-foot { font-size: 11.5px; color: var(--text-muted); margin-top: 8px; }
+    .pick-model {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      transition: border-color 0.2s, opacity 0.2s;
+    }
+    .pick-model.is-picked { border-color: var(--text); box-shadow: var(--shadow-sm); }
+    .pick-model.is-dim { opacity: 0.5; }
+    .pick-model-head {
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+      font-size: 13.5px; font-weight: 700; margin-bottom: 6px;
+    }
+    .pick-dim { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-muted); font-weight: 600; }
+    .pick-bars {
+      display: grid;
+      grid-template-columns: 78px 1fr 44px;
+      gap: 5px 8px;
+      align-items: center;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .pick-bars .track { height: 7px; background: var(--border); border-radius: 999px; overflow: hidden; }
+    .pick-bars .fill { height: 100%; border-radius: 999px; transition: width 0.3s ease; }
+    .pick-bars .fill.total { background: var(--blue); }
+    .pick-bars .fill.ret { background: var(--teal); }
+    .pick-bars strong { font-family: var(--font-mono); font-size: 12px; text-align: right; }
+    .pick-bars .is-key { color: var(--text); font-weight: 700; }
+    .outcome + .outcome { margin-top: 10px; }
+    .outcome-rows { display: grid; grid-template-columns: 76px 1fr; gap: 4px 10px; font-size: 13px; margin-top: 8px; }
+    .outcome-rows span:nth-child(odd) { color: var(--text-muted); }
+    .eval-steps {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 10px 0 4px;
+    }
+    .eval-step {
+      background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 6px;
+      padding: 8px; font-size: 12px; line-height: 1.45; text-align: center;
+    }
+    .eval-step b { display: block; font-family: var(--font-mono); color: var(--teal); font-size: 11.5px; }
+    .sim-bars { padding: 26px 12px 10px; margin-top: 10px; }
+    .sim-row { display: grid; grid-template-columns: 112px 1fr 40px; gap: 8px; align-items: center; font-size: 12px; margin-bottom: 6px; color: var(--text-secondary); }
+    .sim-row .track { height: 8px; background: var(--border); border-radius: 999px; overflow: hidden; }
+    .sim-row .fill { height: 100%; border-radius: 999px; }
+
+    /* Pipeline diagram */
+    .pipe-svg text { font-family: var(--font-sans); }
+
+    /* Lab 3: Chunk Quality & Threshold Tuner */
+    .chunk-compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    @media (max-width: 760px) { .chunk-compare-grid { grid-template-columns: 1fr; } }
+
+    .chunk-box {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-muted);
+      padding: 14px;
+    }
+    .chunk-box-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .score-pill {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+    .score-high { background: var(--green-soft); color: var(--green); }
+    .score-mid { background: var(--accent-soft); color: var(--accent); }
+    .score-low { background: var(--rose-soft); color: var(--rose); }
+
+    .chunk-text-sample {
+      font-size: 12.5px;
+      line-height: 1.65;
+      color: var(--text-secondary);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+    }
+    .chunk-highlight {
+      background: var(--teal-soft);
+      color: var(--text);
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-weight: 600;
+    }
+
+    .tuner-controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      padding: 14px;
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 14px;
+    }
+    .slider-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .slider-label code {
+      font-family: var(--font-mono);
+      color: var(--teal);
+    }
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--teal);
+    }
+
+    .search-result-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .search-result-card {
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 13px;
+    }
+    .search-result-card.is-dropped {
+      opacity: 0.48;
+      border-style: dashed;
+    }
+    .refuse-banner {
+      padding: 14px 16px;
+      border-radius: var(--radius-sm);
+      background: var(--rose-soft);
+      border: 1px solid var(--rose);
+      color: var(--text);
+      font-size: 13.5px;
+      font-weight: 600;
+    }
+
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./index.html">
+        <span>AI Agent Guide</span>
+        <span class="brand-badge">交互式章节</span>
+      </a>
+      <nav class="topbar-nav">
+        <a href="#semantic-space">语义空间与余弦</a>
+        <a href="#mteb-trap">MTEB 榜单陷阱</a>
+        <a href="#qdrant-pipeline">Qdrant 入库检索</a>
+        <a href="#threshold-tuning">Chunk 与阈值</a>
+        <a href="#decision">选型矩阵</a>
+      </nav>
+      <button class="theme-btn" id="themeToggle" type="button">
+        <span id="themeIcon">☀</span>
+        <span id="themeText">浅色</span>
+      </button>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-meta">
+      <span class="hero-pill">模块二 · RAG 检索与证据链路</span>
+      <span class="hero-pill">Qdrant + TypeScript</span>
+      <span class="hero-pill">3 个实验台</span>
+    </div>
+    <h1>Embedding 与向量检索基础</h1>
+    <p class="hero-lead">
+      文档已经切成一批 <code>DocumentChunk</code>，但机器还不知道“猫和狗很近，猫和量子力学很远”。这一步要把文字变成坐标，存进向量库，再按距离找邻居。
+    </p>
+  </section>
+
+  <section class="tldr" aria-label="30 秒版">
+    <div class="tldr-card">
+      <div class="tldr-head">
+        <span class="tldr-kicker">30 秒版 · 只记这 3 句</span>
+        <span class="sim-tag">实验台数字均标明来源或“示意”</span>
+      </div>
+      <ol class="tldr-list">
+        <li class="tldr-item">
+          <span class="tldr-num">01</span>
+          <span class="tldr-claim">余弦相似度只看方向，不看长度。</span>
+          <button class="tldr-go" type="button" onclick="presetVecLab('scale')">拖一下箭头验证 →</button>
+        </li>
+        <li class="tldr-item">
+          <span class="tldr-num">02</span>
+          <span class="tldr-claim">选模型别看 MTEB 总分，看 Retrieval 分，最后用自己的问题集实测。</span>
+          <button class="tldr-go" type="button" onclick="presetPick('total')">试试按总分选会怎样 →</button>
+        </li>
+        <li class="tldr-item">
+          <span class="tldr-num">03</span>
+          <span class="tldr-claim">分数上不去先查 Chunk；只设 limit 不设阈值，噪音会直接喂给模型。</span>
+          <button class="tldr-go" type="button" onclick="presetLab3('oos')">看越界提问如何拒答 →</button>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <main class="prose" id="semantic-space">
+    <h2>Embedding 的本质：把语义编码成坐标</h2>
+    <p class="key">
+      Embedding 模型不生成文字，只输出一串定长数字，也就是文本在语义空间里的坐标。检索就是在这个空间里找离问题最近的点。
+    </p>
+    <p>
+      坐标的维度由模型决定：OpenAI <code>text-embedding-3-small</code> 输出 1536 维，<code>text-embedding-3-large</code> 输出 3072 维，阿里云百炼 <code>text-embedding-v3</code> 和开源的 <code>BGE-M3</code> 默认输出 1024 维。
+    </p>
+    <p>
+      “距离最近”在文本场景下通常用<strong>余弦相似度</strong>衡量，理论值域 -1 到 1。下面的二维示意图里拖动橙色箭头，或者直接
+      <button class="inline-trigger" type="button" onclick="presetVecLab('scale')">把查询向量缩短到 0.45 倍</button>
+      ，看排名会不会变。
+    </p>
+  </main>
+
+  <!-- LAB 1 -->
+  <section class="lab-wrap" id="lab-1">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <div class="lab-eyebrow">实验台 01 · 向量空间直觉</div>
+          <div class="lab-title">2D 语义空间与余弦相似度探针</div>
+          <div class="lab-desc">拖动橙色查询箭头，观察夹角 θ 如何决定排序，以及 <code>score_threshold = 0.65</code> 会过滤掉谁。<span class="sim-tag">示意：真实向量是 1024 维，这里投影到二维</span></div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="chip-btn active" type="button" data-vec-preset="pet">查询：宠物饲养</button>
+          <button class="chip-btn" type="button" data-vec-preset="rust">查询：Rust 向量库</button>
+          <button class="chip-btn" type="button" data-vec-preset="quantum">查询：量子纠缠</button>
+        </div>
+      </div>
+      <div class="lab-body">
+        <div class="vec-grid">
+          <div class="vec-canvas-box">
+            <svg id="vecSvg" class="vec-svg" viewBox="0 0 420 320" role="img" aria-label="2D 向量语义空间交互画布">
+              <defs>
+                <marker id="arrowGray" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--text-muted)"></path>
+                </marker>
+                <marker id="arrowTeal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--teal)"></path>
+                </marker>
+                <marker id="arrowAccent" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                  <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--accent)"></path>
+                </marker>
+              </defs>
+              <!-- Grid & Axes -->
+              <line x1="30" y1="270" x2="395" y2="270" stroke="var(--border-strong)" stroke-width="1.5" />
+              <line x1="60" y1="20" x2="60" y2="295" stroke="var(--border-strong)" stroke-width="1.5" />
+              <text x="360" y="286" font-size="11" fill="var(--text-muted)">语义维度 X</text>
+              <text x="66" y="32" font-size="11" fill="var(--text-muted)">语义维度 Y</text>
+              <g id="vecDocLayer"></g>
+              <g id="vecQueryLayer"></g>
+            </svg>
+            <div class="vec-controls">
+              <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                <input type="checkbox" id="vecScaleToggle" />
+                <span>模拟长文档（将 Query 向量模长缩短为 0.45x）</span>
+              </label>
+              <span>当前阈值：<strong id="vecThreshLabel">0.65</strong></span>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:13px; font-weight:700; margin-bottom:10px; color:var(--text);">
+              Top-K 相似度排序（余弦公式：cos θ = (A · B) / (‖A‖ ‖B‖)）
+            </div>
+            <div class="vec-rank-list" id="vecRankList"></div>
+            <div class="outcome good" id="vecScaleNote" style="display:none; margin-top:10px;">
+              <div class="outcome-title">模长缩短了 55%，排名和分数一个都没变</div>
+              余弦只比较方向。所以长文档、短文档不会因为“向量更长”占便宜，这也是文本检索默认用 Cosine 的原因。
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose" id="mteb-trap">
+    <h2>模型怎么选：MTEB 是起点，不是终点</h2>
+    <p class="key">
+      MTEB 总分混合了分类、聚类等和 RAG 无关的任务。选检索模型先看 Retrieval 分，最后以自己业务问题集上的 Recall@5 为准。
+    </p>
+    <p>
+      MTEB（<a href="https://github.com/embeddings-benchmark/mteb" target="_blank" rel="noopener">项目主页</a>）覆盖上百个数据集，Hugging Face 的<a href="https://huggingface.co/spaces/mteb/leaderboard" target="_blank" rel="noopener">实时排行榜</a>通常是选型第一站。问题是，按总分挑模型很容易挑错。
+    </p>
+
+    <div class="predict-hook" id="predict-1">
+      <div class="predict-q">
+        <span class="predict-badge">先猜一下</span>
+        <span>据 <a href="https://awesomeagents.ai/leaderboards/embedding-model-leaderboard-mteb-march-2026/" target="_blank" rel="noopener">2026 年 3 月英文 MTEB 榜单</a>，<code>NV-Embed-v2</code> 总分 <strong>72.31</strong>，<code>Gemini Embedding 001</code> 总分 <strong>68.32</strong>。做企业知识库检索，哪个更值得先测？</span>
+      </div>
+      <div class="predict-opts">
+        <button class="predict-opt" type="button" data-predict="p1" data-ans="wrong">NV-Embed-v2，总分领先 4 分</button>
+        <button class="predict-opt" type="button" data-predict="p1" data-ans="right">先看 Retrieval 分项再说</button>
+        <button class="predict-opt" type="button" data-predict="p1" data-ans="wrong">总分接近，选参数量更大的</button>
+      </div>
+      <div class="predict-feedback" id="predict-1-fb">
+        拆开看：<code>NV-Embed-v2</code> 的 Retrieval 只有 <strong>62.65</strong>，<code>Gemini Embedding 001</code> 是 <strong>67.71</strong>。总分高的那个，检索反而更弱。
+      </div>
+      <button class="predict-verify" type="button" onclick="presetPick('total')">在实验台 02 里按总分选一次，看后果 →</button>
+    </div>
+  </main>
+
+  <!-- LAB 2 -->
+  <section class="lab-wrap" id="lab-2">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <div class="lab-eyebrow">实验台 02 · 选型决策模拟</div>
+          <div class="lab-title">三种选型策略，三种后果</div>
+          <div class="lab-desc">选一种你最可能用的策略，看它会把你带到哪里。</div>
+        </div>
+      </div>
+      <div class="lab-body">
+        <div class="pick-banner">
+          <div><strong>任务：</strong>给公司内部中文技术文档搭 RAG，约 20,000 个 chunk。</div>
+          <div><strong>现状：</strong>Qdrant collection 已按 <code>text-embedding-v3</code> 建好，<code>size: 1024</code>。</div>
+        </div>
+
+        <div class="pick-options">
+          <button class="pick-opt" type="button" data-pick="total">
+            <span class="pick-letter">A</span>
+            <span><strong>按 MTEB 总分</strong>选第一名</span>
+          </button>
+          <button class="pick-opt" type="button" data-pick="retrieval">
+            <span class="pick-letter">B</span>
+            <span><strong>按 Retrieval 分项</strong>选第一名</span>
+          </button>
+          <button class="pick-opt" type="button" data-pick="eval">
+            <span class="pick-letter">C</span>
+            <span><strong>先用现有模型跑通</strong>，再拿业务问题集实测候选</span>
+          </button>
+        </div>
+
+        <div class="pick-grid">
+          <div class="pick-board">
+            <div class="pick-board-head">
+              <span>英文 MTEB 公开分数</span>
+              <a class="src-tag" href="https://awesomeagents.ai/leaderboards/embedding-model-leaderboard-mteb-march-2026/" target="_blank" rel="noopener">来源 · 2026-03 榜单</a>
+            </div>
+            <div id="pickBoard"></div>
+            <div class="pick-board-foot">只列原稿中有出处的两个模型。维度来自各模型官方文档。</div>
+          </div>
+          <div id="pickOutcome">
+            <div class="outcome">
+              <div class="outcome-title">先在上面选一种策略</div>
+              右侧会给出：选中谁、检索能力如何、要不要重建 collection，以及下一步该做什么。
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <p>
+      为什么榜单高分到了私有语料上会失灵？主要有三点（参考 <a href="https://www.pinecone.io/learn/series/rag/embedding-models-rundown/" target="_blank" rel="noopener">Pinecone 选型指南</a>）：MTEB 用的是新闻、维基等通用文本，和内部文档的词汇分布不同；部分模型的训练数据可能和公开基准有重叠；均分还掩盖了单项差异。
+    </p>
+    <p>
+      小模型反超大模型在 Embedding 领域很常见。BAAI 的 <code>BGE-M3</code>（<a href="https://arxiv.org/abs/2402.03216" target="_blank" rel="noopener">arXiv:2402.03216</a>、<a href="https://huggingface.co/BAAI/bge-m3" target="_blank" rel="noopener">模型页</a>）只有 568M 参数，支持 100 多种语言和 8192 token 上下文。决定效果的是训练任务和检索场景有多接近，而不是参数量。中文场景还可以测阿里开源的 <code>Qwen3-Embedding</code>（0.6B / 4B / 8B，<a href="https://qwenlm.github.io/blog/qwen3-embedding/" target="_blank" rel="noopener">官方博客</a>）。
+    </p>
+  </main>
+
+  <main class="prose" id="qdrant-pipeline">
+    <h2>用 Qdrant 跑通从入库到检索的完整流程</h2>
+    <p class="key">
+      入库必须批量请求并把原文放进 payload，检索必须同时设 limit 和 score_threshold，空结果直接拒答。
+    </p>
+    <figure class="diagram-figure">
+      <figcaption>
+        <span>Qdrant 入库与检索双链路</span>
+        <span class="sim-tag">结构示意</span>
+      </figcaption>
+      <svg class="pipe-svg" viewBox="0 0 860 220" role="img" aria-label="Qdrant 批量入库与过滤检索双链路图">
+        <defs>
+          <marker id="pipeArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--text-muted)"></path>
+          </marker>
+          <marker id="pipeArrowTeal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--teal)"></path>
+          </marker>
+        </defs>
+        <!-- Row 1: Ingestion -->
+        <text x="16" y="24" font-size="11.5" font-weight="700" fill="var(--teal)">离线入库链路</text>
+        <rect x="16" y="34" width="150" height="54" rx="8" fill="var(--bg-muted)" stroke="var(--border-strong)" />
+        <text x="91" y="57" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--text)">DocumentChunk</text>
+        <text x="91" y="75" text-anchor="middle" font-size="11" fill="var(--text-muted)">按 BATCH_SIZE=50 分批</text>
+        <line x1="166" y1="61" x2="210" y2="61" stroke="var(--text-muted)" stroke-width="1.5" marker-end="url(#pipeArrow)" />
+
+        <rect x="214" y="34" width="175" height="54" rx="8" fill="var(--bg-muted)" stroke="var(--border-strong)" />
+        <text x="301" y="57" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--text)">Batch Embedding</text>
+        <text x="301" y="75" text-anchor="middle" font-size="11" fill="var(--text-muted)">一次请求多条，降 RPM</text>
+        <line x1="389" y1="61" x2="433" y2="61" stroke="var(--text-muted)" stroke-width="1.5" marker-end="url(#pipeArrow)" />
+
+        <rect x="437" y="34" width="195" height="54" rx="8" fill="var(--teal-soft)" stroke="var(--teal)" />
+        <text x="534" y="57" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--text)">vector + payload</text>
+        <text x="534" y="75" text-anchor="middle" font-size="11" fill="var(--text-secondary)">原文 / source / section 同存</text>
+        <line x1="632" y1="61" x2="676" y2="61" stroke="var(--teal)" stroke-width="1.5" marker-end="url(#pipeArrowTeal)" />
+
+        <rect x="680" y="34" width="164" height="54" rx="8" fill="var(--bg-muted)" stroke="var(--border-strong)" />
+        <text x="762" y="57" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--text)">Qdrant Collection</text>
+        <text x="762" y="75" text-anchor="middle" font-size="11" fill="var(--text-muted)">Cosine · 1024 维锁定</text>
+
+        <!-- Row 2: Search -->
+        <text x="16" y="122" font-size="11.5" font-weight="700" fill="var(--accent)">在线检索链路</text>
+        <rect x="16" y="132" width="150" height="58" rx="8" fill="var(--bg-muted)" stroke="var(--border-strong)" />
+        <text x="91" y="156" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--text)">用户 Query</text>
+        <text x="91" y="174" text-anchor="middle" font-size="11" fill="var(--text-muted)">同一 Embedding 模型</text>
+        <line x1="166" y1="161" x2="210" y2="161" stroke="var(--text-muted)" stroke-width="1.5" marker-end="url(#pipeArrow)" />
+
+        <rect x="214" y="132" width="175" height="58" rx="8" fill="var(--bg-muted)" stroke="var(--border-strong)" />
+        <text x="301" y="156" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--text)">Filter + Cosine</text>
+        <text x="301" y="174" text-anchor="middle" font-size="11" fill="var(--text-muted)">先按 metadata 缩小范围</text>
+        <line x1="389" y1="161" x2="433" y2="161" stroke="var(--text-muted)" stroke-width="1.5" marker-end="url(#pipeArrow)" />
+
+        <rect x="437" y="132" width="195" height="58" rx="8" fill="var(--accent-soft)" stroke="var(--accent)" />
+        <text x="534" y="156" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--text)">limit + threshold</text>
+        <text x="534" y="174" text-anchor="middle" font-size="11" fill="var(--text-secondary)">低于 score_threshold 丢弃</text>
+
+        <line x1="632" y1="147" x2="676" y2="147" stroke="var(--teal)" stroke-width="1.5" marker-end="url(#pipeArrowTeal)" />
+        <rect x="680" y="128" width="164" height="36" rx="7" fill="var(--green-soft)" stroke="var(--green)" />
+        <text x="762" y="150" text-anchor="middle" font-size="12" font-weight="700" fill="var(--text)">有结果 → 交还 LLM</text>
+
+        <line x1="632" y1="176" x2="676" y2="176" stroke="var(--text-muted)" stroke-width="1.5" marker-end="url(#pipeArrow)" />
+        <rect x="680" y="169" width="164" height="36" rx="7" fill="var(--rose-soft)" stroke="var(--rose)" />
+        <text x="762" y="191" text-anchor="middle" font-size="12" font-weight="700" fill="var(--text)">空数组 → 安全拒答</text>
+      </svg>
+    </figure>
+    <p>
+      在诸多向量数据库中，Qdrant 用 Rust 编写，Docker 一条命令即可启动，自带 Web Dashboard（<code>http://localhost:6333/dashboard</code>），且 TypeScript SDK（<code>@qdrant/js-client-rest</code>）类型完善，适合从本地原型一路用到生产。
+    </p>
+
+    <div class="callout note">
+      <div class="callout-title">API 定价与维度参考（本书示例默认配置）</div>
+      本章代码默认复用阿里云百炼的 <code>text-embedding-v3</code>（¥0.5 / 1M token，1024 维，8192 上下文；<a href="https://help.aliyun.com/zh/model-studio/developer-reference/billing-for-text-embedding" target="_blank" rel="noopener">计费文档</a>）。其他常见选项：OpenAI <code>text-embedding-3-small</code>（$0.02 / 1M，1536 维；<a href="https://platform.openai.com/docs/models/text-embedding-3-small" target="_blank" rel="noopener">官方文档</a>）、<code>text-embedding-3-large</code>（$0.13 / 1M，3072 维）、Voyage AI <code>voyage-4-lite</code>（$0.02 / 1M，1024 维；<a href="https://docs.voyageai.com/docs/pricing" target="_blank" rel="noopener">定价页</a>）、Google <code>Gemini Embedding 001</code>（$0.15 / 1M，3072 维；<a href="https://cloud.google.com/vertex-ai/generative-ai/pricing" target="_blank" rel="noopener">Vertex AI 定价</a>）。
+    </div>
+
+    <p>
+      入库时有两个工程细节最容易忽略：一是把多条文本合并成 <code>input</code> 数组做批量请求（Batch Upsert），避免触发速率限制；二是每个 point 除了存 <code>vector</code>，必须把原文和 <code>source</code>、<code>section</code> 放进 <code>payload</code>，否则检索命中后无法把文字内容交还给 LLM。
+    </p>
+
+    <details class="code-fold">
+      <summary>完整 TypeScript 实现：Qdrant 批量入库与过滤检索（embed-and-store.ts）</summary>
+      <div class="code-fold-body">
+        <div class="code-card">
+          <div class="code-header">
+            <span>examples/rag/embedding-vector-search/embed-and-store.ts</span>
+            <button class="copy-btn" type="button">复制代码</button>
+          </div>
+          <pre><code id="codeEmbedStore" class="language-typescript">import { QdrantClient } from "@qdrant/js-client-rest";
+import OpenAI from "openai";
+
+const openai = new OpenAI({
+  apiKey: process.env.ANTHROPIC_API_KEY, // 复用 DashScope 密钥
+  baseURL: process.env.EMBEDDING_BASE_URL,
+});
+const qdrant = new QdrantClient({ host: "localhost", port: 6333 });
+
+const COLLECTION = "knowledge_base";
+const EMBEDDING_MODEL = process.env.EMBEDDING_MODEL ?? "text-embedding-v3";
+const VECTOR_SIZE = 1024; // 必须与模型输出维度一致
+const BATCH_SIZE = 50;
+
+async function ensureCollection() {
+  const { collections } = await qdrant.getCollections();
+  if (!collections.some((c) => c.name === COLLECTION)) {
+    await qdrant.createCollection(COLLECTION, {
+      vectors: { size: VECTOR_SIZE, distance: "Cosine" },
+    });
+  }
+}
+
+async function ingestChunks(chunks: Array&lt;{ text: string; metadata: { source: string; section?: string; chunkIndex: number } }&gt;) {
+  for (let i = 0; i &lt; chunks.length; i += BATCH_SIZE) {
+    const batch = chunks.slice(i, i + BATCH_SIZE);
+    const response = await openai.embeddings.create({
+      model: EMBEDDING_MODEL,
+      input: batch.map((c) =&gt; c.text), // 批量请求，降低 RPM 压力
+    });
+
+    const points = batch.map((chunk, j) =&gt; ({
+      id: i + j,
+      vector: response.data[j].embedding,
+      payload: {
+        text: chunk.text,
+        source: chunk.metadata.source,
+        section: chunk.metadata.section ?? "",
+        chunkIndex: chunk.metadata.chunkIndex,
+      },
+    }));
+
+    await qdrant.upsert(COLLECTION, { points });
+  }
+}
+
+async function search(query: string, limit = 5, scoreThreshold = 0.65, sourceFilter?: string) {
+  const res = await openai.embeddings.create({ model: EMBEDDING_MODEL, input: query });
+  const queryVector = res.data[0].embedding;
+
+  const results = await qdrant.search(COLLECTION, {
+    vector: queryVector,
+    limit,
+    score_threshold: scoreThreshold, // 低于此分数直接过滤
+    with_payload: true,
+    ...(sourceFilter ? { filter: { must: [{ key: "source", match: { value: sourceFilter } }] } } : {}),
+  });
+
+  if (results.length === 0) {
+    return "没有找到相关内容，无法回答这个问题。"; // 宁可拒答，不用噪音误导 LLM
+  }
+  return results;
+}</code></pre>
+        </div>
+      </div>
+    </details>
+  </main>
+
+  <main class="prose" id="threshold-tuning">
+    <h2>Top-K、相似度分数与 Chunk 质量</h2>
+    <p class="key">
+      真实 RAG 检索拿到 0.70–0.80 就已可用。如果分数普遍偏低，先查 Chunk 是否混入太多概念，而不是急着换模型。
+    </p>
+    <p>
+      使用 Cosine 度量时，Qdrant 返回的 <code>score</code> 越高代表越相似（<a href="https://qdrant.tech/documentation/search/search/" target="_blank" rel="noopener">Qdrant Search 文档</a>）。因为用户口语化提问和书面文档措辞不同，超过 0.85 反而少见。
+    </p>
+    <p>
+      如果精准提问的分数连 0.70 都上不去，往往不是模型不够强，而是 <strong>Chunk 内容太杂</strong>。一个 Chunk 里混入十几个概念，向量就变成了一锅“平均语义”，任何单一问题的相似度都会被拉低。
+    </p>
+
+    <div class="predict-hook" id="predict-2">
+      <div class="predict-q">
+        <span class="predict-badge">先猜一下</span>
+        <span>在同一份向量数据库资料上做实测：把 4 个主题塞进一个大 Chunk 时，查询“余弦相似度的值域是多少？”的分数是 <strong>0.53</strong>。按“每个 Chunk 只讲一个概念”拆细后，同一模型的检索分数会变成多少？</span>
+      </div>
+      <div class="predict-opts">
+        <button class="predict-opt" type="button" data-predict="p2" data-ans="wrong">变化不大，大约 0.58</button>
+        <button class="predict-opt" type="button" data-predict="p2" data-ans="right">大幅跃升到 0.85</button>
+        <button class="predict-opt" type="button" data-predict="p2" data-ans="wrong">反而下降，因为上下文少了</button>
+      </div>
+      <div class="predict-feedback" id="predict-2-fb">
+        真实实验输出（<code>chunk-quality-experiment.ts</code>）：从 <strong>0.53</strong> 直接跳到 <strong>0.85</strong>。聚焦的 Chunk 里只有一句话讲余弦相似度，向量完整捕捉了这个语义；大 Chunk 里这句话被其余三个话题稀释了。
+      </div>
+      <button class="predict-verify" type="button" onclick="presetExpQ(1)">在实验台 03 里查看这条实测对比 →</button>
+    </div>
+
+    <p>
+      在下面的实验台里，你可以切换真实实验的 3 个查询对比“大而杂”与“小而聚焦”的分数落差，也可以联动调整 <code>limit</code>、<code>score_threshold</code> 和 <code>source</code> 过滤，观察越界问题如何触发安全拒答。试试
+      <button class="inline-trigger" type="button" onclick="presetLab3('oos')">模拟知识库外越界问题</button>
+      。
+    </p>
+  </main>
+
+  <!-- LAB 3 -->
+  <section class="lab-wrap" id="lab-3">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <div class="lab-eyebrow">实验台 03 · 切片实验与参数联调</div>
+          <div class="lab-title">Chunk 语义稀释对比 &amp; Top-K / 阈值拦截器</div>
+          <div class="lab-desc">上半部分为 <span class="src-tag">实测 · chunk-quality-experiment.ts</span> 真实分数；下半部分为 <span class="sim-tag">模拟 · Qdrant 过滤逻辑</span>，参数实时同步上方代码。</div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="chip-btn active" type="button" data-exp-q="0">“Qdrant 是用什么语言写的？”</button>
+          <button class="chip-btn" type="button" data-exp-q="1">“余弦相似度的值域是多少？”</button>
+          <button class="chip-btn" type="button" data-exp-q="2">“一百万条向量大概占多少内存？”</button>
+        </div>
+      </div>
+      <div class="lab-body">
+        <div class="chunk-compare-grid" id="chunkCompareGrid"></div>
+
+        <div style="border-top:1px solid var(--border); padding-top:18px; margin-top:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+            <strong style="font-size:14px;">Qdrant 检索参数联调（实时同步上方 TS 代码）</strong>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="chip-btn active" type="button" data-q-scene="normal">场景：正常技术提问</button>
+              <button class="chip-btn" type="button" data-q-scene="oos">场景：知识库外越界提问</button>
+            </div>
+          </div>
+
+          <div class="tuner-controls">
+            <div>
+              <div class="slider-label">
+                <span>返回数量 <code>limit</code></span>
+                <code id="limitVal">5</code>
+              </div>
+              <input type="range" id="limitSlider" min="1" max="5" value="5" />
+            </div>
+            <div>
+              <div class="slider-label">
+                <span>质量下限 <code>score_threshold</code></span>
+                <code id="threshVal">0.65</code>
+              </div>
+              <input type="range" id="threshSlider" min="0.30" max="0.85" step="0.05" value="0.65" />
+            </div>
+            <div style="display:flex; flex-direction:column; justify-content:center;">
+              <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer;">
+                <input type="checkbox" id="filterToggle" />
+                <span>启用 <code>filter</code>（仅查 <code>vector-db.md</code>）</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="search-result-list" id="searchResultList"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose" id="decision">
+    <h2>选型与工程决策矩阵</h2>
+    <p class="key">
+      把前面所有判断收敛成一张可按场景筛选的速查表。点击场景标签即可高亮对应策略。
+    </p>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+      <button class="chip-btn active" type="button" data-filter="all">全部场景</button>
+      <button class="chip-btn" type="button" data-filter="mvp">快速跑通链路</button>
+      <button class="chip-btn" type="button" data-filter="selfhost">中文 / 私有化部署</button>
+      <button class="chip-btn" type="button" data-filter="quality">检索质量异常排查</button>
+    </div>
+
+    <div class="decision-grid" id="decisionGrid">
+      <div class="decision-card" data-tags="mvp">
+        <span class="decision-tag">起点首选</span>
+        <div class="decision-title">先用 text-embedding-v3 跑通</div>
+        <p class="decision-desc">复用现有 DashScope 密钥，1024 维中英文均衡，先把入库、payload、检索整条链路跑通，比前期纠结榜单更划算。</p>
+      </div>
+      <div class="decision-card" data-tags="selfhost">
+        <span class="decision-tag">中文与本地化</span>
+        <div class="decision-title">BGE-M3 或 Qwen3-Embedding</div>
+        <p class="decision-desc">568M 的 BGE-M3 同样是 1024 维，与 text-embedding-v3 切换无需重建 Qdrant collection；需要更高精度可测 Qwen3-Embedding-4B。</p>
+      </div>
+      <div class="decision-card" data-tags="mvp selfhost">
+        <span class="decision-tag">榜单误区</span>
+        <div class="decision-title">只看 Retrieval 分 + 业务实测</div>
+        <p class="decision-desc">不要看 MTEB 总分。收集 100 到 200 个真实业务问题测 Recall@5 和 MRR，私有数据上的得分才是最终依据。</p>
+      </div>
+      <div class="decision-card" data-tags="quality">
+        <span class="decision-tag">低分排查</span>
+        <div class="decision-title">分数普遍 &lt; 0.70 先查切片</div>
+        <p class="decision-desc">大而杂的 chunk 会稀释向量语义。把一个大块拆成单一概念小块，同一模型的相似度就能从 0.53 跃升到 0.85。</p>
+      </div>
+      <div class="decision-card" data-tags="quality">
+        <span class="decision-tag">防幻觉兜底</span>
+        <div class="decision-title">limit 与 score_threshold 并用</div>
+        <p class="decision-desc">无重排时先设 limit=5、threshold=0.65。当返回空数组时直接拒答，不要把 0.5 分的噪音塞给大模型。</p>
+      </div>
+      <div class="decision-card" data-tags="quality mvp">
+        <span class="decision-tag">能力边界</span>
+        <div class="decision-title">纯向量搞不定精确专有名词</div>
+        <p class="decision-desc">问“GDPR 第 17 条”而文档写“被遗忘权”时，向量距离可能不够近。这正是下一章“混合检索与重排”要补上的缺口。</p>
+      </div>
+    </div>
+
+    <p style="margin-top:28px;">
+      到这里，离线入库和在线向量检索的骨架已经立住了。不过纯向量检索有一个天然短板：对精确词汇、报错码、条款编号不敏感。下一章会引入 BM25 关键词检索、RRF 排名融合以及 Cross-Encoder 重排，把召回率和准确率再推高一个台阶。
+    </p>
+  </main>
+
+  <footer></footer>
+
+  <script>
+
+    // 4. Prism highlight
+    function highlightAllCode() { window.bookHighlightCode && window.bookHighlightCode(); }
+
+    // Helpers
+    function pulseLabCard(labId) {
+      const card = document.querySelector(`#${labId} .lab-card`);
+      if (!card) return;
+      card.classList.remove("is-pulsing");
+      void card.offsetWidth;
+      card.classList.add("is-pulsing");
+      setTimeout(() => card.classList.remove("is-pulsing"), 950);
+    }
+    function scrollToLab(labId) {
+      const el = document.getElementById(labId);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      setTimeout(() => pulseLabCard(labId), 320);
+    }
+
+    // Predict-First Micro-Hooks
+    document.querySelectorAll(".predict-opt").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const group = btn.dataset.predict;
+        const hook = btn.closest(".predict-hook");
+        if (!hook) return;
+        hook.querySelectorAll(`.predict-opt[data-predict="${group}"]`).forEach((b) => {
+          b.classList.remove("is-right", "is-wrong");
+          b.classList.add(b.dataset.ans === "right" ? "is-right" : "is-wrong");
+        });
+        const fb = hook.querySelector(".predict-feedback");
+        if (fb) fb.classList.add("show");
+      });
+    });
+
+    // ================= LAB 1: 2D Vector Space =================
+    const DOC_VECTORS = [
+      { id: "d1", label: "布偶猫与英短的日常喂养", angle: 84, len: 205 },
+      { id: "d2", label: "大型犬常见骨骼疾病护理", angle: 66, len: 150 },
+      { id: "d3", label: "Qdrant Rust 向量索引原理", angle: 44, len: 205 },
+      { id: "d4", label: "pgvector 百万级数据性能调优", angle: 29, len: 150 },
+      { id: "d5", label: "量子纠缠与贝尔不等式推导", angle: 6, len: 210 },
+    ];
+    let queryAngleDeg = 76;
+    let shortScale = false;
+    const ORIGIN = { x: 60, y: 270 };
+
+    function degToVec(deg, len) {
+      const rad = (deg * Math.PI) / 180;
+      return { x: ORIGIN.x + Math.cos(rad) * len, y: ORIGIN.y - Math.sin(rad) * len };
+    }
+
+    function renderLab1() {
+      const qLen = shortScale ? 82 : 182;
+      const qEnd = degToVec(queryAngleDeg, qLen);
+      const docLayer = document.getElementById("vecDocLayer");
+      const qLayer = document.getElementById("vecQueryLayer");
+
+      const scored = DOC_VECTORS.map((d) => {
+        const diffRad = ((d.angle - queryAngleDeg) * Math.PI) / 180;
+        const cos = Math.cos(diffRad);
+        return { ...d, cos, angleDiff: Math.abs(d.angle - queryAngleDeg).toFixed(1) };
+      }).sort((a, b) => b.cos - a.cos);
+
+      docLayer.innerHTML = scored.map((d) => {
+        const end = degToVec(d.angle, d.len);
+        const hit = d.cos >= 0.65;
+        const color = hit ? "var(--teal)" : "var(--text-muted)";
+        const marker = hit ? "url(#arrowTeal)" : "url(#arrowGray)";
+        return `
+          <line x1="${ORIGIN.x}" y1="${ORIGIN.y}" x2="${end.x.toFixed(1)}" y2="${end.y.toFixed(1)}"
+            stroke="${color}" stroke-width="${hit ? 2.2 : 1.5}" stroke-dasharray="${hit ? "none" : "4 3"}" marker-end="${marker}" />
+          <text x="${(end.x + 6).toFixed(1)}" y="${(end.y - 4).toFixed(1)}" font-size="11.5" font-weight="${hit ? 700 : 500}" fill="${color}" paint-order="stroke" stroke="var(--bg-elevated)" stroke-width="4">
+            ${d.label}
+          </text>
+        `;
+      }).join("");
+
+      qLayer.innerHTML = `
+        <line x1="${ORIGIN.x}" y1="${ORIGIN.y}" x2="${qEnd.x.toFixed(1)}" y2="${qEnd.y.toFixed(1)}"
+          stroke="var(--accent)" stroke-width="3" marker-end="url(#arrowAccent)" />
+        <circle cx="${qEnd.x.toFixed(1)}" cy="${qEnd.y.toFixed(1)}" r="7" fill="var(--accent)" opacity="0.25" />
+        <text x="${(ORIGIN.x + (qEnd.x - ORIGIN.x) * 0.55 + 10).toFixed(1)}" y="${(ORIGIN.y + (qEnd.y - ORIGIN.y) * 0.55 + 16).toFixed(1)}" font-size="12" font-weight="700" fill="var(--accent)" paint-order="stroke" stroke="var(--bg-elevated)" stroke-width="4">
+          查询 ${queryAngleDeg.toFixed(0)}°
+        </text>
+      `;
+
+      document.getElementById("vecScaleNote").style.display = shortScale ? "block" : "none";
+      const rankEl = document.getElementById("vecRankList");
+      rankEl.innerHTML = scored.map((d, idx) => {
+        const hit = d.cos >= 0.65;
+        const pct = Math.max(0, Math.min(100, d.cos * 100));
+        return `
+          <div class="vec-rank-item ${hit ? "is-hit" : "is-filtered"}">
+            <div class="vec-rank-head">
+              <span>#${idx + 1} · ${d.label}</span>
+              <span class="score-pill ${hit ? "score-high" : "score-low"}">${d.cos.toFixed(3)}</span>
+            </div>
+            <div class="vec-bar-bg">
+              <div class="vec-bar-fill" style="width:${pct.toFixed(1)}%; background:${hit ? "var(--teal)" : "var(--text-muted)"};"></div>
+            </div>
+            <div class="vec-meta">
+              <span>夹角 θ = ${d.angleDiff}°</span>
+              <span>${hit ? "✓ 通过 threshold (0.65)" : "✕ 低于阈值已过滤"}</span>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    const vecSvg = document.getElementById("vecSvg");
+    let draggingVec = false;
+    function updateAngleFromEvent(e) {
+      const rect = vecSvg.getBoundingClientRect();
+      const pt = e.touches ? e.touches[0] : e;
+      const sx = ((pt.clientX - rect.left) / rect.width) * 420;
+      const sy = ((pt.clientY - rect.top) / rect.height) * 320;
+      const dx = Math.max(5, sx - ORIGIN.x);
+      const dy = Math.max(5, ORIGIN.y - sy);
+      queryAngleDeg = Math.max(2, Math.min(88, (Math.atan2(dy, dx) * 180) / Math.PI));
+      renderLab1();
+    }
+    vecSvg.addEventListener("pointerdown", (e) => { draggingVec = true; updateAngleFromEvent(e); });
+    window.addEventListener("pointermove", (e) => { if (draggingVec) updateAngleFromEvent(e); });
+    window.addEventListener("pointerup", () => { draggingVec = false; });
+
+    document.getElementById("vecScaleToggle").addEventListener("change", (e) => {
+      shortScale = e.target.checked;
+      renderLab1();
+    });
+
+    document.querySelectorAll("[data-vec-preset]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("[data-vec-preset]").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        const p = btn.dataset.vecPreset;
+        queryAngleDeg = p === "pet" ? 76 : p === "rust" ? 37 : 9;
+        renderLab1();
+      });
+    });
+
+    window.presetVecLab = function (mode) {
+      scrollToLab("lab-1");
+      if (mode === "scale") {
+        const cb = document.getElementById("vecScaleToggle");
+        cb.checked = true;
+        shortScale = true;
+      } else {
+        queryAngleDeg = 37;
+        document.querySelectorAll("[data-vec-preset]").forEach((b) => {
+          b.classList.toggle("active", b.dataset.vecPreset === "rust");
+        });
+      }
+      renderLab1();
+    };
+    renderLab1();
+
+    // ================= LAB 2: Model picking (choice → consequence) =================
+    // Real, sourced numbers only (awesomeagents.ai MTEB leaderboard, 2026-03; dims from official model cards)
+    const PICK_MODELS = [
+      { id: "nv", name: "NV-Embed-v2", dim: 4096, total: 72.31, retrieval: 62.65 },
+      { id: "gemini", name: "Gemini Embedding 001", dim: 3072, total: 68.32, retrieval: 67.71 },
+    ];
+    const CHUNKS = 20000;
+    const CUR_DIM = 1024;
+    const mb = (dim) => ((CHUNKS * dim * 4) / 1e6).toFixed(0); // float32, raw vectors only
+    let pickStrategy = null;
+
+    function renderPickBoard() {
+      const picked = pickStrategy === "total" ? "nv" : pickStrategy === "retrieval" ? "gemini" : null;
+      const keyCol = pickStrategy === "total" ? "total" : pickStrategy === "retrieval" ? "retrieval" : null;
+      document.getElementById("pickBoard").innerHTML = PICK_MODELS.map((m) => `
+        <div class="pick-model ${picked === m.id ? "is-picked" : picked ? "is-dim" : ""}">
+          <div class="pick-model-head">
+            <span>${picked === m.id ? "✓ " : ""}${m.name}</span>
+            <span class="pick-dim">${m.dim} 维</span>
+          </div>
+          <div class="pick-bars">
+            <span class="${keyCol === "total" ? "is-key" : ""}">MTEB 总分</span>
+            <div class="track"><div class="fill total" style="width:${(m.total - 50) * 2.5}%"></div></div>
+            <strong>${m.total.toFixed(2)}</strong>
+            <span class="${keyCol === "retrieval" ? "is-key" : ""}">Retrieval</span>
+            <div class="track"><div class="fill ret" style="width:${(m.retrieval - 50) * 2.5}%"></div></div>
+            <strong>${m.retrieval.toFixed(2)}</strong>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function renderPickOutcome() {
+      const el = document.getElementById("pickOutcome");
+      if (pickStrategy === "total") {
+        el.innerHTML = `
+          <div class="outcome bad">
+            <div class="outcome-title">选中 NV-Embed-v2：总分第一，检索垫底</div>
+            它的 Retrieval 是 62.65，比 Gemini Embedding 001 低 5.06 分。总分里领先的部分，来自 RAG 用不上的分类、聚类任务。
+            <div class="outcome-rows">
+              <span>迁移代价</span><span>4096 维 ≠ 现有 1024 维，必须重建 collection、全量重新入库</span>
+              <span>存储</span><span>2 万个向量约 ${mb(4096)} MB，是 1024 维（约 ${mb(1024)} MB）的 4 倍 <span class="sim-tag">按 float32 估算，不含索引</span></span>
+              <span>语料</span><span>英文榜单分数，中文技术文档表现未知</span>
+            </div>
+          </div>
+          <div class="outcome">
+            <div class="outcome-title">怎么修</div>
+            改用 Retrieval 分项排序，试试 <button class="inline-trigger" type="button" onclick="presetPick('retrieval')">策略 B</button>。
+          </div>`;
+      } else if (pickStrategy === "retrieval") {
+        el.innerHTML = `
+          <div class="outcome meh">
+            <div class="outcome-title">选中 Gemini Embedding 001：方向对了，但还没到终点</div>
+            Retrieval 67.71，在这两个模型里更适合检索。不过这仍是英文通用语料上的分数。
+            <div class="outcome-rows">
+              <span>迁移代价</span><span>3072 维 ≠ 现有 1024 维，同样要重建 collection</span>
+              <span>存储</span><span>约 ${mb(3072)} MB，是现在的 3 倍 <span class="sim-tag">按 float32 估算</span></span>
+              <span>成本</span><span>$0.15 / 1M token（<a href="https://cloud.google.com/vertex-ai/generative-ai/pricing" target="_blank" rel="noopener">Vertex AI 定价</a>）</span>
+              <span>语料</span><span>中文内部文档上能不能保持优势，榜单回答不了</span>
+            </div>
+          </div>
+          <div class="outcome">
+            <div class="outcome-title">怎么修</div>
+            把榜单当初筛，用自己的问题集做终审：<button class="inline-trigger" type="button" onclick="presetPick('eval')">策略 C</button>。
+          </div>`;
+      } else if (pickStrategy === "eval") {
+        el.innerHTML = `
+          <div class="outcome good">
+            <div class="outcome-title">先跑通，再实测：零迁移起步，用数据做决定</div>
+            继续用 <code>text-embedding-v3</code> 把入库、检索、拒答整条链路跑通。候选里优先放同样 1024 维的 <code>BGE-M3</code>，切换时不用重建 collection。
+            <div class="eval-steps">
+              <div class="eval-step"><b>1</b>收集 100–200 个真实业务问题</div>
+              <div class="eval-step"><b>2</b>标注能回答它的 chunk</div>
+              <div class="eval-step"><b>3</b>每个候选模型各嵌入一遍</div>
+              <div class="eval-step"><b>4</b>比较 Recall@5 和 MRR</div>
+            </div>
+          </div>
+          <div class="sim-zone sim-bars" data-sim-label="示意 · 非实测">
+            <div style="font-size:12.5px; font-weight:700; margin-bottom:8px;">私有问题集上的 Recall@5 可能长这样</div>
+            <div class="sim-row"><span>候选 A · 总分最高</span><div class="track"><div class="fill bar-sim" style="width:58%"></div></div><span>?</span></div>
+            <div class="sim-row"><span>候选 B · 检索分最高</span><div class="track"><div class="fill bar-sim" style="width:66%"></div></div><span>?</span></div>
+            <div class="sim-row"><span>候选 C · 中文专项</span><div class="track"><div class="fill bar-sim" style="width:74%"></div></div><span>?</span></div>
+            <div style="font-size:11.5px; color:var(--text-muted); margin-top:6px;">排名会怎么变，只有跑过自己的数据才知道。这里的柱长只是示意“排名可能洗牌”，不代表任何模型的真实分数。</div>
+          </div>`;
+      }
+    }
+
+    function setPick(strategy) {
+      pickStrategy = strategy;
+      document.querySelectorAll("[data-pick]").forEach((b) => b.classList.toggle("active", b.dataset.pick === strategy));
+      renderPickBoard();
+      renderPickOutcome();
+    }
+    document.querySelectorAll("[data-pick]").forEach((btn) => {
+      btn.addEventListener("click", () => setPick(btn.dataset.pick));
+    });
+    window.presetPick = function (strategy) {
+      scrollToLab("lab-2");
+      setPick(strategy);
+    };
+    renderPickBoard();
+
+    // ================= LAB 3: Chunk Quality & Threshold Tuner =================
+    const EXP_DATA = [
+      {
+        q: "Qdrant 是用什么语言写的？",
+        largeScore: 0.54,
+        focusedScore: 0.73,
+        focusSentence: "Qdrant 是用 Rust 编写的专用向量数据库，内存效率高、查询速度快，是目前工程实践中的热门选择。",
+      },
+      {
+        q: "余弦相似度的值域是多少？",
+        largeScore: 0.53,
+        focusedScore: 0.85,
+        focusSentence: "余弦相似度衡量两个向量方向的夹角，值域在 -1 到 1 之间。文本语义检索通常选用余弦相似度。",
+      },
+      {
+        q: "一百万条向量大概占多少内存？",
+        largeScore: 0.70,
+        focusedScore: 0.74,
+        focusSentence: "一百万条 1536 维的 float32 向量，原始数据约占 6GB，HNSW 索引还会再增加 20%-50% 的内存开销。",
+      },
+    ];
+    let activeExpIdx = 0;
+
+    function renderChunkCompare() {
+      const item = EXP_DATA[activeExpIdx];
+      document.getElementById("chunkCompareGrid").innerHTML = `
+        <div class="chunk-box">
+          <div class="chunk-box-head">
+            <span>大而杂的 Chunk（混合 4 个概念）</span>
+            <span class="score-pill ${item.largeScore >= 0.70 ? "score-mid" : "score-low"}">score: ${item.largeScore.toFixed(2)}</span>
+          </div>
+          <div class="chunk-text-sample">
+            向量数据库通过相似度检索高维向量…… <span class="chunk-highlight">${item.focusSentence}</span> ……pgvector 适合百万条以内；批量写入应使用 batch upsert 接口提升吞吐量。
+          </div>
+        </div>
+        <div class="chunk-box">
+          <div class="chunk-box-head">
+            <span>小而聚焦的 Chunk（单概念独立成块）</span>
+            <span class="score-pill score-high">score: ${item.focusedScore.toFixed(2)}</span>
+          </div>
+          <div class="chunk-text-sample">
+            <span class="chunk-highlight">${item.focusSentence}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    const SEARCH_SCENES = {
+      normal: [
+        { source: "vector-db.md", score: 0.85, text: "余弦相似度衡量两个向量方向的夹角，值域在 -1 到 1 之间。" },
+        { source: "vector-db.md", score: 0.76, text: "Qdrant 是用 Rust 编写的专用向量数据库，适合语义搜索场景。" },
+        { source: "rag-intro.md", score: 0.69, text: "Embedding 模型负责把文本映射为高维空间坐标，再用距离公式检索。" },
+        { source: "vector-db.md", score: 0.58, text: "batch upsert 把多条文本打包成一次请求，吞吐量提升几十倍。" },
+        { source: "deployment.md", score: 0.44, text: "Docker 启动后可通过 6333 端口访问 Web Dashboard。" },
+      ],
+      oos: [
+        { source: "vector-db.md", score: 0.49, text: "一百万条 1536 维向量原始数据约占 6GB 内存。" },
+        { source: "rag-intro.md", score: 0.42, text: "生成模型与 Embedding 模型在架构和输出上完全不同。" },
+        { source: "deployment.md", score: 0.36, text: "本地开发可以使用 -v 参数把向量持久化到磁盘目录。" },
+      ],
+    };
+    let searchScene = "normal";
+    let tunerLimit = 5;
+    let tunerThresh = 0.65;
+    let tunerFilter = false;
+
+    function syncSearchCode() {
+      const codeEl = document.getElementById("codeEmbedStore");
+      if (!codeEl) return;
+      const filterArg = tunerFilter ? `"vector-db.md"` : `undefined`;
+      codeEl.textContent = codeEl.textContent.replace(
+        /async function search\(query: string, limit = \d+, scoreThreshold = [\d.]+, sourceFilter(?:\?: string| = [^)]+)\)/,
+        `async function search(query: string, limit = ${tunerLimit}, scoreThreshold = ${tunerThresh.toFixed(2)}, sourceFilter = ${filterArg})`
+      );
+      if (window.Prism && Prism.highlightElement) {
+        Prism.highlightElement(codeEl);
+      }
+    }
+
+    function renderLab3Search() {
+      let pool = [...SEARCH_SCENES[searchScene]];
+      if (tunerFilter) {
+        pool = pool.filter((r) => r.source === "vector-db.md");
+      }
+      const kept = pool.filter((r) => r.score >= tunerThresh).slice(0, tunerLimit);
+      const listEl = document.getElementById("searchResultList");
+
+      if (kept.length === 0) {
+        listEl.innerHTML = `
+          <div class="refuse-banner">
+            results.length === 0 → 触发安全拒答：“没有找到相关内容，无法回答这个问题。”（成功拦住 ${pool.length} 条低分噪音）
+          </div>
+        `;
+      } else {
+        listEl.innerHTML = pool.slice(0, tunerLimit).map((r) => {
+          const pass = r.score >= tunerThresh;
+          return `
+            <div class="search-result-card ${pass ? "" : "is-dropped"}">
+              <div>
+                <div style="font-size:12px; color:var(--text-muted); margin-bottom:2px;">source: <code>${r.source}</code></div>
+                <div>${r.text}</div>
+              </div>
+              <span class="score-pill ${pass ? "score-high" : "score-low"}">
+                ${r.score.toFixed(2)} ${pass ? "✓ 保留" : "✕ 拦截"}
+              </span>
+            </div>
+          `;
+        }).join("");
+      }
+      syncSearchCode();
+    }
+
+    document.querySelectorAll("[data-exp-q]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("[data-exp-q]").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        activeExpIdx = Number(btn.dataset.expQ);
+        renderChunkCompare();
+      });
+    });
+
+    document.querySelectorAll("[data-q-scene]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("[data-q-scene]").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        searchScene = btn.dataset.qScene;
+        renderLab3Search();
+      });
+    });
+
+    document.getElementById("limitSlider").addEventListener("input", (e) => {
+      tunerLimit = Number(e.target.value);
+      document.getElementById("limitVal").textContent = String(tunerLimit);
+      renderLab3Search();
+    });
+
+    document.getElementById("threshSlider").addEventListener("input", (e) => {
+      tunerThresh = Number(e.target.value);
+      document.getElementById("threshVal").textContent = tunerThresh.toFixed(2);
+      renderLab3Search();
+    });
+
+    document.getElementById("filterToggle").addEventListener("change", (e) => {
+      tunerFilter = e.target.checked;
+      renderLab3Search();
+    });
+
+    window.presetLab3 = function (scene) {
+      scrollToLab("lab-3");
+      searchScene = scene;
+      document.querySelectorAll("[data-q-scene]").forEach((b) => {
+        b.classList.toggle("active", b.dataset.qScene === scene);
+      });
+      renderLab3Search();
+    };
+    window.presetExpQ = function (idx) {
+      scrollToLab("lab-3");
+      activeExpIdx = idx;
+      document.querySelectorAll("[data-exp-q]").forEach((b) => {
+        b.classList.toggle("active", Number(b.dataset.expQ) === idx);
+      });
+      renderChunkCompare();
+    };
+
+    renderChunkCompare();
+    renderLab3Search();
+
+  </script>
+  <script src="../shared/site.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-typescript.min.js"></script>
+</body>
+</html>

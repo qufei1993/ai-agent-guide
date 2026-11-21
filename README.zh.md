@@ -1,79 +1,110 @@
-# AI Agent 全栈开发 Roadmap
+# AI Agent Guide
 
-[![License: CC BY 4.0](https://img.shields.io/badge/License-CC_BY_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md) [![Stars](https://img.shields.io/github/stars/qufei1993/ai-agent-fullstack-roadmap?style=social)](https://github.com/qufei1993/ai-agent-fullstack-roadmap)
+[English](README.md) | **简体中文**
 
-面向 **Node.js / 前端开发者** 的 AI Agent 全栈开发能力地图。系统梳理从 AI 辅助编程到 Agent 应用工程化、再到生产级运营的完整学习路径。
+面向软件工程师的零构建**开源交互式 AI Agent 工程指南**。每一章都将精炼的工程原理与浏览器交互实验台结合，支持调参、透视 Payload 与验证边界条件，并在同仓提供可运行参考代码。
 
-> 公众号「**Nodejs技术栈**」出品　|　作者：五月君　|　[English](./README.md)
+- **在线阅读（GitHub Pages）**：[中文版](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/index.html) · [English Edition](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/index.html)
+- **核心机制与语言无关**：参考代码默认使用 TypeScript，所有工程模式与架构权衡同样适用于 Python、Go、Java 等技术栈。
+- **聚焦核心边界**：重点覆盖 LLM 约束、Agent 执行机制与 RAG 证据链路，不包含重型商业 SaaS 脚手架、模型后训练（SFT / RL）或复杂多 Agent 编排。
 
----
+## 学习路线图
 
-## Roadmap 全景图
+```mermaid
+flowchart LR
+  O["导览<br/>工程全景与术语"] --> M1["模块一 · 已完成 (4/4)<br/>LLM 工程基础"]
+  M1 --> M2["模块二 · 建设中 (0/9)<br/>Agent 核心机制"]
+  M1 --> M3["模块三 · 已完成 (5/5)<br/>RAG 检索与证据"]
+  M2 --> E["可靠的 AI 系统<br/>评测 · 边界 · 证据溯源"]
+  M3 --> E
+```
 
-![AI Agent Fullstack Roadmap](./assets/roadmap.zh.png)
+> **编排原则**：尽早跑通最小 Agent，完整 RAG 并非理解工具调用、执行循环与边界控制的前置条件；安全、评测、可观测性与成本控制贯穿每个模块。
 
----
+## 内容大纲（共 19 篇 · 已双语上线 9 篇）
 
-## 如何阅读
+全站章节状态与双语信息由 [`docs/chapters.json`](docs/chapters.json) 统一维护。
 
-7 个阶段建议**按顺序学**，但不必全部深挖。用标签做取舍：
+### 导览 · 全局坐标与术语
 
-- 🟢 **必学主线** — AI 辅助开发、LLM API、结构化输出、RAG、Agent Loop、全栈部署
-- 🔵 **工程贯穿线** — 安全 · 评测 · 可观测性 · 成本（贯穿每个阶段，不是上线前才补）
-- 🟡 **进阶选修** — MCP 开发、Skills、Sub-agent、多 Agent、本地推理、Pi 等极简底座
+| 序号 | 章节 | 核心内容 | 状态 |
+| --- | --- | --- | --- |
+| 1 | AI Agent 工程全景图 | 通过一次完整任务说明 LLM、上下文、工具、记忆、RAG 与 Harness 的协作关系，并提供易混概念术语速查。 | 待上线 |
 
----
+### 模块一 · LLM 工程基础
 
-## 阶段导航
+| 序号 | 章节 | 核心内容 | 在线阅读 |
+| --- | --- | --- | --- |
+| 2 | **Prompt Engineering** | 讲清模型调用、采样参数、任务约束与 Few-shot，理解 Prompt 能解决什么、不能解决什么。 | [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/prompt-engineering.html) · [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/prompt-engineering.html) |
+| 3 | **结构化输出与结果校验** | 使用 JSON Schema 与 Zod 建立输出契约，处理格式错误、业务校验失败与有限重试。 | [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/structured-output.html) · [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/structured-output.html) |
+| 4 | **Context Engineering** | 理解上下文来源、信息位置与预算，通过筛选、组织和按需加载提高有效信息比例。 | [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/context-engineering.html) · [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/context-engineering.html) |
+| 5 | **Prompt 回归评测** | 建立用例集、评分规则与版本门禁，验证 Prompt、模型和参数改动是否带来退步。 | [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/prompt-regression.html) · [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/prompt-regression.html) |
 
-| 阶段 | 标题 | 核心内容 |
-|:---:|------|----------|
-| 一 | [AI 辅助开发工作流](./ROADMAP.zh.md#阶段一ai-辅助开发工作流) | AI 编程工具 · 方法论 · 规则配置 · MCP & Skills · 调试与测试 |
-| 二 | [LLM API 与结构化交互](./ROADMAP.zh.md#阶段二llm-api-与结构化交互) | 大模型基础 · API 集成 · Prompt Engineering · 结构化输出 · SDK |
-| 三 | [RAG 知识库应用](./ROADMAP.zh.md#阶段三rag-知识库应用) | Embedding · 向量数据库 · RAG 管道 · 失败模式 · 评测 |
-| 四 | [Tool Calling 与 Mini Agent Loop](./ROADMAP.zh.md#阶段四tool-calling-与-mini-agent-loop) | Agent 三要素 · ReAct · 工具系统 · 权限模型 · 对比学习 |
-| 五 | [Agent 应用工程](./ROADMAP.zh.md#阶段五agent-应用工程) | Workflow vs Agent · 记忆管理 · 安全可靠 · MCP · Skills · 框架 |
-| 六 | [AI 全栈产品化](./ROADMAP.zh.md#阶段六ai-全栈产品化) | 前端 AI 化 · 全栈框架与数据层 · AI 安全 · 部署与运行时 |
-| 七 | [生产级运营](./ROADMAP.zh.md#阶段七生产级运营) | 可观测性 · 评估测试 · 成本优化 · 可靠性 |
+### 模块二 · Agent 核心机制
 
-👉 **[阅读完整 Roadmap →](./ROADMAP.zh.md)**
+| 序号 | 章节 | 核心内容 | 状态 |
+| --- | --- | --- | --- |
+| 6 | Tool Calling 与 Mini Agent Loop | 从工具声明、参数校验、执行分发到结果回传，逐步实现一个具有停止条件的最小 Agent。 | 待上线 |
+| 7 | Workflow 与 Agent 的架构选择 | 比较顺序、路由、并行和动态循环，判断哪些步骤交给代码、哪些交给模型。 | 待上线 |
+| 8 | 任务规划与反馈修正 | 实现任务拆解、计划执行与动态调整，利用测试和工具反馈修正结果，并验证收益。 | 待上线 |
+| 9 | Harness 与执行边界 | 通过权限校验、人工审批、执行隔离和资源预算，控制 Agent 可以做什么以及何时必须停止。 | 待上线 |
+| 10 | 记忆管理与上下文压缩 | 区分工作记忆与长期记忆，处理信息的写入、检索、更新、遗忘及历史压缩。 | 待上线 |
+| 11 | 任务状态与中断恢复 | 使用检查点、操作记录和幂等机制，处理超时、重试、进程中断及重复执行。 | 待上线 |
+| 12 | 流式交互与执行状态展示 | 将文本生成、工具执行和审批事件映射到界面，处理取消、断线与恢复后的状态同步。 | 待上线 |
+| 13 | MCP 与 Skills 扩展机制 | 理解协议接入与任务知识封装的区别，实现外部工具连接和 Skills 按需加载。 | 待上线 |
+| 14 | Agent 评测与轨迹诊断 | 结合最终环境状态和执行轨迹，评估任务成功率、约束遵守、成本与延迟，并定位失败原因。 | 待上线 |
 
----
+### 模块三 · RAG 检索与证据
 
-## 设计理念
+| 序号 | 章节 | 核心内容 | 在线阅读 |
+| --- | --- | --- | --- |
+| 15 | **文档解析与分块策略** | 将原始文档转为保留结构和来源的检索单元，对比不同分块方式对证据完整性的影响。 | [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/document-parsing-chunking.html) · [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/document-parsing-chunking.html) |
+| 16 | **Embedding 与向量检索** | 理解语义向量、相似度与召回边界，跑通索引、查询、元数据过滤和内容更新。 | [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/embedding-vector-search.html) · [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/embedding-vector-search.html) |
+| 17 | **混合检索、查询改写与重排** | 组合关键词与向量召回，通过查询改写、RRF 和 Reranker 改善候选证据的覆盖与排序。 | [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/hybrid-search-reranking.html) · [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/hybrid-search-reranking.html) |
+| 18 | **引用溯源与证据校验** | 将回答中的论断绑定到来源，识别不受证据支持的内容，并处理证据冲突、不足和拒答。 | [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/citation-hallucination.html) · [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/citation-hallucination.html) |
+| 19 | **RAG 评测与 Agentic RAG** | 分别评估检索和回答质量，对比固定检索流程与 Agent 自主检索，判断动态检索是否值得引入。 | [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/rag-evaluation-agentic-rag.html) · [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/rag-evaluation-agentic-rag.html) |
 
-- **不是课程大纲** — 不提供"第 1 课做什么、第 2 课做什么"的线性教程
-- **不是工具排行榜** — 不追求覆盖所有工具，不选"最火"，选"最稳、最能说明概念边界"
-- **是能力地图** — 告诉你 AI Agent 全栈开发有哪些必须掌握的能力，以及它们之间的依赖关系
-- **面向已经具备 Node.js/前端基础的开发者** — 传统全栈基础（DB/Redis/OAuth/Docker）默认你已掌握，本 Roadmap 聚焦 AI 增量部分
+## 目录结构
 
----
+```text
+.
+├── docs/                           # GitHub Pages 静态站点根目录（零构建，完全隔离）
+│   ├── index.html                  # 语言自动路由页
+│   ├── chapters.json               # 双语章节目录、siteUrl 与上线状态唯一索引
+│   ├── sitemap.xml                 # 自动生成的双语站点地图
+│   ├── robots.txt                  # 自动生成的爬虫协议
+│   ├── shared/
+│   │   ├── tokens.css              # 全局设计 Token、暗黑模式与通用组件样式
+│   │   └── site.js                 # 全局导航、浮动目录、中英切换
+│   ├── en/                         # 英文交互章节
+│   └── zh/                         # 中文交互章节
+├── examples/                       # 与章节配套的可运行 TypeScript 示例
+├── scripts/
+│   └── generate-seo.mjs            # 同步全站 SEO 标签、sitemap.xml 与 robots.txt
+└── skills/
+    └── interactive-book-chapter/   # 章节生成与维护专用 Agent Skill
+```
 
-## 参与贡献
+## 本地预览与运行示例
 
-欢迎提 Issue 或 PR 来完善这份 Roadmap！
+预览交互站点（零构建，无需安装依赖）：
 
-- 📝 **内容建议** — 发现遗漏、过时或表述不准确的技术点
-- 🐛 **纠错** — 事实性错误、链接失效、措辞问题
-- 💡 **讨论** — 不同工程实践的取舍与边界
+```bash
+npm run preview
+```
 
-详见 [CONTRIBUTING.md](./CONTRIBUTING.md)
+启动后打开[中文版](http://localhost:8766/zh/index.html)或[英文版](http://localhost:8766/en/index.html)（可用 `PORT=4173 npm run preview` 自定义端口）。
 
----
+运行配套示例（Node.js `>= 22.0.0`）：
 
-## License
+```bash
+cp .env.example .env
+npm install
+npx tsx --env-file=.env examples/ai-coding/prompt-engineering/01-temperature.ts
+```
 
-[![CC BY 4.0](https://licensebuttons.net/l/by/4.0/88x31.png)](https://creativecommons.org/licenses/by/4.0/)
+更新章节或目录后，同步全站 SEO 标签与站点地图：
 
-本作品采用 [Creative Commons Attribution 4.0 International](https://creativecommons.org/licenses/by/4.0/) 许可协议。
-
-你可以自由地分享、修改、甚至商用，但**必须署名**并注明出处（公众号「Nodejs技术栈」或原始仓库链接）。
-
----
-
-## 作者
-
-**五月君** — 公众号「Nodejs技术栈」
-
-- 📬 公众号：Nodejs技术栈
-- 🐙 GitHub：[qufei1993](https://github.com/qufei1993)
+```bash
+npm run seo:sync
+```

@@ -1,0 +1,1569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Citation Grounding & Evidence Verification: Making Every RAG Claim Auditable · AI Agent Guide</title>
+  <!-- SEO:START (auto-synced by scripts/generate-seo.mjs) -->
+  <meta name="description" content="Grounding claims to sources, detecting unsupported statements, and handling conflicts or abstention" />
+  <link rel="canonical" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/citation-hallucination.html" />
+  <link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/citation-hallucination.html" />
+  <link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/citation-hallucination.html" />
+  <link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/citation-hallucination.html" />
+  <meta property="og:type" content="article" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:locale:alternate" content="zh_CN" />
+  <meta property="og:title" content="Citations &amp; Evidence Verification" />
+  <meta property="og:description" content="Grounding claims to sources, detecting unsupported statements, and handling conflicts or abstention" />
+  <meta property="og:url" content="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/citation-hallucination.html" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "Citations & Evidence Verification",
+    "description": "Grounding claims to sources, detecting unsupported statements, and handling conflicts or abstention",
+    "inLanguage": "en",
+    "url": "https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/citation-hallucination.html",
+    "isPartOf": {
+      "@type": "Book",
+      "name": "AI Agent Guide"
+    }
+  }
+  </script>
+  <!-- SEO:END -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css" />
+  <link rel="stylesheet" href="../shared/tokens.css" />
+  <style>
+    /* Chapter-specific components */
+    .lab-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 18px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .toolbar-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+    .toolbar-label {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-right: 2px;
+    }
+
+    .split-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+    @media (max-width: 820px) { .split-2 { grid-template-columns: 1fr; } }
+
+    .pane-box {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+    }
+    .pane-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      flex-wrap: wrap;
+    }
+
+    .c-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+    }
+    .c-badge.ok { background: var(--green-soft); color: var(--green); }
+    .c-badge.warn { background: var(--accent-soft); color: var(--accent); }
+    .c-badge.bad { background: var(--rose-soft); color: var(--rose); }
+    .c-badge.info { background: var(--blue-soft); color: var(--blue); }
+
+    .raw-stream {
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      line-height: 1.65;
+      background: var(--bg-code);
+      color: #e6edf3;
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin: 0;
+    }
+
+    /* Lab 01: Threshold slider & candidate cards */
+    .threshold-control {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      margin-bottom: 16px;
+    }
+    .threshold-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      flex-wrap: wrap;
+    }
+    .threshold-val {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      color: var(--teal);
+      background: var(--teal-soft);
+      padding: 2px 10px;
+      border-radius: 999px;
+    }
+    .threshold-control input[type="range"] {
+      width: 100%;
+      accent-color: var(--teal);
+      cursor: pointer;
+    }
+    .threshold-scale {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .cand-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .cand-item {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 11px 13px;
+      transition: opacity 0.18s, border-color 0.18s;
+    }
+    .cand-item.is-pass {
+      border-color: var(--teal);
+    }
+    .cand-item.is-drop {
+      opacity: 0.52;
+      border-style: dashed;
+    }
+    .cand-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 12px;
+      flex-wrap: wrap;
+    }
+    .cand-id {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--text);
+    }
+    .cand-source {
+      font-size: 11.5px;
+      color: var(--text-muted);
+    }
+    .cand-text {
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      line-height: 1.55;
+      margin: 0 0 8px 0;
+    }
+    .score-track {
+      position: relative;
+      height: 8px;
+      background: var(--bg-muted);
+      border-radius: 999px;
+      overflow: visible;
+    }
+    .score-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.2s ease;
+    }
+    .score-marker {
+      position: absolute;
+      top: -4px;
+      bottom: -4px;
+      width: 2px;
+      background: var(--rose);
+      border-radius: 1px;
+      pointer-events: none;
+    }
+
+    .stats-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .stat-pill {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 6px 12px;
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .stat-pill strong {
+      font-family: var(--font-mono);
+      color: var(--text);
+      font-size: 13.5px;
+    }
+    .stat-pill.is-good { border-color: var(--teal); background: var(--teal-soft); color: var(--teal); }
+    .stat-pill.is-good strong { color: var(--teal); }
+    .stat-pill.is-bad { border-color: var(--rose); background: var(--rose-soft); color: var(--rose); }
+    .stat-pill.is-bad strong { color: var(--rose); }
+
+    /* Lab 02: Citation & Faithfulness Verifier */
+    .answer-box {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      font-size: 14px;
+      line-height: 1.75;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+    .cite-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 0 6px;
+      margin: 0 2px;
+      border-radius: 4px;
+      background: var(--blue-soft);
+      color: var(--blue);
+      border: 1px solid color-mix(in srgb, var(--blue) 35%, transparent);
+      cursor: pointer;
+      vertical-align: baseline;
+      transition: all 0.15s;
+    }
+    .cite-pill:hover, .cite-pill.is-active {
+      background: var(--blue);
+      color: #fff;
+    }
+    .cite-pill.is-bad {
+      background: var(--rose-soft);
+      color: var(--rose);
+      border-color: color-mix(in srgb, var(--rose) 40%, transparent);
+    }
+    .cite-pill.is-bad:hover, .cite-pill.is-bad.is-active {
+      background: var(--rose);
+      color: #fff;
+    }
+
+    .evidence-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 11px 13px;
+      margin-bottom: 10px;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    }
+    .evidence-card:last-child { margin-bottom: 0; }
+    .evidence-card.is-hl {
+      border-color: var(--blue);
+      background: var(--blue-soft);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--blue) 18%, transparent);
+    }
+    .evidence-card.is-hl-bad {
+      border-color: var(--rose);
+      background: var(--rose-soft);
+    }
+
+    .claim-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .claim-row {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .claim-row:hover { border-color: var(--blue); }
+    .claim-row.is-supported { border-left-color: var(--green); }
+    .claim-row.is-unsupported { border-left-color: var(--rose); }
+    .claim-row.is-selected { background: var(--bg-muted); }
+    .claim-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 4px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .claim-body {
+      font-size: 13px;
+      color: var(--text);
+      margin: 0 0 4px 0;
+      line-height: 1.55;
+    }
+    .claim-note {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    .meter-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    @media (max-width: 600px) { .meter-grid { grid-template-columns: 1fr; } }
+    .meter-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+    }
+    .meter-label {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      font-weight: 700;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .meter-num {
+      font-family: var(--font-mono);
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .meter-num.good { color: var(--green); }
+    .meter-num.warn { color: var(--accent); }
+    .meter-num.bad { color: var(--rose); }
+    .meter-sub {
+      font-size: 11.5px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* Lab 03: Prompt-proof Hallucination Clinic */
+    .ctx-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .ctx-msg {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font-size: 12.5px;
+      line-height: 1.55;
+    }
+    .ctx-msg.is-poison {
+      border-color: var(--rose);
+      background: var(--rose-soft);
+    }
+    .ctx-msg.is-clean {
+      border-color: var(--teal);
+      background: var(--teal-soft);
+    }
+    .ctx-role {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .ctx-msg.is-poison .ctx-role { color: var(--rose); }
+    .ctx-msg.is-clean .ctx-role { color: var(--teal); }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./index.html">
+        <span>AI Agent Guide</span>
+        <span class="brand-badge">Interactive</span>
+      </a>
+      <nav class="topbar-nav">
+        <a href="#hallucination-sources">Hallucination Sources</a>
+        <a href="#lab-threshold">Lab 01 · Threshold Gate</a>
+        <a href="#lab-faithfulness">Lab 02 · Faithfulness</a>
+        <a href="#lab-boundaries">Lab 03 · Arch Boundaries</a>
+        <a href="#decision">Defense Matrix</a>
+      </nav>
+      <button class="theme-btn" id="themeToggle" type="button">
+        <span id="themeIcon">☀</span>
+        <span id="themeText">Light</span>
+      </button>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-meta">
+      <span class="hero-pill">Module 3 · RAG Retrieval &amp; Grounding</span>
+      <span class="hero-pill">3 Interactive Labs</span>
+      <span class="hero-pill">Node.js + TypeScript</span>
+    </div>
+    <h1>Citation Grounding &amp; Evidence Verification</h1>
+    <p class="hero-lead">
+      Your reranker already pushed <code>security-001</code> to rank #1, but a ranked chunk is still just raw evidence—not an answer users can trust. Hand those chunks to an LLM and it can still slip in "common sense" from pretraining, conflate similar APIs, or cite an outdated spec as current policy. This chapter completes the post-reranker anti-hallucination loop: pre-generation threshold gates, numbered evidence injection, citation tracing, faithfulness verification, and the architectural boundaries that prompt tuning alone cannot fix.
+    </p>
+  </section>
+
+  <section class="tldr">
+    <div class="tldr-card">
+      <div class="tldr-head">
+        <span class="tldr-kicker">30-Second TL;DR</span>
+        <span class="tldr-hint" style="font-size:12px;color:var(--text-muted);">Grab the core rules first, then test them in the labs</span>
+      </div>
+      <ol class="tldr-list">
+        <li class="tldr-item">
+          <span class="tldr-num">01</span>
+          <span class="tldr-claim">Never force an LLM to answer when evidence is weak. Gate low-score queries with a <code>rerankScore</code> threshold before calling the model, and inject surviving chunks with <code>[1]</code> <code>[2]</code> indices plus strict out-of-bounds rules.</span>
+          <button class="tldr-go" type="button" onclick="window.bookJumpToLab('lab-threshold')">Tune threshold &amp; injection in Lab 01 ↓</button>
+        </li>
+        <li class="tldr-item">
+          <span class="tldr-num">02</span>
+          <span class="tldr-claim">Seeing <code>[1]</code> in an answer does not mean the claim came from chunk 1. Use Faithfulness checks to decompose answers into atomic claims and verify each against evidence—while watching out for "faithful yet off-topic" traps.</span>
+          <button class="tldr-go" type="button" onclick="window.bookJumpToLab('lab-faithfulness')">Inspect faithfulness in Lab 02 ↓</button>
+        </li>
+        <li class="tldr-item">
+          <span class="tldr-num">03</span>
+          <span class="tldr-claim">The highest-leverage place to cut hallucinations is retrieval context quality, not the answer prompt. Entity drift, version conflicts, and stale multi-turn evidence require metadata filters and context isolation.</span>
+          <button class="tldr-go" type="button" onclick="window.bookJumpToLab('lab-boundaries')">Diagnose arch boundaries in Lab 03 ↓</button>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2 id="hallucination-sources">Where Hallucinations Come From &amp; the 4-Stage Defense Loop</h2>
+    <p class="key">
+      "RAG reduces hallucinations" carries a hidden premise: the evidence entering the context window is accurate, and the model actually restricts itself to that evidence.
+    </p>
+    <p>
+      In production RAG systems, plausible-sounding answers that mislead users almost always trace back to three failure modes:
+    </p>
+    <ol>
+      <li><strong>Entity Drift</strong>: Semantically similar chunks about a different entity enter the candidate pool. The user asks about <code>deleteAccount API</code> error codes, vector search retrieves <code>deleteUser API</code> docs, and the model confidently explains the wrong endpoint.</li>
+      <li><strong>Version Mismatch</strong>: Both legacy and current specs live in the knowledge base. The old doc gets retrieved, breaking changes disappear from the answer, and users follow an obsolete runbook.</li>
+      <li><strong>Fabricated Details</strong>: The hardest failure to spot. The chunk only says <code>deleteAccount</code> checks foreign-key references, and the model helpfully adds "you can usually call <code>cleanupReferences API</code> first"—an endpoint that does not exist anywhere in your codebase.</li>
+    </ol>
+    <p>
+      Fabrication happens because an LLM is optimized to produce fluent, helpful text rather than strictly quote retrieved facts. Turning candidate chunks into auditable answers requires four defenses after reranking: a <strong>pre-generation threshold gate</strong>, <strong>numbered evidence injection</strong>, <strong>citation extraction</strong>, and <strong>faithfulness verification</strong>.
+    </p>
+
+    <figure class="diagram-figure">
+      <figcaption>
+        <span>Four-Stage Anti-Hallucination Loop: From Reranked Chunks to Verified Answers</span>
+        <span class="sim-tag">Architecture diagram</span>
+      </figcaption>
+      <svg viewBox="0 0 880 215" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Four-stage RAG anti-hallucination loop from reranked chunks to verified answers">
+        <defs>
+          <marker id="arr-main" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--text-muted)" />
+          </marker>
+          <marker id="arr-rose" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--rose)" />
+          </marker>
+          <marker id="arr-teal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--teal)" />
+          </marker>
+        </defs>
+
+        <!-- Step 0: Reranker output -->
+        <rect x="14" y="26" width="132" height="84" rx="12" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="1.6" />
+        <text x="80" y="56" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="700">Reranker Pool</text>
+        <text x="80" y="77" text-anchor="middle" fill="var(--text-secondary)" font-size="11.5">Top-K chunks</text>
+        <text x="80" y="95" text-anchor="middle" fill="var(--text-muted)" font-size="10.5">with relevance_score</text>
+
+        <line x1="146" y1="68" x2="178" y2="68" stroke="var(--text-muted)" stroke-width="1.8" marker-end="url(#arr-main)" />
+
+        <!-- Step 1: Threshold Gate -->
+        <rect x="184" y="26" width="140" height="84" rx="12" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.6" />
+        <text x="254" y="56" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="700">1. Threshold Gate</text>
+        <text x="254" y="77" text-anchor="middle" fill="var(--text-secondary)" font-size="11.5">score ≥ threshold?</text>
+        <text x="254" y="95" text-anchor="middle" fill="var(--text-muted)" font-size="10.5">Drop low-score noise</text>
+
+        <!-- Abstain branch -->
+        <line x1="254" y1="110" x2="254" y2="146" stroke="var(--rose)" stroke-width="1.6" stroke-dasharray="4 3" marker-end="url(#arr-rose)" />
+        <text x="262" y="133" fill="var(--rose)" font-size="11" font-weight="700">All below threshold</text>
+        <rect x="174" y="152" width="160" height="46" rx="10" fill="var(--rose-soft)" stroke="var(--rose)" stroke-width="1.5" />
+        <text x="254" y="173" text-anchor="middle" fill="var(--rose)" font-size="12" font-weight="700">Abstain (Skip LLM)</text>
+        <text x="254" y="190" text-anchor="middle" fill="var(--text-secondary)" font-size="10.5">State gap &amp; next step</text>
+
+        <line x1="324" y1="68" x2="360" y2="68" stroke="var(--teal)" stroke-width="1.8" marker-end="url(#arr-teal)" />
+        <text x="342" y="59" text-anchor="middle" fill="var(--teal)" font-size="11" font-weight="700">Pass</text>
+
+        <!-- Step 2: Numbered Evidence Injection -->
+        <rect x="366" y="26" width="146" height="84" rx="12" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="1.6" />
+        <text x="439" y="56" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="700">2. Numbered Inject</text>
+        <text x="439" y="77" text-anchor="middle" fill="var(--text-secondary)" font-size="11.5">[1] [2] source tags</text>
+        <text x="439" y="95" text-anchor="middle" fill="var(--text-muted)" font-size="10.5">Strict grounding rules</text>
+
+        <line x1="512" y1="68" x2="544" y2="68" stroke="var(--text-muted)" stroke-width="1.8" marker-end="url(#arr-main)" />
+
+        <!-- Step 3: Cited Answer -->
+        <rect x="550" y="26" width="136" height="84" rx="12" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="1.6" />
+        <text x="618" y="56" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="700">3. Cited Answer</text>
+        <text x="618" y="77" text-anchor="middle" fill="var(--text-secondary)" font-size="11.5">Extract [N] markers</text>
+        <text x="618" y="95" text-anchor="middle" fill="var(--text-muted)" font-size="10.5">Map to cited chunks</text>
+
+        <line x1="686" y1="68" x2="718" y2="68" stroke="var(--text-muted)" stroke-width="1.8" marker-end="url(#arr-main)" />
+
+        <!-- Step 4: Faithfulness Check -->
+        <rect x="724" y="26" width="142" height="84" rx="12" fill="var(--purple-soft)" stroke="var(--purple)" stroke-width="1.6" />
+        <text x="795" y="56" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="700">4. Faithfulness</text>
+        <text x="795" y="77" text-anchor="middle" fill="var(--text-secondary)" font-size="11.5">Decompose &amp; verify</text>
+        <text x="795" y="95" text-anchor="middle" fill="var(--text-muted)" font-size="10.5">Faithfulness score</text>
+
+        <!-- Feedback loop back to retrieval -->
+        <path d="M 795 110 L 795 175 L 368 175" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-dasharray="5 4" />
+        <text x="580" y="168" text-anchor="middle" fill="var(--text-muted)" font-size="11">Low-score feedback loop: dirty retrieval context or loose constraints?</text>
+      </svg>
+    </figure>
+
+    <h2 id="evidence-injection">Pre-Generation Gating &amp; Numbered Evidence Injection</h2>
+    <p class="key">
+      Block under-supported queries with <code>rerankScore</code> first, then pass surviving chunks with explicit index numbers so every claim maps back to a concrete source.
+    </p>
+    <p>
+      Many RAG pipelines still shove low-scoring chunks into the prompt when nothing relevant exists, forcing the model to stitch together a plausible guess. Gating with <code>EVIDENCE_THRESHOLD</code> delivers two wins at once: you skip a wasted LLM call, and you give the user actionable feedback on what is missing and where to look instead of a vague "I don't know."
+    </p>
+  </main>
+
+  <!-- LAB 01: Threshold Gate & Evidence Injection -->
+  <section class="lab-wrap" id="lab-threshold">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <span class="lab-eyebrow">Lab 01 · Pre-Generation Gate &amp; Evidence Injection Sandbox</span>
+          <h3 class="lab-title">Drag the Rerank threshold to see when chunks pass, get falsely dropped, or trigger abstention</h3>
+          <p class="lab-desc">
+            Compare a well-supported query (409 troubleshooting) against a knowledge-base gap (rate-limit policy). Adjust <code>EVIDENCE_THRESHOLD</code> and toggle the injection format to inspect the exact LLM payload or abstention response.
+          </p>
+        </div>
+        <span class="sim-tag">Simulated rerank scores</span>
+      </div>
+      <div class="lab-body">
+        <div class="lab-toolbar">
+          <div class="toolbar-group">
+            <span class="toolbar-label">Query:</span>
+            <button class="chip-btn active" type="button" data-lab1-scene="409">Scenario 1: How do I debug a 409 from deleteAccount?</button>
+            <button class="chip-btn" type="button" data-lab1-scene="ratelimit">Scenario 2: What is the deleteAccount rate-limit policy?</button>
+          </div>
+          <div class="toolbar-group">
+            <span class="toolbar-label">Injection Format:</span>
+            <button class="chip-btn teal-active" type="button" data-lab1-fmt="numbered">Numbered + Abstain Rules</button>
+            <button class="chip-btn" type="button" data-lab1-fmt="raw">Raw Concatenation</button>
+          </div>
+        </div>
+
+        <div class="threshold-control">
+          <div class="threshold-head">
+            <span>Pre-generation gate <code>EVIDENCE_THRESHOLD</code> (admits only chunks with <code>rerankScore ≥ threshold</code>)</span>
+            <span class="threshold-val" id="lab1ThresholdVal">0.40</span>
+          </div>
+          <input type="range" id="lab1Slider" min="0.05" max="0.95" step="0.05" value="0.40" />
+          <div class="threshold-scale">
+            <span>0.05 (Very loose · leaks noise)</span>
+            <span>0.40 (Starting baseline)</span>
+            <span>0.95 (Very strict · false rejections)</span>
+          </div>
+        </div>
+
+        <div class="stats-row" id="lab1Stats"></div>
+
+        <div class="split-2">
+          <div class="pane-box">
+            <div class="pane-head">
+              <span>Reranker Candidate Pool (red line = threshold)</span>
+              <span class="sim-tag">Simulated scores · intuition demo</span>
+            </div>
+            <div class="cand-list" id="lab1Candidates"></div>
+          </div>
+
+          <div class="pane-box">
+            <div class="pane-head">
+              <span id="lab1OutputTitle">Actual Prompt Payload Sent to LLM</span>
+              <span id="lab1OutputBadge" class="c-badge ok">Passed</span>
+            </div>
+            <pre class="raw-stream" id="lab1Payload"></pre>
+          </div>
+        </div>
+
+        <div class="outcome good" id="lab1Outcome" style="margin-top: 14px;"></div>
+
+        <details class="code-fold" style="margin-top: 16px; margin-bottom: 0;">
+          <summary>View TypeScript implementation synced to the current threshold (buildEvidenceBlock + pre-generation gate)</summary>
+          <div class="code-fold-body">
+            <div class="code-card" style="margin: 0;">
+              <div class="code-header">
+                <span>answer-with-citation.ts · synced live with the slider above</span>
+                <button class="copy-btn" type="button">Copy</button>
+              </div>
+              <pre><code class="language-typescript" id="lab1CodeSync"></code></pre>
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <div class="callout note">
+      <div class="callout-title">0.40 is only a starting point—never copy thresholds across rerankers</div>
+      <strong>Always calibrate your threshold on your own evaluation set.</strong> A sparse knowledge base may lose answerable questions at 0.40, while compliance-heavy domains often push the bar above 0.60. Score distributions also vary widely across reranker models, so swapping rerankers always requires recalibration.
+    </div>
+
+    <h2 id="citation-faithfulness">Citations ≠ Verification: Why You Still Need Faithfulness Checks</h2>
+    <p class="key">
+      Seeing <code>[1]</code> or <code>[2]</code> in an answer only proves the model claims a sentence came from that chunk—not that the chunk actually supports it.
+    </p>
+    <p>
+      Once numbered evidence enters the prompt, a regex can extract every <code>[N]</code> marker and map it back to the source chunk. Yet two subtle bugs routinely slip past format checks in production: the model slips ungrounded "common sense" right before a valid citation marker, or it misattributes a fact from chunk 2 to <code>[1]</code>.
+    </p>
+
+    <div class="predict-hook" id="predictCitation">
+      <div class="predict-q">
+        <span class="predict-badge">Predict First</span>
+        <span>If every sentence in a RAG answer ends with a valid <code>[1]</code> or <code>[2]</code> marker pointing to real retrieved chunks, does that guarantee the answer is hallucination-free?</span>
+      </div>
+      <div class="predict-opts">
+        <button class="predict-opt" type="button" data-p1="a">A. Yes—valid markers mean the model strictly grounded every claim in evidence</button>
+        <button class="predict-opt" type="button" data-p1="b">B. No—the model can attach fabricated details to a valid index or cite the wrong chunk</button>
+        <button class="predict-opt" type="button" data-p1="c">C. Adding "never use external knowledge" to the prompt guarantees 100% accuracy</button>
+      </div>
+      <div class="predict-feedback" id="predictCitationFb">
+        <strong id="predictCitationLead">Spot on: citation markers are a formatting constraint, not factual verification.</strong>
+        As defined in the <a href="https://docs.ragas.io/en/stable/concepts/metrics/available_metrics/faithfulness/" target="_blank" rel="noopener">RAGAS Faithfulness documentation</a>, faithfulness decomposes an answer into atomic factual claims, checks whether each claim can be inferred from the retrieved context, and computes the fraction of supported claims.
+      </div>
+      <button class="predict-verify" type="button" id="verifyFabricationBtn">See how fabricated details bypass marker checks in Lab 02 ↓</button>
+    </div>
+  </main>
+
+  <!-- LAB 02: Citation Tracing & Faithfulness Verifier -->
+  <section class="lab-wrap" id="lab-faithfulness">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <span class="lab-eyebrow">Lab 02 · Citation Tracing &amp; Claim-Level Faithfulness Verifier</span>
+          <h3 class="lab-title">Click <code>[1]</code> <code>[2]</code> markers and atomic claims to see how faithfulness catches fake citations</h3>
+          <p class="lab-desc">
+            Query: <code>How do I troubleshoot a 409 error from deleteAccount API?</code> Switch across 4 model outputs to compare marker syntax checks, Faithfulness, and Answer Relevancy.
+          </p>
+        </div>
+        <span class="src-tag">Definition: RAGAS Faithfulness</span>
+      </div>
+      <div class="lab-body">
+        <div class="lab-toolbar">
+          <div class="toolbar-group">
+            <span class="toolbar-label">Model Output Sample:</span>
+            <button class="chip-btn active" type="button" data-lab2-case="faithful">① Faithful Answer (1.00)</button>
+            <button class="chip-btn" type="button" data-lab2-case="fabricated">② Invented API (0.67)</button>
+            <button class="chip-btn" type="button" data-lab2-case="miscited">③ Wrong Citation Index (0.50)</button>
+            <button class="chip-btn" type="button" data-lab2-case="irrelevant">④ Faithful but Off-Topic (Trap)</button>
+          </div>
+        </div>
+
+        <div class="split-2">
+          <div>
+            <div class="pane-box" style="margin-bottom: 14px;">
+              <div class="pane-head">
+                <span>Generated Cited Answer (click markers to trace)</span>
+                <span id="lab2CiteCheckBadge" class="c-badge ok">Valid Markers</span>
+              </div>
+              <div class="answer-box" id="lab2AnswerBox"></div>
+              <div style="font-size: 12px; color: var(--text-muted);" id="lab2ExtractedSummary"></div>
+            </div>
+
+            <div class="pane-box">
+              <div class="pane-head">
+                <span>Admitted Source Chunks (highlighted = active citation)</span>
+                <span class="sim-tag">Top-2 from candidate pool</span>
+              </div>
+              <div id="lab2EvidenceList"></div>
+            </div>
+          </div>
+
+          <div class="pane-box">
+            <div class="pane-head">
+              <span>Claim-by-Claim Faithfulness Audit</span>
+              <span class="sim-tag">Simulated LLM judge output</span>
+            </div>
+            <div class="meter-grid" id="lab2Meters"></div>
+            <div class="claim-list" id="lab2Claims"></div>
+            <div class="outcome good" id="lab2Outcome" style="margin-top: 12px;"></div>
+          </div>
+        </div>
+
+        <details class="code-fold" style="margin-top: 16px; margin-bottom: 0;">
+          <summary>View TypeScript implementation for citation extraction and Faithfulness verification</summary>
+          <div class="code-fold-body">
+            <div class="code-card" style="margin: 0;">
+              <div class="code-header">
+                <span>extractCitedChunks + checkFaithfulness · answer-with-citation.ts</span>
+                <button class="copy-btn" type="button">Copy</button>
+              </div>
+              <pre><code class="language-typescript">function extractCitedChunks(answer: string, chunks: EvidenceChunk[]): EvidenceChunk[] {
+  const cited = new Set&lt;number&gt;();
+  for (const match of answer.matchAll(/\[(\d+)\]/g)) {
+    const idx = parseInt(match[1], 10) - 1;
+    if (idx &gt;= 0 &amp;&amp; idx &lt; chunks.length) cited.add(idx);
+  }
+  return [...cited].map((i) =&gt; chunks[i]);
+}
+
+async function checkFaithfulness(
+  answer: string,
+  citedChunks: EvidenceChunk[]
+): Promise&lt;{ score: number; reason: string }&gt; {
+  if (citedChunks.length === 0) {
+    return { score: 0, reason: "Answer cited zero evidence chunks" };
+  }
+
+  const evidenceText = citedChunks.map((c) =&gt; c.text).join("\n\n");
+  const response = await anthropic.messages.create({
+    model: llmModel,
+    max_tokens: 300,
+    messages: [
+      {
+        role: "user",
+        content: [
+          "Check whether every key factual claim in the answer is directly supported by the evidence chunks.",
+          "If any claim introduces facts absent from the evidence, score it as unfaithful.",
+          "",
+          "Evidence chunks:",
+          evidenceText,
+          "",
+          "Answer:",
+          answer,
+          "",
+          'Return JSON only: {"score": number between 0 and 1, "reason": "one-sentence summary"}',
+        ].join("\n"),
+      },
+    ],
+  });
+
+  const textBlock = response.content.find((b) =&gt; b.type === "text");
+  const text = textBlock?.type === "text" ? textBlock.text : "";
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return { score: 0, reason: "Failed to parse verifier output" };
+
+  try {
+    return JSON.parse(jsonMatch[0]) as { score: number; reason: string };
+  } catch {
+    return { score: 0, reason: "JSON parse error" };
+  }
+}</code></pre>
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <div class="callout warn">
+      <div class="callout-title">Two Verification Limits You Shouldn't Ignore</div>
+      1. <strong>LLM-as-a-Judge can miss errors too</strong>: When answers and evidence grow long, a single holistic judge call easily overlooks subtle fabrications. In production, follow the RAGAS pattern: decompose into atomic claims first, verify each claim in isolation, and aggregate the ratio.<br/>
+      2. <strong>Faithfulness is never a standalone KPI</strong>: As Lab 02 Case ④ demonstrates, an answer that quotes chunk <code>[2]</code> verbatim while ignoring the user's actual question still scores <code>1.00</code> on Faithfulness. Always pair it with Answer Relevancy.
+    </div>
+
+    <h2 id="prompt-boundaries">Four Hallucination Classes Prompt Tuning Cannot Fix</h2>
+    <p class="key">
+      Prompts only govern how the model speaks—they cannot change what evidence enters the context window. If the input context is poisoned, stricter wording won't save the answer.
+    </p>
+    <p>
+      Teams often burn days adding "NEVER hallucinate" and "double-check every fact" to system prompts while the real culprit sits upstream: wrong entities, stale doc versions, or leftover chunks from prior turns. The four failure modes below must be solved at the retrieval and context-orchestration layers.
+    </p>
+  </main>
+
+  <!-- LAB 03: Prompt-proof Hallucination Clinic -->
+  <section class="lab-wrap" id="lab-boundaries">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <span class="lab-eyebrow">Lab 03 · Architectural Hallucination Clinic</span>
+          <h3 class="lab-title">Four prompt-proof hallucinations: inspect how context gets poisoned and how architecture fixes it</h3>
+          <p class="lab-desc">
+            Step through 4 recurring production failures and toggle between "Prompt-only guardrails" and "Retrieval / context architecture fix" to compare what the model sees and what it outputs.
+          </p>
+        </div>
+        <span class="sim-tag">Choice → Consequence → Fix</span>
+      </div>
+      <div class="lab-body">
+        <div class="lab-toolbar">
+          <div class="toolbar-group">
+            <span class="toolbar-label">Failure Mode:</span>
+            <button class="chip-btn active" type="button" data-lab3-case="entity">① Entity Drift</button>
+            <button class="chip-btn" type="button" data-lab3-case="version">② Version Conflict</button>
+            <button class="chip-btn" type="button" data-lab3-case="multiturn">③ Multi-Turn Evidence Leak</button>
+            <button class="chip-btn" type="button" data-lab3-case="multihop">④ Multi-Hop Reasoning Gap</button>
+          </div>
+          <div class="toolbar-group">
+            <span class="toolbar-label">Strategy:</span>
+            <button class="chip-btn danger-active" type="button" data-lab3-mode="prompt">Prompt-Only (Fails)</button>
+            <button class="chip-btn" type="button" data-lab3-mode="arch">Architecture Fix (Recommended)</button>
+          </div>
+        </div>
+
+        <div class="split-2">
+          <div class="pane-box">
+            <div class="pane-head">
+              <span id="lab3CtxTitle">Actual Context Seen by the Model</span>
+              <span id="lab3CtxBadge" class="c-badge bad">Context Poisoned</span>
+            </div>
+            <div class="ctx-stack" id="lab3CtxStack"></div>
+          </div>
+
+          <div class="pane-box">
+            <div class="pane-head">
+              <span>Generated Answer &amp; Diagnosis</span>
+              <span id="lab3AnsBadge" class="c-badge bad">Silent Hallucination</span>
+            </div>
+            <div class="answer-box" id="lab3AnswerBox"></div>
+            <div class="outcome bad" id="lab3Outcome"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2 id="decision">Anti-Hallucination Defense Matrix</h2>
+    <p class="key">
+      RAG splits into retrieval and generation: answer-stage guardrails stop phrasing fabrications, while retrieval and context governance prevent entity drift, version clashes, and cross-turn contamination.
+    </p>
+
+    <div class="filter-bar">
+      <button class="chip-btn active" type="button" data-filter="all">All Defenses</button>
+      <button class="chip-btn" type="button" data-filter="pre">Pre-Gate &amp; Retrieval</button>
+      <button class="chip-btn" type="button" data-filter="prompt">Injection &amp; Citations</button>
+      <button class="chip-btn" type="button" data-filter="verify">Post-Verification</button>
+      <button class="chip-btn" type="button" data-filter="context">Multi-Turn &amp; Versioning</button>
+    </div>
+
+    <div class="decision-grid" id="decisionGrid">
+      <div class="decision-card" data-tags="pre">
+        <span class="decision-tag">Pre-Gate</span>
+        <div class="decision-title">Rerank Threshold Gate</div>
+        <p class="decision-desc">Drop chunks with <code>rerankScore &lt; threshold</code>; abstain immediately when zero chunks pass and point users to the right owner or doc, saving an LLM call. Calibrate per eval set and per reranker.</p>
+      </div>
+      <div class="decision-card" data-tags="prompt">
+        <span class="decision-tag">Injection</span>
+        <div class="decision-title">Numbered Evidence + Strict Bounds</div>
+        <p class="decision-desc">Inject Top-3 to Top-5 high-scoring chunks using clear <code>[1] Source: ...</code> delimiters, forbid extrapolating external business details, and define a deterministic abstention prefix.</p>
+      </div>
+      <div class="decision-card" data-tags="prompt verify">
+        <span class="decision-tag">Attribution</span>
+        <div class="decision-title"><code>[N]</code> Markers &amp; Source Extraction</div>
+        <p class="decision-desc">Require inline citation markers after key factual claims and extract cited chunks via <code>extractCitedChunks</code> to power UI source cards and targeted faithfulness checks.</p>
+      </div>
+      <div class="decision-card" data-tags="verify">
+        <span class="decision-tag">Post-Check</span>
+        <div class="decision-title">Claim-Level Faithfulness Audit</div>
+        <p class="decision-desc">In high-stakes domains (legal, healthcare, finance, core ops), never treat valid markers as proof. Decompose answers into atomic claims per RAGAS and evaluate alongside Answer Relevancy.</p>
+      </div>
+      <div class="decision-card" data-tags="pre context">
+        <span class="decision-tag">Metadata</span>
+        <div class="decision-title">Entity Filters &amp; Version Timestamps</div>
+        <p class="decision-desc">Index endpoint names, service IDs, versions, and <code>updatedAt</code> at ingestion time; filter early at retrieval and down-rank expired specs to prevent entity drift and version clashes.</p>
+      </div>
+      <div class="decision-card" data-tags="context">
+        <span class="decision-tag">Multi-Turn</span>
+        <div class="decision-title">Reset Evidence Every Turn</div>
+        <p class="decision-desc">Never persist raw evidence-stuffed user messages into conversation history. Store clean Q&amp;A pairs in history, re-retrieve on each new turn, and inject only the current turn's evidence.</p>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>
+      The highest-leverage place to reduce hallucinations is not the generation prompt—it is the quality of retrieved evidence. Connecting threshold gating, numbered citations, and faithfulness verification closes the entire hand-built RAG pipeline: from document parsing and chunking, hybrid retrieval, and reranking to auditable, verified generation. Next, we break down end-to-end RAG evaluation metrics and draw the boundary between fixed pipelines and Agentic RAG.
+    </p>
+  </footer>
+
+  <script>
+    (function () {
+      /* ============================================================
+         LAB 01: Threshold Gate & Evidence Injection
+         ============================================================ */
+      const lab1Scenes = {
+        '409': {
+          question: 'How do I troubleshoot a 409 error from deleteAccount API?',
+          abstainMsg: 'No 409 troubleshooting documents met the relevance threshold in the knowledge base.\nCheck whether the threshold is set too high, or review the API Security Spec directly.',
+          candidates: [
+            {
+              id: 'security-001',
+              source: 'API Security Spec / Error Codes',
+              score: 0.92,
+              text: 'deleteAccount API must verify a two-step confirmation token before deleting a user. Expired tokens return 401; database constraint conflicts return 409. Check foreign-key references to confirm whether audit records are still held by another service.'
+            },
+            {
+              id: 'account-001',
+              source: 'Account Management / Deletion Flow',
+              score: 0.44,
+              text: 'Account deletion runs in two stages: soft delete and hard delete. Soft delete marks the account as deactivated and retains data for 30 days; hard delete permanently purges database rows.'
+            },
+            {
+              id: 'api-003',
+              source: 'API Standards / Idempotency',
+              score: 0.19,
+              text: 'All write APIs must include an X-Request-ID header for tracing and idempotency checks. Duplicate X-Request-ID requests return 200 with the cached response.'
+            }
+          ]
+        },
+        ratelimit: {
+          question: 'What is the rate-limit policy for deleteAccount API?',
+          abstainMsg: 'No documentation on the deleteAccount rate-limit policy was found in the knowledge base.\nConsult the API Gateway runbook or contact the API platform team.',
+          candidates: [
+            {
+              id: 'security-001',
+              source: 'API Security Spec / Error Codes',
+              score: 0.18,
+              text: 'deleteAccount API must verify a two-step confirmation token before deleting a user. Expired tokens return 401; database constraint conflicts return 409. Check foreign-key references to confirm whether audit records are still held by another service.'
+            },
+            {
+              id: 'api-003',
+              source: 'API Standards / Idempotency',
+              score: 0.12,
+              text: 'All write APIs must include an X-Request-ID header for tracing and idempotency checks.'
+            },
+            {
+              id: 'account-001',
+              source: 'Account Management / Deletion Flow',
+              score: 0.07,
+              text: 'Account deletion runs in two stages: soft delete and hard delete. Soft delete marks the account as deactivated and retains data for 30 days; hard delete permanently purges database rows.'
+            }
+          ]
+        }
+      };
+
+      const lab1State = { scene: '409', fmt: 'numbered', threshold: 0.40 };
+
+      function buildCodeSync(threshold, fmt) {
+        const blockFn = fmt === 'numbered'
+          ? `function buildEvidenceBlock(chunks: EvidenceChunk[]): string {\n  return chunks\n    .map((c, i) => \`[\${i + 1}] Source: \${c.source}\\n\${c.text}\`)\n    .join("\\n\\n---\\n\\n");\n}`
+          : `// Anti-pattern: raw concatenation breaks source attribution and downstream verification\nfunction buildEvidenceBlock(chunks: EvidenceChunk[]): string {\n  return chunks.map((c) => c.text).join("\\n");\n}`;
+
+        return `const EVIDENCE_THRESHOLD = ${threshold.toFixed(2)};
+
+${blockFn}
+
+const usableChunks = candidates.filter((c) => c.rerankScore >= EVIDENCE_THRESHOLD);
+
+if (usableChunks.length === 0) {
+  const maxScore = Math.max(...candidates.map((c) => c.rerankScore));
+  return {
+    abstained: true,
+    message: \`[ABSTAIN] Max rerank score \${maxScore.toFixed(2)} is below threshold \${EVIDENCE_THRESHOLD.toFixed(2)}; skipping LLM call.\`,
+  };
+}
+
+// Inject only threshold-passing Top-K chunks into the prompt
+const evidenceText = buildEvidenceBlock(usableChunks);`;
+      }
+
+      function renderLab1() {
+        const scene = lab1Scenes[lab1State.scene];
+        const t = lab1State.threshold;
+        const usable = scene.candidates.filter((c) => c.score >= t);
+        const maxScore = Math.max(...scene.candidates.map((c) => c.score));
+
+        document.getElementById('lab1ThresholdVal').textContent = t.toFixed(2);
+
+        document.querySelectorAll('[data-lab1-scene]').forEach((b) => {
+          b.classList.toggle('active', b.dataset.lab1Scene === lab1State.scene);
+        });
+        document.querySelectorAll('[data-lab1-fmt]').forEach((b) => {
+          b.classList.remove('teal-active', 'danger-active');
+          if (b.dataset.lab1Fmt === lab1State.fmt) {
+            b.classList.add(lab1State.fmt === 'numbered' ? 'teal-active' : 'danger-active');
+          }
+        });
+
+        // Stats row
+        const llmCalled = usable.length > 0;
+        const statsEl = document.getElementById('lab1Stats');
+        statsEl.innerHTML = `
+          <span class="stat-pill">Candidates <strong>${scene.candidates.length}</strong></span>
+          <span class="stat-pill ${usable.length > 0 ? 'is-good' : 'is-bad'}">Admitted <strong>${usable.length}</strong></span>
+          <span class="stat-pill">Max Score <strong>${maxScore.toFixed(2)}</strong></span>
+          <span class="stat-pill ${llmCalled ? '' : 'is-good'}">LLM Call <strong>${llmCalled ? 'Triggered (1x)' : 'Skipped (0x)'}</strong></span>
+        `;
+
+        // Candidate cards
+        const candEl = document.getElementById('lab1Candidates');
+        let passIdx = 0;
+        candEl.innerHTML = scene.candidates.map((c) => {
+          const passed = c.score >= t;
+          if (passed) passIdx += 1;
+          const pct = Math.round(c.score * 100);
+          const markerPct = Math.round(t * 100);
+          const tag = passed
+            ? `<span class="c-badge ok">Pass ${lab1State.fmt === 'numbered' ? '[' + passIdx + ']' : ''}</span>`
+            : `<span class="c-badge bad">Below Gate · Dropped</span>`;
+          return `
+            <div class="cand-item ${passed ? 'is-pass' : 'is-drop'}">
+              <div class="cand-top">
+                <div>
+                  <span class="cand-id">${c.id}</span>
+                  <span class="cand-source"> · ${c.source}</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <span style="font-family:var(--font-mono);font-weight:700;font-size:12px;">${c.score.toFixed(2)}</span>
+                  ${tag}
+                </div>
+              </div>
+              <p class="cand-text">${c.text}</p>
+              <div class="score-track">
+                <div class="score-fill bar-sim" style="width:${pct}%;"></div>
+                <div class="score-marker" style="left:${markerPct}%;" title="Threshold ${t.toFixed(2)}"></div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        // Payload / Abstain box
+        const titleEl = document.getElementById('lab1OutputTitle');
+        const badgeEl = document.getElementById('lab1OutputBadge');
+        const payloadEl = document.getElementById('lab1Payload');
+        const outcomeEl = document.getElementById('lab1Outcome');
+
+        if (usable.length === 0) {
+          titleEl.textContent = 'Pre-Generation Gate Triggered · Direct Abstention Response';
+          badgeEl.textContent = 'Abstained (0 LLM calls)';
+          badgeEl.className = 'c-badge warn';
+          payloadEl.textContent = `[PRE-GATE] All candidate rerank scores fell below threshold ${t.toFixed(2)} (max ${maxScore.toFixed(2)}).\n\nReturned to user:\n${scene.abstainMsg}`;
+
+          if (lab1State.scene === 'ratelimit') {
+            outcomeEl.className = 'outcome good';
+            outcomeEl.innerHTML = '<div class="outcome-title">Clean Abstention: No rate-limit doc exists, so the gate stops before calling the LLM</div>You saved 1 LLM call, prevented the model from inventing a "default 100 QPS" limit, and pointed the user straight to the API Gateway runbook.';
+          } else {
+            outcomeEl.className = 'outcome bad';
+            outcomeEl.innerHTML = '<div class="outcome-title">False Rejection (Recall Drop): Threshold is too high</div><code>security-001</code> scored 0.92 and directly answers the 409 question, yet a threshold of ' + t.toFixed(2) + ' dropped it. Dial the gate back to your eval-calibrated range.';
+          }
+        } else {
+          titleEl.textContent = 'Actual Prompt Payload Sent to LLM';
+          const evidenceStr = lab1State.fmt === 'numbered'
+            ? usable.map((c, i) => `[${i + 1}] Source: ${c.source}\n${c.text}`).join('\n\n---\n\n')
+            : usable.map((c) => c.text).join('\n');
+
+          if (lab1State.fmt === 'numbered') {
+            payloadEl.textContent = [
+              'You are an enterprise knowledge-base QA assistant. Answer strictly using the provided evidence chunks; never use outside knowledge.',
+              '',
+              'Rules:',
+              '1. Append [N] after each key factual claim to cite its evidence chunk.',
+              '2. If no chunk directly answers the question, start your reply with [INSUFFICIENT EVIDENCE].',
+              '3. Do not extrapolate any business details absent from the evidence.',
+              '',
+              'Evidence chunks:',
+              evidenceStr,
+              '',
+              `Question: ${scene.question}`
+            ].join('\n');
+          } else {
+            payloadEl.textContent = [
+              'Answer the question using the reference text below:',
+              '',
+              evidenceStr,
+              '',
+              `Question: ${scene.question}`
+            ].join('\n');
+          }
+
+          if (lab1State.scene === 'ratelimit') {
+            badgeEl.textContent = 'Noise Leak Risk';
+            badgeEl.className = 'c-badge bad';
+            outcomeEl.className = 'outcome bad';
+            outcomeEl.innerHTML = '<div class="outcome-title">Threshold Too Low: Unrelated chunks leaked into context, inviting fabrication</div>The highest score is only 0.18 and none of the chunks mention rate limits. Letting them through wastes tokens and tempts the model to invent numbers. Raising the gate above 0.20 blocks this cleanly.';
+          } else if (lab1State.fmt === 'raw') {
+            badgeEl.textContent = 'No Citation Indices';
+            badgeEl.className = 'c-badge warn';
+            outcomeEl.className = 'outcome meh';
+            outcomeEl.innerHTML = '<div class="outcome-title">Risk: Merged text blocks prevent citation extraction and faithfulness checks</div>Without <code>[1]</code> <code>[2]</code> indices and an explicit abstention rule, users cannot trace claims to documents and your pipeline cannot map claims back to chunks.';
+          } else if (t <= 0.19) {
+            badgeEl.textContent = 'Low-Score Noise Included';
+            badgeEl.className = 'c-badge warn';
+            outcomeEl.className = 'outcome meh';
+            outcomeEl.innerHTML = '<div class="outcome-title">Too Loose: Unrelated idempotency doc (0.19) entered the prompt</div><code>security-001</code> is present, but low-score noise dilutes attention. Setting the gate near 0.40 keeps only high-signal evidence.';
+          } else {
+            badgeEl.textContent = 'Admitted ' + usable.length + ' high-score chunks';
+            badgeEl.className = 'c-badge ok';
+            outcomeEl.className = 'outcome good';
+            outcomeEl.innerHTML = '<div class="outcome-title">Ideal Setup: Only relevant evidence enters context with clean citation indices</div><code>security-001</code> (0.92) and supporting context are indexed cleanly while low-score noise stays out, enabling reliable <code>[1]</code> <code>[2]</code> citations.';
+          }
+        }
+
+        // Sync code block
+        const codeEl = document.getElementById('lab1CodeSync');
+        codeEl.textContent = buildCodeSync(t, lab1State.fmt);
+        if (window.bookHighlightCode) {
+          window.bookHighlightCode(codeEl.closest('.code-card'));
+        }
+      }
+
+      document.querySelectorAll('[data-lab1-scene]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          lab1State.scene = btn.dataset.lab1Scene;
+          renderLab1();
+        });
+      });
+      document.querySelectorAll('[data-lab1-fmt]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          lab1State.fmt = btn.dataset.lab1Fmt;
+          renderLab1();
+        });
+      });
+      document.getElementById('lab1Slider').addEventListener('input', (e) => {
+        lab1State.threshold = parseFloat(e.target.value);
+        renderLab1();
+      });
+
+      /* ============================================================
+         PREDICT HOOK 01
+         ============================================================ */
+      document.querySelectorAll('[data-p1]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const val = btn.dataset.p1;
+          document.querySelectorAll('[data-p1]').forEach((b) => {
+            b.classList.remove('is-right', 'is-wrong');
+            if (b.dataset.p1 === 'b') b.classList.add('is-right');
+            else if (b === btn) b.classList.add('is-wrong');
+          });
+          const lead = document.getElementById('predictCitationLead');
+          if (lead) {
+            lead.textContent = val === 'b'
+              ? 'Spot on: citation markers are a formatting constraint, not factual verification.'
+              : 'Not quite: citation markers are only a formatting constraint, not factual verification.';
+          }
+          document.getElementById('predictCitation').classList.add('answered');
+          document.getElementById('predictCitationFb').classList.add('show');
+        });
+      });
+
+      document.getElementById('verifyFabricationBtn').addEventListener('click', () => {
+        lab2State.caseKey = 'fabricated';
+        lab2State.activeCite = 1;
+        lab2State.selectedClaim = 2;
+        renderLab2();
+        if (window.bookJumpToLab) window.bookJumpToLab('lab-faithfulness');
+      });
+
+      /* ============================================================
+         LAB 02: Citation Tracing & Faithfulness Verifier
+         ============================================================ */
+      const lab2Evidence = [
+        {
+          num: 1,
+          id: 'security-001',
+          source: 'API Security Spec / Error Codes',
+          text: 'deleteAccount API must verify a two-step confirmation token before deleting a user. Expired tokens return 401; database constraint conflicts return 409. Check foreign-key references to confirm whether audit records are still held by another service.'
+        },
+        {
+          num: 2,
+          id: 'account-001',
+          source: 'Account Management / Deletion Flow',
+          text: 'Account deletion runs in two stages: soft delete and hard delete. Soft delete marks the account as deactivated and retains data for 30 days; hard delete permanently purges database rows.'
+        }
+      ];
+
+      const lab2Cases = {
+        faithful: {
+          citeBadge: 'Valid Markers · All Grounded',
+          citeBadgeCls: 'ok',
+          extracted: 'Extracted citations: [1] security-001, [2] account-001',
+          answerHtml:
+            'A 409 error from <code>deleteAccount API</code> indicates a database constraint conflict <button class="cite-pill" type="button" data-cite="1">[1]</button>. To troubleshoot, inspect foreign-key references and verify whether audit records are still held by another service <button class="cite-pill" type="button" data-cite="1">[1]</button>. Account data is not purged immediately—soft delete retains it for 30 days <button class="cite-pill" type="button" data-cite="2">[2]</button>.',
+          faithScore: 1.0,
+          faithCls: 'good',
+          faithSub: '3 / 3 claims directly supported',
+          relLabel: 'High (On-Topic)',
+          relCls: 'good',
+          relSub: 'Directly answers 409 troubleshooting',
+          claims: [
+            { text: 'A 409 error from deleteAccount is caused by a database constraint conflict.', cite: 1, ok: true, note: 'Directly supported by [1]: "database constraint conflicts return 409".' },
+            { text: 'Troubleshooting requires checking foreign-key references and whether audit records are held by another service.', cite: 1, ok: true, note: 'Directly supported by [1]: "Check foreign-key references to confirm whether audit records are still held by another service".' },
+            { text: 'Soft delete retains account data for 30 days instead of purging it immediately.', cite: 2, ok: true, note: 'Directly supported by [2]: "Soft delete marks the account as deactivated and retains data for 30 days".' }
+          ],
+          outcomeCls: 'good',
+          outcomeHtml: '<div class="outcome-title">Verified: Every key factual claim maps directly to its cited chunk</div>Faithfulness = 1.00, and the response directly resolves the user\'s 409 troubleshooting question.'
+        },
+        fabricated: {
+          citeBadge: 'Valid Markers · Hidden Fabrication',
+          citeBadgeCls: 'warn',
+          extracted: 'Extracted citations: [1] security-001 (syntax check sees zero anomalies)',
+          answerHtml:
+            'A 409 error from <code>deleteAccount API</code> is caused by a database constraint conflict <button class="cite-pill" type="button" data-cite="1">[1]</button>; check foreign-key references and audit record locks <button class="cite-pill" type="button" data-cite="1">[1]</button>. You can typically call <code>cleanupReferences API</code> first to release locks before retrying <button class="cite-pill is-bad" type="button" data-cite="1">[1]</button>.',
+          faithScore: 0.67,
+          faithCls: 'bad',
+          faithSub: '2 / 3 claims supported (1 fabricated)',
+          relLabel: 'Medium (Misleading Step)',
+          relCls: 'warn',
+          relSub: 'Invents a non-existent endpoint',
+          claims: [
+            { text: 'A 409 error from deleteAccount is caused by a database constraint conflict.', cite: 1, ok: true, note: 'Directly supported by [1].' },
+            { text: 'Troubleshooting requires checking foreign-key references and audit record locks.', cite: 1, ok: true, note: 'Directly supported by [1].' },
+            { text: 'You can call cleanupReferences API first to release locks before retrying.', cite: 1, ok: false, note: 'Unfaithful! [1] never mentions cleanupReferences API—the model invented it from pretraining priors.' }
+          ],
+          outcomeCls: 'bad',
+          outcomeHtml: '<div class="outcome-title">Fabrication Caught: Marker [1] is valid, but sentence 3 is pure invention</div>A regex check for <code>[1]</code> would ship this bug straight to production. Claim-level Faithfulness verification isolates the non-existent <code>cleanupReferences API</code>.'
+        },
+        miscited: {
+          citeBadge: 'Valid Markers · Misattributed',
+          citeBadgeCls: 'warn',
+          extracted: 'Extracted citations: [1] security-001 ([2] was never cited, leaving a gap)',
+          answerHtml:
+            'A 409 error from <code>deleteAccount API</code> is a database constraint conflict—inspect foreign-key references and audit record locks <button class="cite-pill" type="button" data-cite="1">[1]</button>. Additionally, soft delete retains account data for 30 days before hard delete purges rows <button class="cite-pill is-bad" type="button" data-cite="1">[1]</button>.',
+          faithScore: 0.50,
+          faithCls: 'bad',
+          faithSub: '1 / 2 claims supported in cited chunk',
+          relLabel: 'High (On-Topic)',
+          relCls: 'good',
+          relSub: 'Factually true, but points to wrong doc',
+          claims: [
+            { text: '409 is a database constraint conflict requiring foreign-key and audit lock checks.', cite: 1, ok: true, note: 'Directly supported by the cited chunk [1].' },
+            { text: 'Soft delete retains data for 30 days before hard delete purges rows (cited as [1]).', cite: 1, ok: false, note: 'Misattributed! That fact comes from [2] Account Management, not [1]. Verifying strictly against cited chunks flags the mismatch.' }
+          ],
+          outcomeCls: 'meh',
+          outcomeHtml: '<div class="outcome-title">Broken Attribution: Auditors clicking [1] find zero mention of "30 days"</div>In compliance and support workflows, misattributed citations erode trust just as fast as fabrications. Verifying strictly against <code>extractCitedChunks</code> catches wrong indices.'
+        },
+        irrelevant: {
+          citeBadge: 'Valid Markers · Off-Topic',
+          citeBadgeCls: 'info',
+          extracted: 'Extracted citations: [2] account-001',
+          answerHtml:
+            'Account deletion runs in two stages: soft delete and hard delete <button class="cite-pill" type="button" data-cite="2">[2]</button>. Soft delete marks the account as deactivated and retains data for 30 days before hard delete permanently purges database rows <button class="cite-pill" type="button" data-cite="2">[2]</button>.',
+          faithScore: 1.0,
+          faithCls: 'good',
+          faithSub: '2 / 2 claims strictly faithful to [2]',
+          relLabel: 'Very Low (Off-Topic)',
+          relCls: 'bad',
+          relSub: 'Never explains 409 troubleshooting',
+          claims: [
+            { text: 'Account deletion runs in two stages: soft delete and hard delete.', cite: 2, ok: true, note: 'Strictly faithful to [2] with zero fabrication.' },
+            { text: 'Soft delete retains data for 30 days before hard delete purges rows.', cite: 2, ok: true, note: 'Strictly faithful to [2] with zero fabrication.' }
+          ],
+          outcomeCls: 'meh',
+          outcomeHtml: '<div class="outcome-title">Classic Metric Trap: Faithfulness = 1.00, yet useless to the user</div>Faithfulness only measures whether the answer stays true to its sources—not whether it solved the question. Always evaluate Faithfulness alongside Answer Relevancy.'
+        }
+      };
+
+      const lab2State = { caseKey: 'faithful', activeCite: 1, selectedClaim: 0 };
+
+      function renderLab2() {
+        const data = lab2Cases[lab2State.caseKey];
+
+        document.querySelectorAll('[data-lab2-case]').forEach((b) => {
+          b.classList.toggle('active', b.dataset.lab2Case === lab2State.caseKey);
+        });
+
+        const badgeEl = document.getElementById('lab2CiteCheckBadge');
+        badgeEl.textContent = data.citeBadge;
+        badgeEl.className = 'c-badge ' + data.citeBadgeCls;
+
+        document.getElementById('lab2AnswerBox').innerHTML = data.answerHtml;
+        document.getElementById('lab2ExtractedSummary').textContent = data.extracted;
+
+        // Bind cite pills
+        document.querySelectorAll('#lab2AnswerBox .cite-pill').forEach((pill) => {
+          const num = parseInt(pill.dataset.cite, 10);
+          pill.classList.toggle('is-active', num === lab2State.activeCite);
+          pill.addEventListener('click', () => {
+            lab2State.activeCite = num;
+            renderLab2();
+          });
+        });
+
+        // Evidence cards
+        const selectedClaimObj = data.claims[lab2State.selectedClaim] || data.claims[0];
+        const isBadSelected = selectedClaimObj && !selectedClaimObj.ok && selectedClaimObj.cite === lab2State.activeCite;
+
+        document.getElementById('lab2EvidenceList').innerHTML = lab2Evidence.map((ev) => {
+          const isHl = ev.num === lab2State.activeCite;
+          const hlCls = isHl ? (isBadSelected ? 'is-hl-bad' : 'is-hl') : '';
+          return `
+            <div class="evidence-card ${hlCls}">
+              <div class="cand-top" style="margin-bottom:4px;">
+                <span class="cand-id">[${ev.num}] ${ev.id}</span>
+                <span class="cand-source">${ev.source}</span>
+              </div>
+              <p class="cand-text" style="margin:0;">${ev.text}</p>
+            </div>
+          `;
+        }).join('');
+
+        // Meters
+        document.getElementById('lab2Meters').innerHTML = `
+          <div class="meter-card">
+            <div class="meter-label"><span>Faithfulness</span><span>Supported / Total</span></div>
+            <div class="meter-num ${data.faithCls}">${data.faithScore.toFixed(2)}</div>
+            <div class="meter-sub">${data.faithSub}</div>
+          </div>
+          <div class="meter-card">
+            <div class="meter-label"><span>Answer Relevancy</span><span>Companion Metric</span></div>
+            <div class="meter-num ${data.relCls}" style="font-size:16px;padding-top:4px;">${data.relLabel}</div>
+            <div class="meter-sub">${data.relSub}</div>
+          </div>
+        `;
+
+        // Claims list
+        document.getElementById('lab2Claims').innerHTML = data.claims.map((cl, idx) => `
+          <div class="claim-row ${cl.ok ? 'is-supported' : 'is-unsupported'} ${idx === lab2State.selectedClaim ? 'is-selected' : ''}" data-claim-idx="${idx}">
+            <div class="claim-head">
+              <span>Claim #${idx + 1} · Cites [${cl.cite}]</span>
+              <span class="c-badge ${cl.ok ? 'ok' : 'bad'}">${cl.ok ? '✓ Supported' : '✕ Unsupported'}</span>
+            </div>
+            <p class="claim-body">${cl.text}</p>
+            <p class="claim-note">${cl.note}</p>
+          </div>
+        `).join('');
+
+        document.querySelectorAll('#lab2Claims .claim-row').forEach((row) => {
+          row.addEventListener('click', () => {
+            const idx = parseInt(row.dataset.claimIdx, 10);
+            lab2State.selectedClaim = idx;
+            lab2State.activeCite = data.claims[idx].cite;
+            renderLab2();
+          });
+        });
+
+        const outEl = document.getElementById('lab2Outcome');
+        outEl.className = 'outcome ' + data.outcomeCls;
+        outEl.innerHTML = data.outcomeHtml;
+      }
+
+      document.querySelectorAll('[data-lab2-case]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          lab2State.caseKey = btn.dataset.lab2Case;
+          lab2State.selectedClaim = 0;
+          lab2State.activeCite = lab2Cases[lab2State.caseKey].claims[0].cite;
+          renderLab2();
+        });
+      });
+
+      /* ============================================================
+         LAB 03: Prompt-proof Hallucination Clinic
+         ============================================================ */
+      const lab3Cases = {
+        entity: {
+          prompt: {
+            ctxBadge: 'Wrong Entity in Pool',
+            ctxBadgeCls: 'bad',
+            ansBadge: 'Entity-Drift Hallucination',
+            ansBadgeCls: 'bad',
+            messages: [
+              { role: 'USER QUESTION', cls: '', body: 'How do I handle a 409 failure on deleteAccount API?' },
+              { role: 'CHUNK [1] · deleteUser API (high vector similarity, wrong entity)', cls: 'is-poison', body: 'deleteUser API returns 409 when the user has unpaid invoices. Settle billing first and pass force=true.' }
+            ],
+            answer: 'A 409 error from <code>deleteAccount API</code> means the user has unpaid invoices; settle billing first and pass <code>force=true</code> [1].',
+            outcomeCls: 'bad',
+            outcomeHtml: '<div class="outcome-title">Consequence: No prompt can fix this—the model faithfully quoted the wrong API doc</div>The answer is 100% "faithful" to chunk <code>[1]</code>, yet passing <code>force=true</code> to <code>deleteAccount</code> fails completely.'
+          },
+          arch: {
+            ctxBadge: 'Metadata Filter Applied',
+            ctxBadgeCls: 'ok',
+            ansBadge: 'Exact Entity Matched',
+            ansBadgeCls: 'ok',
+            messages: [
+              { role: 'RETRIEVAL FILTER', cls: 'is-clean', body: 'metadata.entity == "deleteAccount" (excludes deleteUser / deleteProfile before scoring)' },
+              { role: 'CHUNK [1] · security-001 (entity matched)', cls: 'is-clean', body: 'deleteAccount API returns 409 on database constraint conflicts. Inspect foreign-key references to see if audit records are still held by another service.' }
+            ],
+            answer: 'A 409 error from <code>deleteAccount API</code> indicates a database constraint conflict; inspect foreign-key references and confirm whether audit records are still held by another service [1].',
+            outcomeCls: 'good',
+            outcomeHtml: '<div class="outcome-title">Fix: Write exact entity metadata at ingestion and filter during retrieval</div>The earlier you narrow candidate scope in the RAG pipeline, the less chance of downstream entity drift.'
+          }
+        },
+        version: {
+          prompt: {
+            ctxBadge: 'v1 & v2 Mixed in Pool',
+            ctxBadgeCls: 'bad',
+            ansBadge: 'Conflicting / Blended Rule',
+            ansBadgeCls: 'bad',
+            messages: [
+              { role: 'CHUNK [1] · Doc (no version field, actually legacy v1)', cls: 'is-poison', body: 'deleteAccount API returns 409 when two-step confirmation token verification fails.' },
+              { role: 'CHUNK [2] · Doc (no version field, actually current v2)', cls: '', body: 'deleteAccount API returns 401 for expired tokens and 409 for database constraint conflicts.' }
+            ],
+            answer: '<code>deleteAccount API</code> returns 409 either when two-step token verification fails [1] or when a database constraint conflict occurs [2].',
+            outcomeCls: 'bad',
+            outcomeHtml: '<div class="outcome-title">Consequence: Both chunks are "true" in the index, so the model guesses or blends them</div>Without timestamps or version fields, the LLM has no way to tell which spec supersedes the other, sending engineers down the wrong debugging path.'
+          },
+          arch: {
+            ctxBadge: 'Version Filter + Conflict Rule',
+            ctxBadgeCls: 'ok',
+            ansBadge: 'Current Spec Only',
+            ansBadgeCls: 'ok',
+            messages: [
+              { role: 'RETRIEVAL FILTER', cls: 'is-clean', body: 'metadata.version == "v2" and decay older updatedAt scores; prompt instructs: "surface conflicts explicitly instead of guessing."' },
+              { role: 'CHUNK [1] · v2 (updatedAt: 2026-04)', cls: 'is-clean', body: 'deleteAccount API returns 401 for expired tokens and 409 for database constraint conflicts.' }
+            ],
+            answer: 'Under the current v2 spec, <code>deleteAccount API</code> returns 409 for database constraint conflicts (expired tokens now return 401) [1].',
+            outcomeCls: 'good',
+            outcomeHtml: '<div class="outcome-title">Fix: Stamp every indexed chunk with version and updatedAt metadata</div>Filter or down-rank outdated versions at retrieval, and instruct the model to flag any remaining conflicts explicitly.'
+          }
+        },
+        multiturn: {
+          prompt: {
+            ctxBadge: 'Turn 1 Evidence Stuck in History',
+            ctxBadgeCls: 'bad',
+            ansBadge: 'Cross-Turn Contamination',
+            ansBadgeCls: 'bad',
+            messages: [
+              { role: 'TURN 1 USER (stale evidence block)', cls: 'is-poison', body: '[Evidence 1] deleteAccount soft delete retains data for 30 days...\nQuestion: Does deleteAccount keep data after deletion?' },
+              { role: 'TURN 1 ASSISTANT', cls: '', body: 'Soft delete retains data for 30 days [1].' },
+              { role: 'TURN 2 USER', cls: '', body: '[Evidence 1] deleteOrg also clears org-member mappings...\nQuestion: How many days does deleteOrg retain data?' }
+            ],
+            answer: '<code>deleteOrg</code> also retains data for 30 days during soft delete before clearing org-member mappings [1].',
+            outcomeCls: 'bad',
+            outcomeHtml: '<div class="outcome-title">Consequence: Turn 2 evidence never mentioned retention days, so the model borrowed Turn 1\'s rule</div>Cross-turn leaks read smoothly and are notoriously hard to catch. The bug comes from appending evidence-stuffed user messages straight into the <code>messages</code> history.'
+          },
+          arch: {
+            ctxBadge: 'Clean History · Fresh Evidence',
+            ctxBadgeCls: 'ok',
+            ansBadge: 'Clean Abstention',
+            ansBadgeCls: 'ok',
+            messages: [
+              { role: 'TURN 1 HISTORY (evidence stripped)', cls: 'is-clean', body: 'User: Does deleteAccount keep data after deletion?\nAssistant: Soft delete retains data for 30 days.' },
+              { role: 'TURN 2 USER (current turn evidence only)', cls: 'is-clean', body: '[1] deleteOrg also clears org-member mappings...\nQuestion: How many days does deleteOrg retain data?' }
+            ],
+            answer: '[INSUFFICIENT EVIDENCE] The retrieved <code>deleteOrg</code> documentation only states that org-member mappings are cleared; it does not specify a data retention period.',
+            outcomeCls: 'good',
+            outcomeHtml: '<div class="outcome-title">Fix: Re-retrieve on every turn and never store old evidence blocks in chat history</div>Stripping old evidence keeps the context clean, saves tokens, and stops rules from one topic bleeding into the next.'
+          }
+        },
+        multihop: {
+          prompt: {
+            ctxBadge: 'Single Retrieval Missing Second Hop',
+            ctxBadgeCls: 'bad',
+            ansBadge: 'Broken Chain & Guesswork',
+            ansBadgeCls: 'bad',
+            messages: [
+              { role: 'USER QUESTION', cls: '', body: 'When deleteAccount fails, can a regular admin still query the audit records?' },
+              { role: 'CHUNK [1] · API spec only', cls: 'is-poison', body: 'deleteAccount checks foreign-key references before deletion to confirm whether audit records are still held by another service.' }
+            ],
+            answer: 'Yes—because foreign-key constraints protect audit records when deletion fails, regular admins can still query them normally [1].',
+            outcomeCls: 'bad',
+            outcomeHtml: '<div class="outcome-title">Consequence: Retrieval found "audit records survive" but missed "who has query permissions," so the model guessed the second half</div>One-shot vector search rarely covers two separate topics at once; pushing the prompt to "reason carefully" only triggers speculation.'
+          },
+          arch: {
+            ctxBadge: 'Sub-Query Split + 2-Hop Retrieval',
+            ctxBadgeCls: 'ok',
+            ansBadge: 'Complete 2-Hop Grounding',
+            ansBadgeCls: 'ok',
+            messages: [
+              { role: 'SUB-QUERY 1 → CHUNK [1]', cls: 'is-clean', body: 'When deleteAccount fails with 409, the transaction rolls back and audit records are not deleted.' },
+              { role: 'SUB-QUERY 2 → CHUNK [2]', cls: 'is-clean', body: 'The audit log table is readable only by Security Auditors; regular admins do not have query access.' }
+            ],
+            answer: 'No. Although audit records are preserved when <code>deleteAccount</code> fails [1], the audit log table is restricted to Security Auditors and regular admins cannot query it [2].',
+            outcomeCls: 'good',
+            outcomeHtml: '<div class="outcome-title">Fix: Decompose multi-hop questions into sequential sub-queries (Agentic RAG)</div>Once both hops enter the context window, the LLM only needs deterministic synthesis—flipping the conclusion from wrong to rock-solid.'
+          }
+        }
+      };
+
+      const lab3State = { caseKey: 'entity', mode: 'prompt' };
+
+      function renderLab3() {
+        const data = lab3Cases[lab3State.caseKey][lab3State.mode];
+
+        document.querySelectorAll('[data-lab3-case]').forEach((b) => {
+          b.classList.toggle('active', b.dataset.lab3Case === lab3State.caseKey);
+        });
+        document.querySelectorAll('[data-lab3-mode]').forEach((b) => {
+          b.classList.remove('danger-active', 'teal-active');
+          if (b.dataset.lab3Mode === lab3State.mode) {
+            b.classList.add(lab3State.mode === 'prompt' ? 'danger-active' : 'teal-active');
+          }
+        });
+
+        const ctxBadge = document.getElementById('lab3CtxBadge');
+        ctxBadge.textContent = data.ctxBadge;
+        ctxBadge.className = 'c-badge ' + data.ctxBadgeCls;
+
+        const ansBadge = document.getElementById('lab3AnsBadge');
+        ansBadge.textContent = data.ansBadge;
+        ansBadge.className = 'c-badge ' + data.ansBadgeCls;
+
+        document.getElementById('lab3CtxStack').innerHTML = data.messages.map((m) => `
+          <div class="ctx-msg ${m.cls}">
+            <div class="ctx-role"><span>${m.role}</span></div>
+            <div>${m.body.replace(/\n/g, '<br/>')}</div>
+          </div>
+        `).join('');
+
+        document.getElementById('lab3AnswerBox').innerHTML = data.answer;
+
+        const outEl = document.getElementById('lab3Outcome');
+        outEl.className = 'outcome ' + data.outcomeCls;
+        outEl.innerHTML = data.outcomeHtml;
+      }
+
+      document.querySelectorAll('[data-lab3-case]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          lab3State.caseKey = btn.dataset.lab3Case;
+          renderLab3();
+        });
+      });
+      document.querySelectorAll('[data-lab3-mode]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          lab3State.mode = btn.dataset.lab3Mode;
+          renderLab3();
+        });
+      });
+
+      // Initial renders
+      renderLab1();
+      renderLab2();
+      renderLab3();
+    })();
+  </script>
+  <script src="../shared/site.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-json.min.js"></script>
+</body>
+</html>

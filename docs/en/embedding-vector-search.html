@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Embeddings &amp; Vector Search Fundamentals · AI Agent Guide</title>
+  <!-- SEO:START (auto-synced by scripts/generate-seo.mjs) -->
+  <meta name="description" content="Semantic vectors, similarity metrics, recall boundaries, metadata filtering, and index updates" />
+  <link rel="canonical" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/embedding-vector-search.html" />
+  <link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/embedding-vector-search.html" />
+  <link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/embedding-vector-search.html" />
+  <link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/embedding-vector-search.html" />
+  <meta property="og:type" content="article" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:locale:alternate" content="zh_CN" />
+  <meta property="og:title" content="Embeddings &amp; Vector Search" />
+  <meta property="og:description" content="Semantic vectors, similarity metrics, recall boundaries, metadata filtering, and index updates" />
+  <meta property="og:url" content="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/embedding-vector-search.html" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "Embeddings & Vector Search",
+    "description": "Semantic vectors, similarity metrics, recall boundaries, metadata filtering, and index updates",
+    "inLanguage": "en",
+    "url": "https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/embedding-vector-search.html",
+    "isPartOf": {
+      "@type": "Book",
+      "name": "AI Agent Guide"
+    }
+  }
+  </script>
+  <!-- SEO:END -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css" />
+  <link rel="stylesheet" href="../shared/tokens.css" />
+  <style>
+
+
+    /* Lab 1: 2D Vector Space Explorer */
+    .vec-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      gap: 20px;
+      align-items: stretch;
+    }
+    @media (max-width: 820px) { .vec-grid { grid-template-columns: 1fr; } }
+
+    .vec-canvas-box {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .vec-svg {
+      width: 100%;
+      height: auto;
+      display: block;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: crosshair;
+      user-select: none;
+    }
+    .vec-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12.5px;
+      color: var(--text-secondary);
+    }
+    .vec-rank-list {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+    .vec-rank-item {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .vec-rank-item.is-hit {
+      border-color: var(--teal);
+      background: var(--teal-soft);
+    }
+    .vec-rank-item.is-filtered {
+      opacity: 0.55;
+    }
+    .vec-rank-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+    .vec-bar-bg {
+      height: 6px;
+      background: var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+    .vec-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.25s ease;
+    }
+    .vec-meta {
+      font-size: 12px;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Lab 2: Model picking — choice → consequence */
+    .pick-banner {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--text-secondary);
+      margin-bottom: 14px;
+    }
+    .pick-options {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 820px) { .pick-options { grid-template-columns: 1fr; } }
+    .pick-opt {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      text-align: left;
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-strong);
+      background: var(--bg-elevated);
+      color: var(--text-secondary);
+      font-size: 13.5px;
+      line-height: 1.5;
+      cursor: pointer;
+      font-family: var(--font-sans);
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .pick-opt:hover { border-color: var(--text-muted); }
+    .pick-opt.active { border-color: var(--text); background: var(--bg-muted); color: var(--text); }
+    .pick-letter {
+      flex: none;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 12px; font-weight: 700;
+      background: var(--bg-muted);
+      border: 1px solid var(--border-strong);
+      color: var(--text);
+    }
+    .pick-opt.active .pick-letter { background: var(--text); color: var(--bg); border-color: var(--text); }
+    .pick-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.15fr;
+      gap: 16px;
+      align-items: start;
+    }
+    @media (max-width: 820px) { .pick-grid { grid-template-columns: 1fr; } }
+    .pick-board {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-muted);
+      padding: 14px;
+    }
+    .pick-board-head {
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+      font-size: 13px; font-weight: 700; margin-bottom: 10px;
+    }
+    .pick-board-foot { font-size: 11.5px; color: var(--text-muted); margin-top: 8px; }
+    .pick-model {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      transition: border-color 0.2s, opacity 0.2s;
+    }
+    .pick-model.is-picked { border-color: var(--text); box-shadow: var(--shadow-sm); }
+    .pick-model.is-dim { opacity: 0.5; }
+    .pick-model-head {
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+      font-size: 13.5px; font-weight: 700; margin-bottom: 6px;
+    }
+    .pick-dim { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-muted); font-weight: 600; }
+    .pick-bars {
+      display: grid;
+      grid-template-columns: 82px 1fr 44px;
+      gap: 5px 8px;
+      align-items: center;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .pick-bars .track { height: 7px; background: var(--border); border-radius: 999px; overflow: hidden; }
+    .pick-bars .fill { height: 100%; border-radius: 999px; transition: width 0.3s ease; }
+    .pick-bars .fill.total { background: var(--blue); }
+    .pick-bars .fill.ret { background: var(--teal); }
+    .pick-bars strong { font-family: var(--font-mono); font-size: 12px; text-align: right; }
+    .pick-bars .is-key { color: var(--text); font-weight: 700; }
+    .outcome + .outcome { margin-top: 10px; }
+    .outcome-rows { display: grid; grid-template-columns: 78px 1fr; gap: 4px 10px; font-size: 13px; margin-top: 8px; }
+    .outcome-rows span:nth-child(odd) { color: var(--text-muted); }
+    .eval-steps {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 10px 0 4px;
+    }
+    .eval-step {
+      background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 6px;
+      padding: 8px; font-size: 12px; line-height: 1.45; text-align: center;
+    }
+    .eval-step b { display: block; font-family: var(--font-mono); color: var(--teal); font-size: 11.5px; }
+    .sim-bars { padding: 26px 12px 10px; margin-top: 10px; }
+    .sim-row { display: grid; grid-template-columns: 128px 1fr 32px; gap: 8px; align-items: center; font-size: 12px; margin-bottom: 6px; color: var(--text-secondary); }
+    .sim-row .track { height: 8px; background: var(--border); border-radius: 999px; overflow: hidden; }
+    .sim-row .fill { height: 100%; border-radius: 999px; }
+
+    /* Pipeline diagram */
+    .pipe-svg text { font-family: var(--font-sans); }
+
+    /* Lab 3: Chunk Quality & Threshold Tuner */
+    .chunk-compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    @media (max-width: 760px) { .chunk-compare-grid { grid-template-columns: 1fr; } }
+
+    .chunk-box {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-muted);
+      padding: 14px;
+    }
+    .chunk-box-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .score-pill {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+    .score-high { background: var(--green-soft); color: var(--green); }
+    .score-mid { background: var(--accent-soft); color: var(--accent); }
+    .score-low { background: var(--rose-soft); color: var(--rose); }
+
+    .chunk-text-sample {
+      font-size: 12.5px;
+      line-height: 1.65;
+      color: var(--text-secondary);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+    }
+    .chunk-highlight {
+      background: var(--teal-soft);
+      color: var(--text);
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-weight: 600;
+    }
+
+    .tuner-controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      padding: 14px;
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 14px;
+    }
+    .slider-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .slider-label code {
+      font-family: var(--font-mono);
+      color: var(--teal);
+    }
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--teal);
+    }
+
+    .search-result-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .search-result-card {
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 13px;
+    }
+    .search-result-card.is-dropped {
+      opacity: 0.48;
+      border-style: dashed;
+    }
+    .refuse-banner {
+      padding: 14px 16px;
+      border-radius: var(--radius-sm);
+      background: var(--rose-soft);
+      border: 1px solid var(--rose);
+      color: var(--text);
+      font-size: 13.5px;
+      font-weight: 600;
+    }
+
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./index.html">
+        <span>AI Agent Guide</span>
+        <span class="brand-badge">Interactive</span>
+      </a>
+      <nav class="topbar-nav">
+        <a href="#semantic-space">Semantic Space</a>
+        <a href="#mteb-trap">MTEB Trap</a>
+        <a href="#qdrant-pipeline">Qdrant Pipeline</a>
+        <a href="#threshold-tuning">Chunks &amp; Thresholds</a>
+        <a href="#decision">Decision Matrix</a>
+      </nav>
+      <button class="theme-btn" id="themeToggle" type="button">
+        <span id="themeIcon">☀</span>
+        <span id="themeText">Light</span>
+      </button>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-meta">
+      <span class="hero-pill">Module 2 · RAG Retrieval &amp; Grounding</span>
+      <span class="hero-pill">Qdrant + TypeScript</span>
+      <span class="hero-pill">3 Interactive Labs</span>
+    </div>
+    <h1>Embeddings &amp; Vector Search Fundamentals</h1>
+    <p class="hero-lead">
+      Your documents are now split into clean <code>DocumentChunk</code> objects, but the machine still has no idea that "cats and dogs" are close while "cats and quantum mechanics" are worlds apart. This step turns text into coordinates, stores them in a vector database, and retrieves nearest neighbors by distance.
+    </p>
+  </section>
+
+  <section class="tldr" aria-label="30-Second Summary">
+    <div class="tldr-card">
+      <div class="tldr-head">
+        <span class="tldr-kicker">30-Second Version · Remember Just These 3 Rules</span>
+        <span class="sim-tag">All lab numbers are either cited or marked illustrative</span>
+      </div>
+      <ol class="tldr-list">
+        <li class="tldr-item">
+          <span class="tldr-num">01</span>
+          <span class="tldr-claim">Cosine similarity measures direction only, never vector length.</span>
+          <button class="tldr-go" type="button" onclick="presetVecLab('scale')">Drag the arrow to verify →</button>
+        </li>
+        <li class="tldr-item">
+          <span class="tldr-num">02</span>
+          <span class="tldr-claim">Skip MTEB overall averages—check the Retrieval split first, then benchmark on your own queries.</span>
+          <button class="tldr-go" type="button" onclick="presetPick('total')">See what happens if you pick by overall score →</button>
+        </li>
+        <li class="tldr-item">
+          <span class="tldr-num">03</span>
+          <span class="tldr-claim">Low scores? Inspect your chunks first. Setting <code>limit</code> without a threshold feeds noise straight to the LLM.</span>
+          <button class="tldr-go" type="button" onclick="presetLab3('oos')">Test out-of-scope refusal →</button>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <main class="prose" id="semantic-space">
+    <h2>What Embeddings Actually Do: Encoding Meaning as Coordinates</h2>
+    <p class="key">
+      An embedding model does not generate text; it outputs a fixed-length numeric array—a point in semantic space. Retrieval is simply finding the points closest to the query.
+    </p>
+    <p>
+      The vector dimensionality is fixed by the model: OpenAI <code>text-embedding-3-small</code> outputs 1,536 dimensions, <code>text-embedding-3-large</code> outputs 3,072, while Alibaba Cloud Model Studio's <code>text-embedding-v3</code> and open-source <code>BGE-M3</code> default to 1,024 dimensions.
+    </p>
+    <p>
+      For text retrieval, "closest" usually means highest <strong>cosine similarity</strong>, ranging theoretically from -1 to 1. Drag the orange arrow in the 2D explorer below—or
+      <button class="inline-trigger" type="button" onclick="presetVecLab('scale')">shrink the query vector to 0.45× length</button>
+      —and watch whether the ranking changes.
+    </p>
+  </main>
+
+  <!-- LAB 1 -->
+  <section class="lab-wrap" id="lab-1">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <div class="lab-eyebrow">Lab 01 · Vector Space Intuition</div>
+          <div class="lab-title">2D Semantic Space &amp; Cosine Similarity Probe</div>
+          <div class="lab-desc">Drag the orange query arrow to see how angle θ drives ranking and which documents get dropped by <code>score_threshold = 0.65</code>.<span class="sim-tag">Illustrative: real vectors have 1,024+ dims, projected here to 2D</span></div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="chip-btn active" type="button" data-vec-preset="pet">Query: Pet care</button>
+          <button class="chip-btn" type="button" data-vec-preset="rust">Query: Rust vector DB</button>
+          <button class="chip-btn" type="button" data-vec-preset="quantum">Query: Quantum physics</button>
+        </div>
+      </div>
+      <div class="lab-body">
+        <div class="vec-grid">
+          <div class="vec-canvas-box">
+            <svg id="vecSvg" class="vec-svg" viewBox="0 0 420 320" role="img" aria-label="Interactive 2D semantic vector space canvas">
+              <defs>
+                <marker id="arrowGray" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--text-muted)"></path>
+                </marker>
+                <marker id="arrowTeal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--teal)"></path>
+                </marker>
+                <marker id="arrowAccent" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                  <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--accent)"></path>
+                </marker>
+              </defs>
+              <!-- Grid & Axes -->
+              <line x1="30" y1="270" x2="395" y2="270" stroke="var(--border-strong)" stroke-width="1.5" />
+              <line x1="60" y1="20" x2="60" y2="295" stroke="var(--border-strong)" stroke-width="1.5" />
+              <text x="330" y="286" font-size="11" fill="var(--text-muted)">Semantic Dim X</text>
+              <text x="66" y="32" font-size="11" fill="var(--text-muted)">Semantic Dim Y</text>
+              <g id="vecDocLayer"></g>
+              <g id="vecQueryLayer"></g>
+            </svg>
+            <div class="vec-controls">
+              <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                <input type="checkbox" id="vecScaleToggle" />
+                <span>Simulate length variance (scale Query norm to 0.45×)</span>
+              </label>
+              <span>Threshold: <strong id="vecThreshLabel">0.65</strong></span>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:13px; font-weight:700; margin-bottom:10px; color:var(--text);">
+              Top-K Similarity Ranking (cos θ = (A · B) / (‖A‖ ‖B‖))
+            </div>
+            <div class="vec-rank-list" id="vecRankList"></div>
+            <div class="outcome good" id="vecScaleNote" style="display:none; margin-top:10px;">
+              <div class="outcome-title">Magnitude dropped 55%, yet every score and rank stayed identical</div>
+              Cosine compares direction only. Long and short passages don't gain an unfair advantage from vector magnitude, which is why Cosine is the default metric for text search.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose" id="mteb-trap">
+    <h2>Choosing an Embedding Model: MTEB Is a Starting Point, Not the Finish Line</h2>
+    <p class="key">
+      MTEB overall averages blend classification, clustering, and other tasks irrelevant to RAG. Start with the Retrieval sub-score, then decide based on Recall@5 on your own query set.
+    </p>
+    <p>
+      MTEB (<a href="https://github.com/embeddings-benchmark/mteb" target="_blank" rel="noopener">GitHub repo</a>) spans over a hundred datasets, and the Hugging Face <a href="https://huggingface.co/spaces/mteb/leaderboard" target="_blank" rel="noopener">live leaderboard</a> is usually the first stop. The catch: sorting by the headline overall score often picks the wrong model.
+    </p>
+
+    <div class="predict-hook" id="predict-1">
+      <div class="predict-q">
+        <span class="predict-badge">Predict First</span>
+        <span>On the <a href="https://awesomeagents.ai/leaderboards/embedding-model-leaderboard-mteb-march-2026/" target="_blank" rel="noopener">March 2026 English MTEB leaderboard</a>, <code>NV-Embed-v2</code> scores <strong>72.31</strong> overall while <code>Gemini Embedding 001</code> scores <strong>68.32</strong>. For an enterprise knowledge base, which should you test first?</span>
+      </div>
+      <div class="predict-opts">
+        <button class="predict-opt" type="button" data-predict="p1" data-ans="wrong">NV-Embed-v2—it leads overall by 4 points</button>
+        <button class="predict-opt" type="button" data-predict="p1" data-ans="right">Check the Retrieval sub-score before deciding</button>
+        <button class="predict-opt" type="button" data-predict="p1" data-ans="wrong">Scores are close; pick the larger parameter count</button>
+      </div>
+      <div class="predict-feedback" id="predict-1-fb">
+        Under the hood: <code>NV-Embed-v2</code> scores only <strong>62.65</strong> on Retrieval, whereas <code>Gemini Embedding 001</code> hits <strong>67.71</strong>. The overall leader is actually weaker at retrieval.
+      </div>
+      <button class="predict-verify" type="button" onclick="presetPick('total')">Pick by overall score in Lab 02 to see the fallout →</button>
+    </div>
+  </main>
+
+  <!-- LAB 2 -->
+  <section class="lab-wrap" id="lab-2">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <div class="lab-eyebrow">Lab 02 · Selection Trade-Off Simulator</div>
+          <div class="lab-title">Three Selection Strategies, Three Outcomes</div>
+          <div class="lab-desc">Pick the strategy you'd reach for first and inspect the engineering consequences.</div>
+        </div>
+      </div>
+      <div class="lab-body">
+        <div class="pick-banner">
+          <div><strong>Task:</strong> Build RAG over internal engineering docs (~20,000 chunks, bilingual Chinese/English).</div>
+          <div><strong>Current setup:</strong> Qdrant collection already provisioned for <code>text-embedding-v3</code> with <code>size: 1024</code>.</div>
+        </div>
+
+        <div class="pick-options">
+          <button class="pick-opt" type="button" data-pick="total">
+            <span class="pick-letter">A</span>
+            <span>Pick #1 by <strong>MTEB overall score</strong></span>
+          </button>
+          <button class="pick-opt" type="button" data-pick="retrieval">
+            <span class="pick-letter">B</span>
+            <span>Pick #1 by <strong>Retrieval sub-score</strong></span>
+          </button>
+          <button class="pick-opt" type="button" data-pick="eval">
+            <span class="pick-letter">C</span>
+            <span><strong>Ship with current model</strong>, then eval candidates on real queries</span>
+          </button>
+        </div>
+
+        <div class="pick-grid">
+          <div class="pick-board">
+            <div class="pick-board-head">
+              <span>Public English MTEB Scores</span>
+              <a class="src-tag" href="https://awesomeagents.ai/leaderboards/embedding-model-leaderboard-mteb-march-2026/" target="_blank" rel="noopener">Source · 2026-03 Board</a>
+            </div>
+            <div id="pickBoard"></div>
+            <div class="pick-board-foot">Only the two models with cited leaderboard numbers are shown. Dimensions from official model cards.</div>
+          </div>
+          <div id="pickOutcome">
+            <div class="outcome">
+              <div class="outcome-title">Select a strategy above</div>
+              This panel shows which model gets picked, how it performs on retrieval, whether you must rebuild the Qdrant collection, and what to do next.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <p>
+      Why do leaderboard winners underperform on private corpora? Three main reasons (see <a href="https://www.pinecone.io/learn/series/rag/embedding-models-rundown/" target="_blank" rel="noopener">Pinecone's embedding rundown</a>): MTEB tests general text like news and Wikipedia whose vocabulary diverges from internal docs; some models have training overlap with public benchmarks; and aggregate averages hide per-task variance.
+    </p>
+    <p>
+      Smaller models routinely beat larger ones in embedding retrieval. BAAI's <code>BGE-M3</code> (<a href="https://arxiv.org/abs/2402.03216" target="_blank" rel="noopener">arXiv:2402.03216</a>, <a href="https://huggingface.co/BAAI/bge-m3" target="_blank" rel="noopener">model card</a>) has only 568M parameters yet supports 100+ languages and an 8,192-token context window. Alignment between training objectives and retrieval matters far more than parameter count. For multilingual and Chinese workloads, Alibaba's open-source <code>Qwen3-Embedding</code> family (0.6B / 4B / 8B, <a href="https://qwenlm.github.io/blog/qwen3-embedding/" target="_blank" rel="noopener">official blog</a>) is also worth benchmarking.
+    </p>
+  </main>
+
+  <main class="prose" id="qdrant-pipeline">
+    <h2>End-to-End Ingestion and Search with Qdrant</h2>
+    <p class="key">
+      Batch your embedding requests and store the original text in the payload during ingestion; at query time, combine <code>limit</code> with <code>score_threshold</code> and refuse cleanly when the result array is empty.
+    </p>
+    <figure class="diagram-figure">
+      <figcaption>
+        <span>Qdrant Ingestion &amp; Retrieval Pipelines</span>
+        <span class="sim-tag">Architecture overview</span>
+      </figcaption>
+      <svg class="pipe-svg" viewBox="0 0 860 220" role="img" aria-label="Qdrant batch ingestion and filtered retrieval dual pipeline diagram">
+        <defs>
+          <marker id="pipeArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--text-muted)"></path>
+          </marker>
+          <marker id="pipeArrowTeal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--teal)"></path>
+          </marker>
+        </defs>
+        <!-- Row 1: Ingestion -->
+        <text x="16" y="24" font-size="11.5" font-weight="700" fill="var(--teal)">Offline Ingestion Pipeline</text>
+        <rect x="16" y="34" width="150" height="54" rx="8" fill="var(--bg-muted)" stroke="var(--border-strong)" />
+        <text x="91" y="57" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--text)">DocumentChunk</text>
+        <text x="91" y="75" text-anchor="middle" font-size="11" fill="var(--text-muted)">Batched (BATCH_SIZE=50)</text>
+        <line x1="166" y1="61" x2="210" y2="61" stroke="var(--text-muted)" stroke-width="1.5" marker-end="url(#pipeArrow)" />
+
+        <rect x="214" y="34" width="175" height="54" rx="8" fill="var(--bg-muted)" stroke="var(--border-strong)" />
+        <text x="301" y="57" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--text)">Batch Embedding</text>
+        <text x="301" y="75" text-anchor="middle" font-size="11" fill="var(--text-muted)">Multi-input, lower RPM</text>
+        <line x1="389" y1="61" x2="433" y2="61" stroke="var(--text-muted)" stroke-width="1.5" marker-end="url(#pipeArrow)" />
+
+        <rect x="437" y="34" width="195" height="54" rx="8" fill="var(--teal-soft)" stroke="var(--teal)" />
+        <text x="534" y="57" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--text)">vector + payload</text>
+        <text x="534" y="75" text-anchor="middle" font-size="11" fill="var(--text-secondary)">Store text / source / section</text>
+        <line x1="632" y1="61" x2="676" y2="61" stroke="var(--teal)" stroke-width="1.5" marker-end="url(#pipeArrowTeal)" />
+
+        <rect x="680" y="34" width="164" height="54" rx="8" fill="var(--bg-muted)" stroke="var(--border-strong)" />
+        <text x="762" y="57" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--text)">Qdrant Collection</text>
+        <text x="762" y="75" text-anchor="middle" font-size="11" fill="var(--text-muted)">Cosine · 1024-dim locked</text>
+
+        <!-- Row 2: Search -->
+        <text x="16" y="122" font-size="11.5" font-weight="700" fill="var(--accent)">Online Retrieval Pipeline</text>
+        <rect x="16" y="132" width="150" height="58" rx="8" fill="var(--bg-muted)" stroke="var(--border-strong)" />
+        <text x="91" y="156" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--text)">User Query</text>
+        <text x="91" y="174" text-anchor="middle" font-size="11" fill="var(--text-muted)">Same embedding model</text>
+        <line x1="166" y1="161" x2="210" y2="161" stroke="var(--text-muted)" stroke-width="1.5" marker-end="url(#pipeArrow)" />
+
+        <rect x="214" y="132" width="175" height="58" rx="8" fill="var(--bg-muted)" stroke="var(--border-strong)" />
+        <text x="301" y="156" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--text)">Filter + Cosine</text>
+        <text x="301" y="174" text-anchor="middle" font-size="11" fill="var(--text-muted)">Pre-filter by metadata</text>
+        <line x1="389" y1="161" x2="433" y2="161" stroke="var(--text-muted)" stroke-width="1.5" marker-end="url(#pipeArrow)" />
+
+        <rect x="437" y="132" width="195" height="58" rx="8" fill="var(--accent-soft)" stroke="var(--accent)" />
+        <text x="534" y="156" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--text)">limit + threshold</text>
+        <text x="534" y="174" text-anchor="middle" font-size="11" fill="var(--text-secondary)">Drop below score_threshold</text>
+
+        <line x1="632" y1="147" x2="676" y2="147" stroke="var(--teal)" stroke-width="1.5" marker-end="url(#pipeArrowTeal)" />
+        <rect x="680" y="128" width="164" height="36" rx="7" fill="var(--green-soft)" stroke="var(--green)" />
+        <text x="762" y="150" text-anchor="middle" font-size="12" font-weight="700" fill="var(--text)">Hits → Pass to LLM</text>
+
+        <line x1="632" y1="176" x2="676" y2="176" stroke="var(--text-muted)" stroke-width="1.5" marker-end="url(#pipeArrow)" />
+        <rect x="680" y="169" width="164" height="36" rx="7" fill="var(--rose-soft)" stroke="var(--rose)" />
+        <text x="762" y="191" text-anchor="middle" font-size="12" font-weight="700" fill="var(--text)">Empty → Safe Refusal</text>
+      </svg>
+    </figure>
+    <p>
+      Among vector databases, Qdrant is written in Rust, launches with a single Docker command, ships with a built-in Web Dashboard (<code>http://localhost:6333/dashboard</code>), and provides a strongly typed TypeScript SDK (<code>@qdrant/js-client-rest</code>)—scaling cleanly from local prototype to production.
+    </p>
+
+    <div class="callout note">
+      <div class="callout-title">API Pricing &amp; Dimensions Reference (Default Book Setup)</div>
+      The examples in this chapter default to Alibaba Cloud Model Studio's <code>text-embedding-v3</code> (¥0.5 / 1M tokens, 1,024 dims, 8,192 context; <a href="https://help.aliyun.com/zh/model-studio/developer-reference/billing-for-text-embedding" target="_blank" rel="noopener">billing docs</a>). Other common options: OpenAI <code>text-embedding-3-small</code> ($0.02 / 1M, 1,536 dims; <a href="https://platform.openai.com/docs/models/text-embedding-3-small" target="_blank" rel="noopener">docs</a>), <code>text-embedding-3-large</code> ($0.13 / 1M, 3,072 dims), Voyage AI <code>voyage-4-lite</code> ($0.02 / 1M, 1,024 dims; <a href="https://docs.voyageai.com/docs/pricing" target="_blank" rel="noopener">pricing</a>), and Google <code>Gemini Embedding 001</code> ($0.15 / 1M, 3,072 dims; <a href="https://cloud.google.com/vertex-ai/generative-ai/pricing" target="_blank" rel="noopener">Vertex AI pricing</a>).
+    </div>
+
+    <p>
+      Two engineering details trip up almost every first ingestion script: first, pack multiple texts into a single <code>input</code> array (batch upsert) instead of one HTTP call per chunk, or you will hit rate limits fast; second, store the raw text alongside <code>source</code> and <code>section</code> inside each point's <code>payload</code>, otherwise a vector hit gives you an ID with no text to hand back to the LLM.
+    </p>
+
+    <details class="code-fold">
+      <summary>Full TypeScript implementation: Qdrant batch upsert &amp; filtered search (embed-and-store.ts)</summary>
+      <div class="code-fold-body">
+        <div class="code-card">
+          <div class="code-header">
+            <span>examples/rag/embedding-vector-search/embed-and-store.ts</span>
+            <button class="copy-btn" type="button">Copy</button>
+          </div>
+          <pre><code id="codeEmbedStore" class="language-typescript">import { QdrantClient } from "@qdrant/js-client-rest";
+import OpenAI from "openai";
+
+const openai = new OpenAI({
+  apiKey: process.env.ANTHROPIC_API_KEY, // Reuses DashScope API key
+  baseURL: process.env.EMBEDDING_BASE_URL,
+});
+const qdrant = new QdrantClient({ host: "localhost", port: 6333 });
+
+const COLLECTION = "knowledge_base";
+const EMBEDDING_MODEL = process.env.EMBEDDING_MODEL ?? "text-embedding-v3";
+const VECTOR_SIZE = 1024; // Must match the embedding model output dimension
+const BATCH_SIZE = 50;
+
+async function ensureCollection() {
+  const { collections } = await qdrant.getCollections();
+  if (!collections.some((c) => c.name === COLLECTION)) {
+    await qdrant.createCollection(COLLECTION, {
+      vectors: { size: VECTOR_SIZE, distance: "Cosine" },
+    });
+  }
+}
+
+async function ingestChunks(chunks: Array&lt;{ text: string; metadata: { source: string; section?: string; chunkIndex: number } }&gt;) {
+  for (let i = 0; i &lt; chunks.length; i += BATCH_SIZE) {
+    const batch = chunks.slice(i, i + BATCH_SIZE);
+    const response = await openai.embeddings.create({
+      model: EMBEDDING_MODEL,
+      input: batch.map((c) =&gt; c.text), // Batch requests to reduce RPM pressure
+    });
+
+    const points = batch.map((chunk, j) =&gt; ({
+      id: i + j,
+      vector: response.data[j].embedding,
+      payload: {
+        text: chunk.text,
+        source: chunk.metadata.source,
+        section: chunk.metadata.section ?? "",
+        chunkIndex: chunk.metadata.chunkIndex,
+      },
+    }));
+
+    await qdrant.upsert(COLLECTION, { points });
+  }
+}
+
+async function search(query: string, limit = 5, scoreThreshold = 0.65, sourceFilter?: string) {
+  const res = await openai.embeddings.create({ model: EMBEDDING_MODEL, input: query });
+  const queryVector = res.data[0].embedding;
+
+  const results = await qdrant.search(COLLECTION, {
+    vector: queryVector,
+    limit,
+    score_threshold: scoreThreshold, // Drop anything below the quality floor
+    with_payload: true,
+    ...(sourceFilter ? { filter: { must: [{ key: "source", match: { value: sourceFilter } }] } } : {}),
+  });
+
+  if (results.length === 0) {
+    return "No relevant context found to answer this question."; // Refuse instead of feeding noise to the LLM
+  }
+  return results;
+}</code></pre>
+        </div>
+      </div>
+    </details>
+  </main>
+
+  <main class="prose" id="threshold-tuning">
+    <h2>Top-K, Similarity Scores, and Chunk Quality</h2>
+    <p class="key">
+      In production RAG, cosine scores of 0.70–0.80 are already strong. When scores stay stubbornly low, inspect whether your chunks mix too many topics before swapping embedding models.
+    </p>
+    <p>
+      Under Cosine distance, higher Qdrant <code>score</code> values mean higher similarity (<a href="https://qdrant.tech/documentation/search/search/" target="_blank" rel="noopener">Qdrant Search docs</a>). Because conversational user queries rarely match formal doc phrasing word for word, scores above 0.85 are uncommon.
+    </p>
+    <p>
+      If precise queries fail to break 0.70, the bottleneck is usually <strong>bloated, mixed-topic chunks</strong> rather than a weak model. Cram a dozen concepts into one chunk and its embedding collapses into a diluted "average meaning," pulling down similarity for every single question.
+    </p>
+
+    <div class="predict-hook" id="predict-2">
+      <div class="predict-q">
+        <span class="predict-badge">Predict First</span>
+        <span>In a controlled run on the same vector-DB notes: packing 4 topics into one large chunk yields a score of <strong>0.53</strong> for "What is the range of cosine similarity?" Split into single-concept chunks using the exact same model—what does the score jump to?</span>
+      </div>
+      <div class="predict-opts">
+        <button class="predict-opt" type="button" data-predict="p2" data-ans="wrong">Barely moves, around 0.58</button>
+        <button class="predict-opt" type="button" data-predict="p2" data-ans="right">Jumps sharply to 0.85</button>
+        <button class="predict-opt" type="button" data-predict="p2" data-ans="wrong">Drops lower due to less surrounding context</button>
+      </div>
+      <div class="predict-feedback" id="predict-2-fb">
+        Actual experiment output (<code>chunk-quality-experiment.ts</code>): it jumps from <strong>0.53</strong> straight to <strong>0.85</strong>. The focused chunk contains only the cosine similarity definition, so the vector represents that concept cleanly instead of being diluted by three unrelated topics.
+      </div>
+      <button class="predict-verify" type="button" onclick="presetExpQ(1)">Inspect this benchmark pair in Lab 03 →</button>
+    </div>
+
+    <p>
+      In Lab 03 below, switch across all 3 real benchmark queries to compare "large &amp; mixed" vs. "small &amp; focused" chunks, then tune <code>limit</code>, <code>score_threshold</code>, and <code>source</code> filtering together. Try
+      <button class="inline-trigger" type="button" onclick="presetLab3('oos')">simulating an out-of-scope query</button>
+      to see how the threshold gate triggers safe refusal.
+    </p>
+  </main>
+
+  <!-- LAB 3 -->
+  <section class="lab-wrap" id="lab-3">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <div class="lab-eyebrow">Lab 03 · Chunk Dilution &amp; Parameter Tuner</div>
+          <div class="lab-title">Chunk Semantic Dilution &amp; Top-K / Threshold Gate</div>
+          <div class="lab-desc">Top: <span class="src-tag">Measured · chunk-quality-experiment.ts</span> real scores. Bottom: <span class="sim-tag">Simulated · Qdrant filter logic</span> synced live to the TypeScript snippet above.</div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="chip-btn active" type="button" data-exp-q="0">"What language is Qdrant written in?"</button>
+          <button class="chip-btn" type="button" data-exp-q="1">"What is the range of cosine similarity?"</button>
+          <button class="chip-btn" type="button" data-exp-q="2">"How much RAM for 1M vectors?"</button>
+        </div>
+      </div>
+      <div class="lab-body">
+        <div class="chunk-compare-grid" id="chunkCompareGrid"></div>
+
+        <div style="border-top:1px solid var(--border); padding-top:18px; margin-top:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+            <strong style="font-size:14px;">Qdrant Retrieval Parameter Tuner (syncs live to the TS code above)</strong>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="chip-btn active" type="button" data-q-scene="normal">Scene: In-scope technical query</button>
+              <button class="chip-btn" type="button" data-q-scene="oos">Scene: Out-of-scope query</button>
+            </div>
+          </div>
+
+          <div class="tuner-controls">
+            <div>
+              <div class="slider-label">
+                <span>Result cap <code>limit</code></span>
+                <code id="limitVal">5</code>
+              </div>
+              <input type="range" id="limitSlider" min="1" max="5" value="5" />
+            </div>
+            <div>
+              <div class="slider-label">
+                <span>Quality floor <code>score_threshold</code></span>
+                <code id="threshVal">0.65</code>
+              </div>
+              <input type="range" id="threshSlider" min="0.30" max="0.85" step="0.05" value="0.65" />
+            </div>
+            <div style="display:flex; flex-direction:column; justify-content:center;">
+              <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer;">
+                <input type="checkbox" id="filterToggle" />
+                <span>Enable <code>filter</code> (<code>vector-db.md</code> only)</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="search-result-list" id="searchResultList"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose" id="decision">
+    <h2>Selection &amp; Engineering Decision Matrix</h2>
+    <p class="key">
+      Every rule from this chapter distilled into a filterable cheat sheet. Click a scenario tag to highlight the relevant playbooks.
+    </p>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+      <button class="chip-btn active" type="button" data-filter="all">All Scenarios</button>
+      <button class="chip-btn" type="button" data-filter="mvp">Ship MVP Fast</button>
+      <button class="chip-btn" type="button" data-filter="selfhost">Multilingual / Self-Hosted</button>
+      <button class="chip-btn" type="button" data-filter="quality">Debug Low Retrieval Quality</button>
+    </div>
+
+    <div class="decision-grid" id="decisionGrid">
+      <div class="decision-card" data-tags="mvp">
+        <span class="decision-tag">Default Start</span>
+        <div class="decision-title">Ship end-to-end with text-embedding-v3 first</div>
+        <p class="decision-desc">Reuse your existing DashScope key with balanced 1,024-dim bilingual vectors. Getting ingestion, payloads, and search working beats agonizing over leaderboards upfront.</p>
+      </div>
+      <div class="decision-card" data-tags="selfhost">
+        <span class="decision-tag">Multilingual &amp; Local</span>
+        <div class="decision-title">BGE-M3 or Qwen3-Embedding</div>
+        <p class="decision-desc">568M BGE-M3 also outputs 1,024 dims, so swapping from text-embedding-v3 requires no Qdrant collection rebuild. Benchmark Qwen3-Embedding-4B when you need higher accuracy.</p>
+      </div>
+      <div class="decision-card" data-tags="mvp selfhost">
+        <span class="decision-tag">Benchmark Trap</span>
+        <div class="decision-title">Retrieval split + private query eval</div>
+        <p class="decision-desc">Ignore MTEB overall averages. Collect 100–200 real user questions and measure Recall@5 and MRR—your private corpus score is the only verdict that counts.</p>
+      </div>
+      <div class="decision-card" data-tags="quality">
+        <span class="decision-tag">Low-Score Triage</span>
+        <div class="decision-title">Scores &lt; 0.70? Audit chunks first</div>
+        <p class="decision-desc">Oversized, mixed-topic chunks dilute vector semantics. Splitting a multi-topic block into single-concept chunks jumped the exact same model from 0.53 to 0.85.</p>
+      </div>
+      <div class="decision-card" data-tags="quality">
+        <span class="decision-tag">Hallucination Guard</span>
+        <div class="decision-title">Always pair limit with score_threshold</div>
+        <p class="decision-desc">Without a reranker, start at limit=5 and threshold=0.65. When Qdrant returns an empty array, refuse directly instead of feeding 0.5-score noise to the LLM.</p>
+      </div>
+      <div class="decision-card" data-tags="quality mvp">
+        <span class="decision-tag">Known Boundary</span>
+        <div class="decision-title">Dense vectors miss exact identifiers</div>
+        <p class="decision-desc">Asking for "GDPR Article 17" when the doc says "right to erasure" (or querying error codes and SKUs) can fall short on pure dense search. That's the gap Hybrid Search &amp; Reranking closes next.</p>
+      </div>
+    </div>
+
+    <p style="margin-top:28px;">
+      With offline ingestion and online vector search in place, the retrieval backbone is standing. Pure dense retrieval still has one structural blind spot: exact terms, error codes, and clause numbers. The next chapter adds BM25 keyword search, Reciprocal Rank Fusion (RRF), and Cross-Encoder reranking to push both recall and precision another level higher.
+    </p>
+  </main>
+
+  <footer></footer>
+
+  <script>
+
+    // 4. Prism highlight
+    function highlightAllCode() { window.bookHighlightCode && window.bookHighlightCode(); }
+
+    // Helpers
+    function pulseLabCard(labId) {
+      const card = document.querySelector(`#${labId} .lab-card`);
+      if (!card) return;
+      card.classList.remove("is-pulsing");
+      void card.offsetWidth;
+      card.classList.add("is-pulsing");
+      setTimeout(() => card.classList.remove("is-pulsing"), 950);
+    }
+    function scrollToLab(labId) {
+      const el = document.getElementById(labId);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      setTimeout(() => pulseLabCard(labId), 320);
+    }
+
+    // Predict-First Micro-Hooks
+    document.querySelectorAll(".predict-opt").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const group = btn.dataset.predict;
+        const hook = btn.closest(".predict-hook");
+        if (!hook) return;
+        hook.querySelectorAll(`.predict-opt[data-predict="${group}"]`).forEach((b) => {
+          b.classList.remove("is-right", "is-wrong");
+          b.classList.add(b.dataset.ans === "right" ? "is-right" : "is-wrong");
+        });
+        const fb = hook.querySelector(".predict-feedback");
+        if (fb) fb.classList.add("show");
+      });
+    });
+
+    // ================= LAB 1: 2D Vector Space =================
+    const DOC_VECTORS = [
+      { id: "d1", label: "Ragdoll & cat care", angle: 84, len: 205 },
+      { id: "d2", label: "Large dog joint care", angle: 66, len: 150 },
+      { id: "d3", label: "Qdrant Rust vector index", angle: 44, len: 205 },
+      { id: "d4", label: "pgvector 1M-row tuning", angle: 29, len: 150 },
+      { id: "d5", label: "Quantum entanglement", angle: 6, len: 210 },
+    ];
+    let queryAngleDeg = 76;
+    let shortScale = false;
+    const ORIGIN = { x: 60, y: 270 };
+
+    function degToVec(deg, len) {
+      const rad = (deg * Math.PI) / 180;
+      return { x: ORIGIN.x + Math.cos(rad) * len, y: ORIGIN.y - Math.sin(rad) * len };
+    }
+
+    function renderLab1() {
+      const qLen = shortScale ? 82 : 182;
+      const qEnd = degToVec(queryAngleDeg, qLen);
+      const docLayer = document.getElementById("vecDocLayer");
+      const qLayer = document.getElementById("vecQueryLayer");
+
+      const scored = DOC_VECTORS.map((d) => {
+        const diffRad = ((d.angle - queryAngleDeg) * Math.PI) / 180;
+        const cos = Math.cos(diffRad);
+        return { ...d, cos, angleDiff: Math.abs(d.angle - queryAngleDeg).toFixed(1) };
+      }).sort((a, b) => b.cos - a.cos);
+
+      docLayer.innerHTML = scored.map((d) => {
+        const end = degToVec(d.angle, d.len);
+        const hit = d.cos >= 0.65;
+        const color = hit ? "var(--teal)" : "var(--text-muted)";
+        const marker = hit ? "url(#arrowTeal)" : "url(#arrowGray)";
+        return `
+          <line x1="${ORIGIN.x}" y1="${ORIGIN.y}" x2="${end.x.toFixed(1)}" y2="${end.y.toFixed(1)}"
+            stroke="${color}" stroke-width="${hit ? 2.2 : 1.5}" stroke-dasharray="${hit ? "none" : "4 3"}" marker-end="${marker}" />
+          <text x="${(end.x + 6).toFixed(1)}" y="${(end.y - 4).toFixed(1)}" font-size="11.5" font-weight="${hit ? 700 : 500}" fill="${color}" paint-order="stroke" stroke="var(--bg-elevated)" stroke-width="4">
+            ${d.label}
+          </text>
+        `;
+      }).join("");
+
+      qLayer.innerHTML = `
+        <line x1="${ORIGIN.x}" y1="${ORIGIN.y}" x2="${qEnd.x.toFixed(1)}" y2="${qEnd.y.toFixed(1)}"
+          stroke="var(--accent)" stroke-width="3" marker-end="url(#arrowAccent)" />
+        <circle cx="${qEnd.x.toFixed(1)}" cy="${qEnd.y.toFixed(1)}" r="7" fill="var(--accent)" opacity="0.25" />
+        <text x="${(ORIGIN.x + (qEnd.x - ORIGIN.x) * 0.55 + 10).toFixed(1)}" y="${(ORIGIN.y + (qEnd.y - ORIGIN.y) * 0.55 + 16).toFixed(1)}" font-size="12" font-weight="700" fill="var(--accent)" paint-order="stroke" stroke="var(--bg-elevated)" stroke-width="4">
+          Query ${queryAngleDeg.toFixed(0)}°
+        </text>
+      `;
+
+      document.getElementById("vecScaleNote").style.display = shortScale ? "block" : "none";
+      const rankEl = document.getElementById("vecRankList");
+      rankEl.innerHTML = scored.map((d, idx) => {
+        const hit = d.cos >= 0.65;
+        const pct = Math.max(0, Math.min(100, d.cos * 100));
+        return `
+          <div class="vec-rank-item ${hit ? "is-hit" : "is-filtered"}">
+            <div class="vec-rank-head">
+              <span>#${idx + 1} · ${d.label}</span>
+              <span class="score-pill ${hit ? "score-high" : "score-low"}">${d.cos.toFixed(3)}</span>
+            </div>
+            <div class="vec-bar-bg">
+              <div class="vec-bar-fill" style="width:${pct.toFixed(1)}%; background:${hit ? "var(--teal)" : "var(--text-muted)"};"></div>
+            </div>
+            <div class="vec-meta">
+              <span>Angle θ = ${d.angleDiff}°</span>
+              <span>${hit ? "✓ Passes threshold (0.65)" : "✕ Below threshold, dropped"}</span>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    const vecSvg = document.getElementById("vecSvg");
+    let draggingVec = false;
+    function updateAngleFromEvent(e) {
+      const rect = vecSvg.getBoundingClientRect();
+      const pt = e.touches ? e.touches[0] : e;
+      const sx = ((pt.clientX - rect.left) / rect.width) * 420;
+      const sy = ((pt.clientY - rect.top) / rect.height) * 320;
+      const dx = Math.max(5, sx - ORIGIN.x);
+      const dy = Math.max(5, ORIGIN.y - sy);
+      queryAngleDeg = Math.max(2, Math.min(88, (Math.atan2(dy, dx) * 180) / Math.PI));
+      renderLab1();
+    }
+    vecSvg.addEventListener("pointerdown", (e) => { draggingVec = true; updateAngleFromEvent(e); });
+    window.addEventListener("pointermove", (e) => { if (draggingVec) updateAngleFromEvent(e); });
+    window.addEventListener("pointerup", () => { draggingVec = false; });
+
+    document.getElementById("vecScaleToggle").addEventListener("change", (e) => {
+      shortScale = e.target.checked;
+      renderLab1();
+    });
+
+    document.querySelectorAll("[data-vec-preset]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("[data-vec-preset]").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        const p = btn.dataset.vecPreset;
+        queryAngleDeg = p === "pet" ? 76 : p === "rust" ? 37 : 9;
+        renderLab1();
+      });
+    });
+
+    window.presetVecLab = function (mode) {
+      scrollToLab("lab-1");
+      if (mode === "scale") {
+        const cb = document.getElementById("vecScaleToggle");
+        cb.checked = true;
+        shortScale = true;
+      } else {
+        queryAngleDeg = 37;
+        document.querySelectorAll("[data-vec-preset]").forEach((b) => {
+          b.classList.toggle("active", b.dataset.vecPreset === "rust");
+        });
+      }
+      renderLab1();
+    };
+    renderLab1();
+
+    // ================= LAB 2: Model picking (choice → consequence) =================
+    // Real, sourced numbers only (awesomeagents.ai MTEB leaderboard, 2026-03; dims from official model cards)
+    const PICK_MODELS = [
+      { id: "nv", name: "NV-Embed-v2", dim: 4096, total: 72.31, retrieval: 62.65 },
+      { id: "gemini", name: "Gemini Embedding 001", dim: 3072, total: 68.32, retrieval: 67.71 },
+    ];
+    const CHUNKS = 20000;
+    const CUR_DIM = 1024;
+    const mb = (dim) => ((CHUNKS * dim * 4) / 1e6).toFixed(0); // float32, raw vectors only
+    let pickStrategy = null;
+
+    function renderPickBoard() {
+      const picked = pickStrategy === "total" ? "nv" : pickStrategy === "retrieval" ? "gemini" : null;
+      const keyCol = pickStrategy === "total" ? "total" : pickStrategy === "retrieval" ? "retrieval" : null;
+      document.getElementById("pickBoard").innerHTML = PICK_MODELS.map((m) => `
+        <div class="pick-model ${picked === m.id ? "is-picked" : picked ? "is-dim" : ""}">
+          <div class="pick-model-head">
+            <span>${picked === m.id ? "✓ " : ""}${m.name}</span>
+            <span class="pick-dim">${m.dim} dims</span>
+          </div>
+          <div class="pick-bars">
+            <span class="${keyCol === "total" ? "is-key" : ""}">MTEB Avg</span>
+            <div class="track"><div class="fill total" style="width:${(m.total - 50) * 2.5}%"></div></div>
+            <strong>${m.total.toFixed(2)}</strong>
+            <span class="${keyCol === "retrieval" ? "is-key" : ""}">Retrieval</span>
+            <div class="track"><div class="fill ret" style="width:${(m.retrieval - 50) * 2.5}%"></div></div>
+            <strong>${m.retrieval.toFixed(2)}</strong>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function renderPickOutcome() {
+      const el = document.getElementById("pickOutcome");
+      if (pickStrategy === "total") {
+        el.innerHTML = `
+          <div class="outcome bad">
+            <div class="outcome-title">Picked NV-Embed-v2: #1 overall, last in retrieval</div>
+            Its Retrieval score is 62.65—5.06 points behind Gemini Embedding 001. The overall lead comes from classification and clustering tasks that RAG never uses.
+            <div class="outcome-rows">
+              <span>Migration</span><span>4096 dims ≠ current 1024 dims; requires rebuilding the collection and full re-ingestion</span>
+              <span>Storage</span><span>20k vectors ≈ ${mb(4096)} MB—4× the 1024-dim footprint (~${mb(1024)} MB) <span class="sim-tag">float32 raw est., excl. index</span></span>
+              <span>Corpus</span><span>English leaderboard scores; bilingual internal-doc quality is untested</span>
+            </div>
+          </div>
+          <div class="outcome">
+            <div class="outcome-title">How to fix</div>
+            Sort by the Retrieval sub-score instead—try <button class="inline-trigger" type="button" onclick="presetPick('retrieval')">Strategy B</button>.
+          </div>`;
+      } else if (pickStrategy === "retrieval") {
+        el.innerHTML = `
+          <div class="outcome meh">
+            <div class="outcome-title">Picked Gemini Embedding 001: right direction, still not final</div>
+            At 67.71 Retrieval, it is the stronger search model of the two—but that score is still measured on general English benchmarks.
+            <div class="outcome-rows">
+              <span>Migration</span><span>3072 dims ≠ current 1024 dims; still requires rebuilding the collection</span>
+              <span>Storage</span><span>~${mb(3072)} MB—3× current footprint <span class="sim-tag">float32 raw est.</span></span>
+              <span>Cost</span><span>$0.15 / 1M tokens (<a href="https://cloud.google.com/vertex-ai/generative-ai/pricing" target="_blank" rel="noopener">Vertex AI pricing</a>)</span>
+              <span>Corpus</span><span>No leaderboard can tell you whether that lead holds on internal docs</span>
+            </div>
+          </div>
+          <div class="outcome">
+            <div class="outcome-title">How to fix</div>
+            Use leaderboards only as a shortlist; make the final call on your own query set: <button class="inline-trigger" type="button" onclick="presetPick('eval')">Strategy C</button>.
+          </div>`;
+      } else if (pickStrategy === "eval") {
+        el.innerHTML = `
+          <div class="outcome good">
+            <div class="outcome-title">Ship first, eval second: zero-migration start, data-driven choice</div>
+            Finish the ingestion, retrieval, and refusal loop on <code>text-embedding-v3</code>. Put 1024-dim <code>BGE-M3</code> in the candidate pool so you can swap without rebuilding the collection.
+            <div class="eval-steps">
+              <div class="eval-step"><b>1</b>Collect 100–200 real user queries</div>
+              <div class="eval-step"><b>2</b>Label the gold chunk for each</div>
+              <div class="eval-step"><b>3</b>Embed once per candidate model</div>
+              <div class="eval-step"><b>4</b>Compare Recall@5 and MRR</div>
+            </div>
+          </div>
+          <div class="sim-zone sim-bars" data-sim-label="Illustrative · Not measured">
+            <div style="font-size:12.5px; font-weight:700; margin-bottom:8px;">What Recall@5 on a private query set can look like</div>
+            <div class="sim-row"><span>A · Top Overall</span><div class="track"><div class="fill bar-sim" style="width:58%"></div></div><span>?</span></div>
+            <div class="sim-row"><span>B · Top Retrieval</span><div class="track"><div class="fill bar-sim" style="width:66%"></div></div><span>?</span></div>
+            <div class="sim-row"><span>C · Domain-Tuned</span><div class="track"><div class="fill bar-sim" style="width:74%"></div></div><span>?</span></div>
+            <div style="font-size:11.5px; color:var(--text-muted); margin-top:6px;">You only learn the real ordering by running on your own data. Bar widths merely illustrate how rankings can reshuffle—they are not real model scores.</div>
+          </div>`;
+      }
+    }
+
+    function setPick(strategy) {
+      pickStrategy = strategy;
+      document.querySelectorAll("[data-pick]").forEach((b) => b.classList.toggle("active", b.dataset.pick === strategy));
+      renderPickBoard();
+      renderPickOutcome();
+    }
+    document.querySelectorAll("[data-pick]").forEach((btn) => {
+      btn.addEventListener("click", () => setPick(btn.dataset.pick));
+    });
+    window.presetPick = function (strategy) {
+      scrollToLab("lab-2");
+      setPick(strategy);
+    };
+    renderPickBoard();
+
+    // ================= LAB 3: Chunk Quality & Threshold Tuner =================
+    const EXP_DATA = [
+      {
+        q: "What language is Qdrant written in?",
+        largeScore: 0.54,
+        focusedScore: 0.73,
+        focusSentence: "Qdrant is a dedicated vector database written in Rust, offering high memory efficiency and fast query latency in production.",
+      },
+      {
+        q: "What is the range of cosine similarity?",
+        largeScore: 0.53,
+        focusedScore: 0.85,
+        focusSentence: "Cosine similarity measures the angle between two vectors and ranges from -1 to 1. Text semantic search typically uses cosine similarity.",
+      },
+      {
+        q: "How much RAM do 1 million vectors take?",
+        largeScore: 0.70,
+        focusedScore: 0.74,
+        focusSentence: "One million 1,536-dim float32 vectors occupy roughly 6 GB raw, and an HNSW index adds another 20%–50% memory overhead.",
+      },
+    ];
+    let activeExpIdx = 0;
+
+    function renderChunkCompare() {
+      const item = EXP_DATA[activeExpIdx];
+      document.getElementById("chunkCompareGrid").innerHTML = `
+        <div class="chunk-box">
+          <div class="chunk-box-head">
+            <span>Large Mixed Chunk (4 topics bundled)</span>
+            <span class="score-pill ${item.largeScore >= 0.70 ? "score-mid" : "score-low"}">score: ${item.largeScore.toFixed(2)}</span>
+          </div>
+          <div class="chunk-text-sample">
+            Vector databases retrieve high-dimensional vectors by similarity... <span class="chunk-highlight">${item.focusSentence}</span> ...pgvector works well under a million rows; use batch upsert endpoints to boost write throughput.
+          </div>
+        </div>
+        <div class="chunk-box">
+          <div class="chunk-box-head">
+            <span>Small Focused Chunk (single concept)</span>
+            <span class="score-pill score-high">score: ${item.focusedScore.toFixed(2)}</span>
+          </div>
+          <div class="chunk-text-sample">
+            <span class="chunk-highlight">${item.focusSentence}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    const SEARCH_SCENES = {
+      normal: [
+        { source: "vector-db.md", score: 0.85, text: "Cosine similarity measures the angle between two vectors and ranges from -1 to 1." },
+        { source: "vector-db.md", score: 0.76, text: "Qdrant is a dedicated vector database written in Rust, well suited for semantic search." },
+        { source: "rag-intro.md", score: 0.69, text: "Embedding models map text to high-dimensional coordinates retrieved via distance metrics." },
+        { source: "vector-db.md", score: 0.58, text: "Batch upsert bundles multiple texts per request, increasing ingestion throughput by orders of magnitude." },
+        { source: "deployment.md", score: 0.44, text: "After starting Docker, open the Web Dashboard on port 6333." },
+      ],
+      oos: [
+        { source: "vector-db.md", score: 0.49, text: "One million 1,536-dim float32 vectors take roughly 6 GB of raw memory." },
+        { source: "rag-intro.md", score: 0.42, text: "Generative LLMs and embedding models differ fundamentally in architecture and output." },
+        { source: "deployment.md", score: 0.36, text: "Mount a local volume with -v to persist vector collections across restarts." },
+      ],
+    };
+    let searchScene = "normal";
+    let tunerLimit = 5;
+    let tunerThresh = 0.65;
+    let tunerFilter = false;
+
+    function syncSearchCode() {
+      const codeEl = document.getElementById("codeEmbedStore");
+      if (!codeEl) return;
+      const filterArg = tunerFilter ? `"vector-db.md"` : `undefined`;
+      codeEl.textContent = codeEl.textContent.replace(
+        /async function search\(query: string, limit = \d+, scoreThreshold = [\d.]+, sourceFilter(?:\?: string| = [^)]+)\)/,
+        `async function search(query: string, limit = ${tunerLimit}, scoreThreshold = ${tunerThresh.toFixed(2)}, sourceFilter = ${filterArg})`
+      );
+      if (window.Prism && Prism.highlightElement) {
+        Prism.highlightElement(codeEl);
+      }
+    }
+
+    function renderLab3Search() {
+      let pool = [...SEARCH_SCENES[searchScene]];
+      if (tunerFilter) {
+        pool = pool.filter((r) => r.source === "vector-db.md");
+      }
+      const kept = pool.filter((r) => r.score >= tunerThresh).slice(0, tunerLimit);
+      const listEl = document.getElementById("searchResultList");
+
+      if (kept.length === 0) {
+        listEl.innerHTML = `
+          <div class="refuse-banner">
+            results.length === 0 → Safe refusal triggered: "No relevant context found to answer this question." (blocked ${pool.length} low-score noise hits)
+          </div>
+        `;
+      } else {
+        listEl.innerHTML = pool.slice(0, tunerLimit).map((r) => {
+          const pass = r.score >= tunerThresh;
+          return `
+            <div class="search-result-card ${pass ? "" : "is-dropped"}">
+              <div>
+                <div style="font-size:12px; color:var(--text-muted); margin-bottom:2px;">source: <code>${r.source}</code></div>
+                <div>${r.text}</div>
+              </div>
+              <span class="score-pill ${pass ? "score-high" : "score-low"}">
+                ${r.score.toFixed(2)} ${pass ? "✓ Kept" : "✕ Dropped"}
+              </span>
+            </div>
+          `;
+        }).join("");
+      }
+      syncSearchCode();
+    }
+
+    document.querySelectorAll("[data-exp-q]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("[data-exp-q]").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        activeExpIdx = Number(btn.dataset.expQ);
+        renderChunkCompare();
+      });
+    });
+
+    document.querySelectorAll("[data-q-scene]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("[data-q-scene]").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        searchScene = btn.dataset.qScene;
+        renderLab3Search();
+      });
+    });
+
+    document.getElementById("limitSlider").addEventListener("input", (e) => {
+      tunerLimit = Number(e.target.value);
+      document.getElementById("limitVal").textContent = String(tunerLimit);
+      renderLab3Search();
+    });
+
+    document.getElementById("threshSlider").addEventListener("input", (e) => {
+      tunerThresh = Number(e.target.value);
+      document.getElementById("threshVal").textContent = tunerThresh.toFixed(2);
+      renderLab3Search();
+    });
+
+    document.getElementById("filterToggle").addEventListener("change", (e) => {
+      tunerFilter = e.target.checked;
+      renderLab3Search();
+    });
+
+    window.presetLab3 = function (scene) {
+      scrollToLab("lab-3");
+      searchScene = scene;
+      document.querySelectorAll("[data-q-scene]").forEach((b) => {
+        b.classList.toggle("active", b.dataset.qScene === scene);
+      });
+      renderLab3Search();
+    };
+    window.presetExpQ = function (idx) {
+      scrollToLab("lab-3");
+      activeExpIdx = idx;
+      document.querySelectorAll("[data-exp-q]").forEach((b) => {
+        b.classList.toggle("active", Number(b.dataset.expQ) === idx);
+      });
+      renderChunkCompare();
+    };
+
+    renderChunkCompare();
+    renderLab3Search();
+
+  </script>
+  <script src="../shared/site.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-typescript.min.js"></script>
+</body>
+</html>

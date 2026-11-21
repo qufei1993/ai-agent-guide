@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Agent Guide · Interactive Engineering Guide</title>
+  <!-- SEO:START (auto-synced by scripts/generate-seo.mjs) -->
+  <meta name="description" content="An interactive engineering guide to LLMs, Agents, and RAG" />
+  <link rel="canonical" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/index.html" />
+  <link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/index.html" />
+  <link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/index.html" />
+  <link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/index.html" />
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:locale:alternate" content="zh_CN" />
+  <meta property="og:title" content="AI Agent Guide" />
+  <meta property="og:description" content="An interactive engineering guide to LLMs, Agents, and RAG" />
+  <meta property="og:url" content="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/index.html" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "AI Agent Guide",
+    "description": "An interactive engineering guide to LLMs, Agents, and RAG",
+    "inLanguage": "en",
+    "url": "https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/index.html"
+  }
+  </script>
+  <!-- SEO:END -->
+  <link rel="stylesheet" href="../shared/tokens.css" />
+  <style>
+    .container {
+      max-width: var(--page-width);
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .home-hero {
+      padding: 52px 0 36px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .hero-kicker {
+      display: inline-block;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--teal);
+      background: var(--teal-soft);
+      padding: 3px 11px;
+      border-radius: 999px;
+      margin-bottom: 14px;
+      letter-spacing: 0.02em;
+    }
+
+    .home-hero h1 {
+      font-size: clamp(30px, 4.5vw, 44px);
+      line-height: 1.18;
+      margin: 0 0 14px;
+      letter-spacing: -0.02em;
+    }
+
+    .hero-desc {
+      font-size: 17.5px;
+      color: var(--text-secondary);
+      max-width: 700px;
+      margin: 0 0 24px;
+      line-height: 1.65;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 28px;
+    }
+
+    .btn-primary-cta {
+      background: var(--teal);
+      color: #fff;
+      text-decoration: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 650;
+      font-size: 14.5px;
+      transition: transform 0.15s, opacity 0.15s;
+    }
+
+    .btn-primary-cta:hover {
+      transform: translateY(-1px);
+      opacity: 0.94;
+    }
+
+    .btn-secondary-link {
+      border: 1px solid var(--border-strong);
+      background: var(--bg-elevated);
+      color: var(--text);
+      text-decoration: none;
+      padding: 9px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+
+    .btn-secondary-link:hover {
+      border-color: var(--teal);
+      transform: translateY(-1px);
+    }
+
+    .feature-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .feature-item {
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+    }
+
+    .feature-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 2px;
+    }
+
+    .feature-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    .part-section { margin: 42px 0; }
+
+    .part-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .part-head-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .part-num {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--teal);
+      background: var(--teal-soft);
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+
+    .part-title {
+      font-size: 19px;
+      font-weight: 700;
+      margin: 0;
+      padding: 0;
+      border: none;
+    }
+
+    .part-count {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      white-space: nowrap;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+    }
+
+    .ch-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      text-decoration: none;
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: var(--shadow-sm);
+      transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+    }
+
+    a.ch-card {
+      border-left: 3px solid var(--teal);
+    }
+
+    a.ch-card:hover {
+      border-color: var(--teal);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .ch-card.is-planned {
+      background: color-mix(in srgb, var(--bg-elevated) 65%, var(--bg-muted));
+      cursor: default;
+    }
+
+    .ch-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .ch-num {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    a.ch-card .ch-num {
+      color: var(--teal);
+    }
+
+    .ch-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 9px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .badge-ready { background: var(--teal-soft); color: var(--teal); }
+    .badge-plan { background: var(--bg-muted); color: var(--text-muted); }
+
+    .ch-title { font-size: 16.5px; font-weight: 700; line-height: 1.38; margin-top: 8px; }
+    .ch-card.is-planned .ch-title { color: var(--text-secondary); }
+    .ch-desc { font-size: 13.5px; color: var(--text-secondary); margin: 6px 0 0; line-height: 1.55; }
+    .ch-card.is-planned .ch-desc { color: var(--text-muted); }
+    .ch-cta { font-size: 13px; font-weight: 650; color: var(--teal); }
+
+    @media (max-width: 820px) {
+      .feature-strip { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 680px) {
+      .cards-grid,
+      .feature-strip { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./index.html">
+        <span>AI Agent Guide</span>
+        <span class="brand-badge">Interactive</span>
+      </a>
+      <button class="theme-btn" id="themeToggle" type="button">
+        <span id="themeIcon">☀</span>
+        <span id="themeText">Light</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="home-hero">
+      <span class="hero-kicker">LLM · Agent Loop · RAG · Interactive Labs</span>
+      <h1>AI Agent Guide</h1>
+      <p class="hero-desc">
+        An open-source interactive engineering guide to LLMs, Agents, and RAG. Every chapter pairs clear mental models with browser labs where you can inspect live payloads, tune parameters, and test failure boundaries.
+      </p>
+      <div class="hero-actions">
+        <a class="btn-primary-cta" href="./context-engineering.html">Start Reading: Context Engineering →</a>
+        <a class="btn-secondary-link" href="https://github.com/qufei1993/ai-agent-fullstack-roadmap" target="_blank" rel="noopener">GitHub Repo ↗</a>
+      </div>
+      <div class="feature-strip">
+        <div class="feature-item">
+          <div class="feature-title">Zero-Build Labs</div>
+          <div class="feature-sub">Tweak parameters directly in the browser</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-title">Payload X-Ray</div>
+          <div class="feature-sub">Inspect real API requests &amp; attention decay</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-title">Runnable Reference Code</div>
+          <div class="feature-sub">Every core mechanism maps to runnable examples</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-title">Bilingual Edition</div>
+          <div class="feature-sub">Symmetric English &amp; Chinese interactive docs</div>
+        </div>
+      </div>
+    </section>
+
+    <div id="catalogRoot"></div>
+  </main>
+
+  <footer>
+    AI Agent Guide · Open-Source Interactive Engineering Guide
+  </footer>
+
+  <script>
+    const saved = localStorage.getItem("book-theme");
+    let isDark = saved === "dark";
+    const applyTheme = () => {
+      document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
+      document.getElementById("themeIcon").textContent = isDark ? "☾" : "☀";
+      document.getElementById("themeText").textContent = isDark ? "Dark" : "Light";
+      localStorage.setItem("book-theme", isDark ? "dark" : "light");
+    };
+    applyTheme();
+    document.getElementById("themeToggle").addEventListener("click", () => {
+      isDark = !isDark;
+      applyTheme();
+    });
+
+    function renderCatalog(data) {
+      const root = document.getElementById("catalogRoot");
+      let globalIdx = 0;
+      root.innerHTML = data.parts
+        .map((part, pIdx) => {
+          const partNum = String(pIdx + 1).padStart(2, "0");
+          const rawName = part.nameEn || part.name;
+          const cleanName = rawName.replace(/^Part\s*\d+\s*·\s*/i, "");
+          return `
+            <section class="part-section">
+              <div class="part-head">
+                <div class="part-head-left">
+                  <span class="part-num">PART ${partNum}</span>
+                  <h2 class="part-title">${cleanName}</h2>
+                </div>
+                <span class="part-count">${part.chapters.length} Chapters</span>
+              </div>
+              <div class="cards-grid">
+                ${part.chapters
+                  .map((c) => {
+                    globalIdx += 1;
+                    const chNum = String(globalIdx).padStart(2, "0");
+                    const ready = c.status === "ready" && Array.isArray(c.langs) && c.langs.includes("en");
+                    const title = c.titleEn || c.title;
+                    const summary = c.summaryEn || c.summary;
+                    if (ready) {
+                      return `
+                        <a class="ch-card" href="./${c.slug}.html">
+                          <div>
+                            <div class="ch-top">
+                              <span class="ch-num">CH ${chNum}</span>
+                              <span class="ch-badge badge-ready">Interactive</span>
+                            </div>
+                            <div class="ch-title">${title}</div>
+                            <p class="ch-desc">${summary}</p>
+                          </div>
+                          <div class="ch-cta">Read Chapter →</div>
+                        </a>`;
+                    }
+                    const badgeText = c.status === "ready" ? "ZH Ready · EN Soon" : "Upcoming";
+                    return `
+                      <div class="ch-card is-planned">
+                        <div>
+                          <div class="ch-top">
+                            <span class="ch-num">CH ${chNum}</span>
+                            <span class="ch-badge badge-plan">${badgeText}</span>
+                          </div>
+                          <div class="ch-title">${title}</div>
+                          <p class="ch-desc">${summary}</p>
+                        </div>
+                      </div>`;
+                  })
+                  .join("")}
+              </div>
+            </section>`;
+        })
+        .join("");
+    }
+
+    fetch("../chapters.json", { cache: "no-cache" })
+      .then((r) => r.json())
+      .then(renderCatalog);
+  </script>
+  <script src="../shared/site.js"></script>
+</body>
+</html>

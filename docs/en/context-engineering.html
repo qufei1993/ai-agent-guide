@@ -1,0 +1,1458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Context Engineering: Why More Context Hurts · AI Agent Guide</title>
+  <!-- SEO:START (auto-synced by scripts/generate-seo.mjs) -->
+  <meta name="description" content="Context sources, information placement, token budgets, and Just-In-Time loading" />
+  <link rel="canonical" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/context-engineering.html" />
+  <link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/context-engineering.html" />
+  <link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/context-engineering.html" />
+  <link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/context-engineering.html" />
+  <meta property="og:type" content="article" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:locale:alternate" content="zh_CN" />
+  <meta property="og:title" content="Context Engineering: Why More Context Hurts" />
+  <meta property="og:description" content="Context sources, information placement, token budgets, and Just-In-Time loading" />
+  <meta property="og:url" content="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/context-engineering.html" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "Context Engineering: Why More Context Hurts",
+    "description": "Context sources, information placement, token budgets, and Just-In-Time loading",
+    "inLanguage": "en",
+    "url": "https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/context-engineering.html",
+    "isPartOf": {
+      "@type": "Book",
+      "name": "AI Agent Guide"
+    }
+  }
+  </script>
+  <!-- SEO:END -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css" />
+  <link rel="stylesheet" href="../shared/tokens.css" />
+  <style>
+    /* Chapter-specific components */
+    .quote-card {
+      margin: 26px 0;
+      padding: 20px 24px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--accent);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+    }
+    .quote-text { font-size: 16.5px; font-style: italic; margin: 0 0 8px; }
+    .quote-meta { font-size: 13px; color: var(--text-muted); }
+
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin: 22px 0 30px;
+    }
+    .compare-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      box-shadow: var(--shadow-sm);
+    }
+    .compare-card.is-focus {
+      border-color: color-mix(in srgb, var(--teal) 45%, var(--border));
+      background: linear-gradient(180deg, var(--teal-soft) 0%, var(--bg-elevated) 55%);
+    }
+    .compare-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .compare-card.is-focus .compare-label { color: var(--teal); }
+    .compare-title { font-size: 16.5px; font-weight: 700; margin-bottom: 6px; }
+    .compare-desc { font-size: 14px; color: var(--text-secondary); margin: 0; }
+
+    /* 4-Layer Explorer */
+    .layer-explorer {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 16px;
+      margin: 22px 0 30px;
+      align-items: start;
+    }
+    .layer-list { display: flex; flex-direction: column; gap: 8px; }
+    .layer-tab {
+      text-align: left;
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      transition: all 0.15s;
+    }
+    .layer-tab:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+    .layer-tab.active {
+      border-color: var(--text);
+      box-shadow: var(--shadow-sm);
+      background: var(--bg-muted);
+    }
+    .layer-tab-left { display: flex; align-items: center; gap: 10px; }
+    .layer-swatch { width: 10px; height: 28px; border-radius: 4px; flex-shrink: 0; }
+    .layer-tab-name { font-size: 14.5px; font-weight: 650; display: block; }
+    .layer-tab-sub { font-size: 12px; color: var(--text-muted); display: block; }
+    .layer-pill {
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: var(--bg-muted);
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+    .layer-detail {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 22px;
+      box-shadow: var(--shadow-sm);
+    }
+    .layer-detail-title { font-size: 18px; font-weight: 700; margin: 0 0 10px; }
+    .layer-meta-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+    .meta-tag {
+      font-size: 12px;
+      padding: 3px 9px;
+      border-radius: 6px;
+      background: var(--bg-muted);
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    .layer-snippet {
+      margin-top: 12px;
+      background: var(--bg-code);
+      color: #e5e7eb;
+      padding: 14px 16px;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+
+    /* Stat strip */
+    .stat-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin: 22px 0;
+    }
+    .stat-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+    }
+    .stat-card.dip { border-color: color-mix(in srgb, var(--rose) 40%, var(--border)); background: var(--rose-soft); }
+    .stat-pos { font-size: 12.5px; color: var(--text-muted); margin-bottom: 4px; font-weight: 600; }
+    .stat-num { font-size: 28px; font-weight: 800; line-height: 1.2; }
+    .stat-note { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+
+    /* Lab 1 */
+    .token-meter-wrap { margin-bottom: 18px; }
+    .token-meter-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+    .token-bar {
+      height: 14px;
+      border-radius: 999px;
+      background: var(--bg-muted);
+      overflow: hidden;
+      display: flex;
+      border: 1px solid var(--border);
+    }
+    .token-bar > div { transition: width 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
+    .seg-system { background: var(--purple); }
+    .seg-history { background: var(--blue); }
+    .seg-rag { background: var(--teal); }
+    .seg-noise { background: #9ca3af; }
+    .seg-task { background: var(--accent); }
+
+    .legend-row {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 8px;
+    }
+    .legend-item { display: inline-flex; align-items: center; gap: 5px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+    .lab1-grid {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 20px;
+      align-items: start;
+    }
+    .control-panel { display: flex; flex-direction: column; gap: 16px; }
+    .control-group {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+    }
+    .control-label {
+      font-size: 13px;
+      font-weight: 650;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .toggle-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    input[type="range"] { width: 100%; accent-color: var(--teal); cursor: pointer; }
+    .doc-slots {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 5px;
+      margin-top: 8px;
+    }
+    .doc-slot {
+      height: 28px;
+      border-radius: 5px;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-elevated);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.12s;
+    }
+    .doc-slot:hover { border-color: var(--teal); color: var(--text); }
+    .doc-slot.is-answer {
+      background: var(--teal);
+      border-color: var(--teal);
+      color: #fff;
+      font-weight: 700;
+      box-shadow: 0 2px 6px rgba(13, 148, 136, 0.35);
+    }
+    .viz-panel { display: flex; flex-direction: column; gap: 14px; }
+    .metrics-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .metric-box {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      background: var(--bg);
+    }
+    .metric-name { font-size: 12px; color: var(--text-muted); }
+    .metric-val { font-size: 24px; font-weight: 800; line-height: 1.25; margin-top: 2px; }
+    .metric-sub { font-size: 11.5px; color: var(--text-secondary); }
+    .chart-box {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      background: var(--bg);
+    }
+    .u-curve-svg { width: 100%; height: 150px; display: block; }
+    .diagnosis-box {
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      font-size: 13.5px;
+      line-height: 1.55;
+      border: 1px solid var(--border);
+      background: var(--bg-muted);
+    }
+    .diagnosis-box.warn { background: var(--rose-soft); border-color: color-mix(in srgb, var(--rose) 35%, var(--border)); }
+    .diagnosis-box.good { background: var(--green-soft); border-color: color-mix(in srgb, var(--green) 35%, var(--border)); }
+
+    /* X-ray drawer */
+    .xray-wrap {
+      margin-top: 20px;
+      border-top: 1px solid var(--border);
+      padding-top: 18px;
+    }
+    .xray-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .xray-tabs { display: flex; gap: 8px; }
+    .heatmap-stream {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 250px;
+      overflow-y: auto;
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .hm-block {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 12.5px;
+      font-family: var(--font-mono);
+      border: 1px solid var(--border);
+    }
+    .hm-block.is-answer { border: 1.5px solid var(--teal); font-weight: 700; }
+    .hm-badge { font-size: 11px; padding: 1px 6px; border-radius: 4px; background: rgba(0, 0, 0, 0.08); white-space: nowrap; }
+    [data-theme="dark"] .hm-badge { background: rgba(255, 255, 255, 0.1); }
+    .payload-pre {
+      margin: 0;
+      padding: 14px 16px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-code);
+      color: #e5e7eb;
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      line-height: 1.55;
+      max-height: 260px;
+      overflow: auto;
+    }
+
+    /* Assembly code highlight */
+    .code-line { display: block; padding: 1px 8px; border-radius: 4px; transition: background 0.15s, opacity 0.15s; }
+    .code-line.is-highlighted { background: rgba(45, 212, 191, 0.18); box-shadow: inset 3px 0 0 var(--teal); }
+    .code-line.is-dimmed { opacity: 0.42; }
+
+    /* Lab 2 */
+    .lab2-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .lab2-sandbox-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      margin-bottom: 16px;
+      font-size: 13px;
+    }
+    .btn-group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .turn-indicator { font-size: 13.5px; font-weight: 700; padding: 4px 12px; border-radius: 999px; background: var(--bg-muted); border: 1px solid var(--border); }
+    .lab2-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .strategy-panel { border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); display: flex; flex-direction: column; overflow: hidden; }
+    .strategy-head { padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--bg-muted); display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 700; gap: 8px; }
+    .strategy-badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 600; white-space: nowrap; }
+    .badge-warn { background: var(--rose-soft); color: var(--rose); }
+    .badge-ok { background: var(--green-soft); color: var(--green); }
+    .strategy-body { padding: 14px 16px; flex: 1; display: flex; flex-direction: column; gap: 10px; }
+    .msg-bubble { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 9px 12px; font-size: 13px; line-height: 1.5; background: var(--bg-elevated); }
+    .msg-bubble.is-dropped { opacity: 0.45; border-style: dashed; text-decoration: line-through; background: var(--rose-soft); }
+    .msg-bubble.is-spike { border-color: var(--rose); background: var(--rose-soft); }
+    .msg-role { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 2px; display: flex; justify-content: space-between; }
+    .summary-pin { border: 1px solid color-mix(in srgb, var(--teal) 45%, var(--border)); background: var(--teal-soft); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 13px; line-height: 1.5; }
+    .summary-pin-title { font-size: 11.5px; font-weight: 700; color: var(--teal); margin-bottom: 4px; }
+    .strategy-foot { padding: 10px 16px; border-top: 1px solid var(--border); font-size: 12.5px; color: var(--text-secondary); display: flex; justify-content: space-between; background: var(--bg-muted); }
+
+    /* Lab 3 */
+    .lab3-modes { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; align-items: center; }
+    .jit-layout { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 18px; align-items: start; }
+    .file-pool { border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; background: var(--bg); }
+    .file-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+    .file-chip { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 9px 11px; font-size: 12.5px; background: var(--bg-elevated); display: flex; justify-content: space-between; align-items: center; gap: 6px; transition: all 0.2s; }
+    .file-chip.in-context-useful { border-color: var(--teal); background: var(--teal-soft); font-weight: 600; }
+    .file-chip.in-context-noise { border-color: var(--rose); background: var(--rose-soft); opacity: 0.85; }
+    .file-chip.cleared { opacity: 0.45; border-style: dashed; }
+    .file-tok { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+    .jit-timeline { border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; background: var(--bg); display: flex; flex-direction: column; gap: 12px; }
+    .context-blocks-stack { display: flex; flex-direction: column; gap: 7px; min-height: 150px; }
+    .context-block { padding: 8px 12px; border-radius: 6px; font-size: 12.5px; font-family: var(--font-mono); border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; animation: blockIn 0.2s ease-out; }
+    @keyframes blockIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    .jit-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding-top: 10px; border-top: 1px solid var(--border); text-align: center; }
+    .jit-stat-val { font-size: 18px; font-weight: 800; }
+    .jit-stat-lbl { font-size: 11.5px; color: var(--text-muted); }
+
+    /* Decision matrix */
+    .filter-pills { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0 20px; }
+    .decision-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 16px 0 32px; }
+    .decision-card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; display: flex; flex-direction: column; gap: 8px; box-shadow: var(--shadow-sm); transition: opacity 0.2s, border-color 0.2s, transform 0.2s; }
+    .decision-card.is-match { border-color: var(--teal); box-shadow: 0 0 0 2px color-mix(in srgb, var(--teal) 20%, transparent), var(--shadow-sm); transform: translateY(-2px); }
+    .decision-card.is-dim { opacity: 0.35; }
+    .decision-card.is-summary { background: linear-gradient(180deg, var(--accent-soft) 0%, var(--bg-elevated) 70%); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+    .dc-tag { font-size: 11.5px; font-weight: 700; color: var(--teal); }
+    .decision-card.is-summary .dc-tag { color: var(--accent); }
+    .dc-title { font-size: 15.5px; font-weight: 700; line-height: 1.35; }
+    .dc-desc { font-size: 13.5px; color: var(--text-secondary); line-height: 1.6; margin: 0; }
+
+    @media (max-width: 860px) {
+      .compare-grid, .layer-explorer, .stat-strip, .lab1-grid, .lab2-columns, .jit-layout, .decision-grid { grid-template-columns: 1fr; }
+      .doc-slots { grid-template-columns: repeat(5, 1fr); }
+      .file-grid { grid-template-columns: 1fr; }
+      .topbar-nav { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./index.html">
+        <span>AI Agent Guide</span>
+        <span class="brand-badge">Interactive</span>
+      </a>
+      <nav class="topbar-nav">
+        <a href="#sources">4 Context Layers</a>
+        <a href="#lab-1">Position &amp; Heatmap</a>
+        <a href="#lab-2">Window Sandbox</a>
+        <a href="#lab-3">JIT Loading</a>
+        <a href="#decision">Decision Matrix</a>
+      </nav>
+      <button class="theme-btn" id="themeToggle" type="button" aria-label="Toggle theme">
+        <span id="themeIcon">☀</span>
+        <span id="themeText">Light</span>
+      </button>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-meta">
+      <span class="hero-pill">Part 1 · LLM Engineering Foundations</span>
+      <span>5 interactive labs · Live Payload &amp; Boundary Inspection</span>
+    </div>
+    <h1>Context Engineering: Why More Context Hurts</h1>
+    <p class="hero-lead">
+      Stuffing everything into the prompt dilutes model attention. Just like visiting a doctor: you do not dump every medical record since birth onto the desk — you hand over only the relevant lab reports for this visit.
+    </p>
+
+    <div class="quote-card">
+      <p class="quote-text">
+        “Context engineering is the delicate art and science of filling the context window with just the right information for the next step.”
+      </p>
+      <div class="quote-meta">
+        Source: <a href="https://x.com/karpathy/status/1937902205765607626" target="_blank" rel="noopener">@karpathy, June 25, 2025</a>
+      </div>
+    </div>
+
+    <div class="compare-grid">
+      <div class="compare-card">
+        <div class="compare-label">Prompt Engineering</div>
+        <div class="compare-title">Focuses on “How to phrase instructions”</div>
+        <p class="compare-desc">Designing system roles, tone constraints, few-shot examples, and output schemas to shape how the model reasons and responds.</p>
+      </div>
+      <div class="compare-card is-focus">
+        <div class="compare-label">Context Engineering</div>
+        <div class="compare-title">Focuses on “What information goes where”</div>
+        <p class="compare-desc">Dynamically selecting useful chunks at every step, budgeting tokens, and ordering pieces so noise never dilutes attention.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="tldr">
+    <div class="tldr-card">
+      <div class="tldr-head">
+        <span class="tldr-kicker">30-Second TL;DR · 3 Core Context Rules</span>
+      </div>
+      <ol class="tldr-list">
+        <li class="tldr-item">
+          <span class="tldr-num">01</span>
+          <span class="tldr-claim">More context hurts accuracy: burying evidence in the middle of 20 docs drops accuracy below closed-book baselines.</span>
+          <button class="tldr-go" type="button" onclick="window.bookJumpToLab('lab-1')">Test Lost in the Middle ↓</button>
+        </li>
+        <li class="tldr-item">
+          <span class="tldr-num">02</span>
+          <span class="tldr-claim">Fixed turn-count windows break under log spikes; combine a rolling summary with recent turns to lock Turn 1 constraints.</span>
+          <button class="tldr-go" type="button" onclick="window.bookJumpToLab('lab-2')">Inject a 3,000t log in Lab 02 ↓</button>
+        </li>
+        <li class="tldr-item">
+          <span class="tldr-num">03</span>
+          <span class="tldr-claim">Prefer Just-In-Time loading over Context Stuffing so agents keep high signal density and clear stale tool outputs.</span>
+          <button class="tldr-go" type="button" onclick="window.bookJumpToLab('lab-3')">Compare JIT vs. Stuffing ↓</button>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2 id="sources">The Four Sources of Context</h2>
+    <p class="key">
+      Instead of throwing all text into one flat string, split context into four layers by lifecycle. Click any layer on the left to inspect its retention strategy and a realistic snippet (colors match the interactive labs below):
+    </p>
+
+    <div class="layer-explorer">
+      <div class="layer-list" role="tablist">
+        <button class="layer-tab active" data-layer-tab="system" type="button">
+          <div class="layer-tab-left">
+            <span class="layer-swatch" style="background: var(--purple);"></span>
+            <div>
+              <span class="layer-tab-name">System Prompt · Rules</span>
+              <span class="layer-tab-sub">Role &amp; global guardrails</span>
+            </div>
+          </div>
+          <span class="layer-pill">Static</span>
+        </button>
+
+        <button class="layer-tab" data-layer-tab="memory" type="button">
+          <div class="layer-tab-left">
+            <span class="layer-swatch" style="background: var(--blue);"></span>
+            <div>
+              <span class="layer-tab-name">History &amp; Memory · State</span>
+              <span class="layer-tab-sub">Multi-turn chat &amp; summaries</span>
+            </div>
+          </div>
+          <span class="layer-pill">Grows</span>
+        </button>
+
+        <button class="layer-tab" data-layer-tab="knowledge" type="button">
+          <div class="layer-tab-left">
+            <span class="layer-swatch" style="background: var(--teal);"></span>
+            <div>
+              <span class="layer-tab-name">RAG &amp; Tools · Knowledge</span>
+              <span class="layer-tab-sub">Retrieved chunks &amp; tool outputs</span>
+            </div>
+          </div>
+          <span class="layer-pill">Dynamic</span>
+        </button>
+
+        <button class="layer-tab" data-layer-tab="task" type="button">
+          <div class="layer-tab-left">
+            <span class="layer-swatch" style="background: var(--accent);"></span>
+            <div>
+              <span class="layer-tab-name">User Input · Current Task</span>
+              <span class="layer-tab-sub">The immediate instruction</span>
+            </div>
+          </div>
+          <span class="layer-pill">Per-Turn</span>
+        </button>
+      </div>
+
+      <div class="layer-detail" id="layerDetailPanel"></div>
+    </div>
+
+    <h2>Why More Context Degrades Accuracy</h2>
+    <p class="key">
+      Liu et al. (2023, TACL 2024) <a class="src-tag" href="https://arxiv.org/abs/2307.03172" target="_blank" rel="noopener">Source: arXiv:2307.03172 ↗</a> gave GPT-3.5-Turbo 20 documents with the answer hidden in only one of them, then measured accuracy by position:
+    </p>
+
+    <div class="stat-strip">
+      <div class="stat-card">
+        <div class="stat-pos">Position 1 (Start)</div>
+        <div class="stat-num" style="color: var(--teal);">75%</div>
+        <div class="stat-note">Strong primacy attention</div>
+      </div>
+      <div class="stat-card dip">
+        <div class="stat-pos">Position 10 (Middle)</div>
+        <div class="stat-num" style="color: var(--rose);">55%</div>
+        <div class="stat-note">Worse than 56.1% closed-book</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-pos">Position 20 (End)</div>
+        <div class="stat-num" style="color: var(--teal);">72%</div>
+        <div class="stat-note">Recency recovery</div>
+      </div>
+    </div>
+
+    <p>
+      Chroma’s 2025 benchmark across 18 frontier models confirmed similar “Context Rot” (<a href="https://www.trychroma.com/research/context-rot" target="_blank" rel="noopener">Chroma Research</a>), and recent studies show that advertised “maximum context windows” far exceed “maximum effective context windows” (<a href="https://arxiv.org/abs/2509.21361" target="_blank" rel="noopener">arXiv:2509.21361</a>). Move the evidence slot below to inspect both attention decay and the live API payload:
+      <button class="inline-trigger" id="presetMiddleBtn" type="button">▶ Reproduce: Bury the evidence in the middle of 20 docs</button>
+    </p>
+  </main>
+
+  <!-- INTERACTIVE LAB 1 -->
+  <section class="lab-wrap" id="lab-1">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <span class="lab-eyebrow">Interactive Lab 01 · Lost in the Middle &amp; Payload X-Ray</span>
+          <h3 class="lab-title">Context Assembly, Attention Heatmap &amp; Request Preview</h3>
+          <p class="lab-desc">Toggle context layers, adjust noise document count, and move the key evidence slot to see attention decay and the real API payload update in real time.</p>
+        </div>
+        <button class="btn" id="lab1ResetBtn" type="button">Reset</button>
+      </div>
+      <div class="lab-body">
+        <div class="predict-hook" id="predictHook1">
+          <div class="predict-q">
+            <span class="predict-badge">Predict First</span>
+            <span>With 20 documents and the answer placed at position 10 (dead center), is accuracy higher or lower than giving NO documents at all?</span>
+          </div>
+          <div class="predict-opts">
+            <button class="predict-opt" data-predict="high" type="button">A. Higher — it still has the answer</button>
+            <button class="predict-opt" data-predict="low" type="button">B. Lower — worse than closed-book</button>
+            <button class="predict-opt" data-predict="same" type="button">C. About the same</button>
+          </div>
+          <div class="predict-feedback" id="predictFeedback1"></div>
+        </div>
+
+        <div class="token-meter-wrap">
+          <div class="token-meter-head">
+            <span><strong>Live Context Window Usage</strong> (Simulated 16,000-token effective budget)</span>
+            <span id="lab1TokenSummary" style="font-family: var(--font-mono); font-weight: 700;"></span>
+          </div>
+          <div class="token-bar">
+            <div class="seg-system" id="segSystem"></div>
+            <div class="seg-history" id="segHistory"></div>
+            <div class="seg-rag" id="segRag"></div>
+            <div class="seg-noise" id="segNoise"></div>
+            <div class="seg-task" id="segTask"></div>
+          </div>
+          <div class="legend-row">
+            <span class="legend-item"><span class="dot" style="background: var(--purple)"></span>System Rules</span>
+            <span class="legend-item"><span class="dot" style="background: var(--blue)"></span>Memory History</span>
+            <span class="legend-item"><span class="dot" style="background: var(--teal)"></span>Key Evidence</span>
+            <span class="legend-item"><span class="dot" style="background: #9ca3af"></span>Noise Chunks</span>
+            <span class="legend-item"><span class="dot" style="background: var(--accent)"></span>Current Task</span>
+          </div>
+        </div>
+
+        <div class="lab1-grid">
+          <div class="control-panel">
+            <div class="control-group">
+              <div class="control-label"><span>1. Active Context Layers</span></div>
+              <div class="toggle-row">
+                <button class="chip-btn active" data-layer="system" type="button">System Prompt (600t)</button>
+                <button class="chip-btn active" data-layer="history" type="button">Recent History (1,800t)</button>
+                <button class="chip-btn active" data-layer="task" type="button">User Input (200t)</button>
+              </div>
+            </div>
+
+            <div class="control-group">
+              <div class="control-label">
+                <span>2. Retrieved Documents (1 Key + Noise)</span>
+                <span id="docCountLabel" style="font-family: var(--font-mono); color: var(--teal);">20 docs</span>
+              </div>
+              <input id="docCountSlider" type="range" min="3" max="20" value="20" />
+            </div>
+
+            <div class="control-group">
+              <div class="control-label">
+                <span>3. Click a Slot to Move Key Evidence</span>
+                <span id="answerPosLabel" style="font-family: var(--font-mono); color: var(--teal);">Pos 10 (Middle)</span>
+              </div>
+              <div class="doc-slots" id="docSlots"></div>
+            </div>
+          </div>
+
+          <div class="viz-panel">
+            <div class="metrics-row">
+              <div class="metric-box">
+                <div class="metric-name">Estimated Accuracy (U-Curve)</div>
+                <div class="metric-val" id="accVal" style="color: var(--rose);">55%</div>
+                <div class="metric-sub">Closed-book baseline: 56.1%</div>
+              </div>
+              <div class="metric-box">
+                <div class="metric-name">TTFT Latency &amp; Cost</div>
+                <div class="metric-val" id="latencyVal">High</div>
+                <div class="metric-sub">14x token waste from noise</div>
+              </div>
+            </div>
+
+            <div class="chart-box">
+              <svg class="u-curve-svg" viewBox="0 0 360 135" aria-label="Lost in the Middle U-curve">
+                <line x1="28" y1="20" x2="28" y2="112" stroke="var(--border-strong)" stroke-width="1" />
+                <line x1="28" y1="112" x2="344" y2="112" stroke="var(--border-strong)" stroke-width="1" />
+                <line x1="28" y1="90" x2="344" y2="90" stroke="var(--rose)" stroke-width="1" stroke-dasharray="4 3" opacity="0.65" />
+                <text x="235" y="103" font-size="9.5" fill="var(--rose)">Closed-book 56.1%</text>
+                <path id="uCurvePath" fill="none" stroke="var(--teal)" stroke-width="2.5" stroke-linecap="round" />
+                <circle id="uCurveDot" cx="188" cy="90" r="6" fill="var(--accent)" stroke="var(--bg-elevated)" stroke-width="2" />
+                <text x="28" y="127" font-size="10" fill="var(--text-muted)">Pos 1 (Start)</text>
+                <text x="166" y="127" font-size="10" fill="var(--text-muted)">Middle</text>
+                <text x="305" y="127" font-size="10" fill="var(--text-muted)">End</text>
+              </svg>
+            </div>
+
+            <div class="diagnosis-box warn" id="lab1Diagnosis"></div>
+          </div>
+        </div>
+
+        <div class="xray-wrap">
+          <div class="xray-head">
+            <strong style="font-size: 14px;">Context X-Ray: What the Model Actually Sees</strong>
+            <div class="xray-tabs">
+              <button class="chip-btn active" data-xray="heatmap" type="button">Attention Heatmap</button>
+              <button class="chip-btn" data-xray="payload" type="button">API Request Payload (JSON)</button>
+            </div>
+          </div>
+          <div id="xrayContent"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2>Three Ordering Principles for Context Assembly</h2>
+    <p class="key">
+      Putting theory into production comes down to three ordering rules: <strong>keep stable System Rules at the very top</strong> (so prompt caching hits cleanly), <strong>place the highest-relevance evidence at the edges</strong> instead of burying it in noise, and <strong>pin the current task at the end</strong>. Hover any block in the code below to highlight which layer it maps to:
+    </p>
+
+    <div class="code-card">
+      <div class="code-header">
+        <span>context-assembly.ts — Production 4-layer ordering</span>
+        <button class="copy-btn" type="button">Copy</button>
+      </div>
+      <pre><code id="assemblyCode"><span class="code-line">const response = await client.messages.create({</span><span class="code-line">  model: process.env.MODEL!,</span><span class="code-line">  max_tokens: 1024,</span><span class="code-line" data-layer-line="system">  // Rules + rolling summary stay anchored in system</span><span class="code-line" data-layer-line="system">  system: `${systemRules}${summarizedHistory ? `\n\n[Earlier Summary]\n${summarizedHistory}` : ""}`,</span><span class="code-line">  messages: [</span><span class="code-line" data-layer-line="knowledge">    // Knowledge: top-ranked RAG chunks first</span><span class="code-line" data-layer-line="knowledge">    ...(ragResults.length > 0 ? [</span><span class="code-line" data-layer-line="knowledge">      { role: "user" as const, content: `References:\n${ragResults.map((r, i) => `[${i + 1}] ${r.content}`).join("\n\n")}` },</span><span class="code-line" data-layer-line="knowledge">      { role: "assistant" as const, content: "Understood, I have reviewed the references." },</span><span class="code-line" data-layer-line="knowledge">    ] : []),</span><span class="code-line" data-layer-line="memory">    // Memory: recent turns verbatim</span><span class="code-line" data-layer-line="memory">    ...recentMessages,</span><span class="code-line" data-layer-line="task">    // Task: current user prompt at the very end</span><span class="code-line" data-layer-line="task">    { role: "user" as const, content: userInput },</span><span class="code-line">  ],</span><span class="code-line">});</span></code></pre>
+    </div>
+
+    <h2>Multi-Turn State: Breaking the Window</h2>
+    <p class="key">
+      Fixed turn-count truncation hides a production trap: the moment a user pastes a 3,000-token stack trace, keeping by message count blows your budget, while truncating by token budget evicts every earlier constraint. Try adjusting the window size, or:
+      <button class="inline-trigger" id="presetSpikeBtn" type="button">▶ Reproduce: Inject a 3,000t stack trace at Turn 5</button>
+    </p>
+  </main>
+
+  <!-- INTERACTIVE LAB 2 -->
+  <section class="lab-wrap" id="lab-2">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <span class="lab-eyebrow">Interactive Lab 02 · Multi-Turn Boundary Sandbox</span>
+          <h3 class="lab-title">Sliding Window vs. Rolling Summary + Long Log Spike</h3>
+          <p class="lab-desc">Step through an 8-turn coding session, adjust the window limit, or inject a 3,000-token stack trace at Turn 5 to watch how both strategies react.</p>
+        </div>
+        <span class="sim-tag">Simulated token budget</span>
+      </div>
+      <div class="lab-body">
+        <div class="lab2-toolbar">
+          <div class="btn-group">
+            <button class="btn" id="lab2Prev" type="button">Prev Turn</button>
+            <button class="btn btn-primary" id="lab2Next" type="button">Next Turn →</button>
+            <button class="btn" id="lab2Reset" type="button">Reset</button>
+          </div>
+          <span class="turn-indicator" id="lab2TurnBadge">Progress: Turn 1 / 8</span>
+        </div>
+
+        <div class="lab2-sandbox-bar">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <strong>Window Limit:</strong>
+            <button class="chip-btn" data-win="1" type="button">Last 1 turn</button>
+            <button class="chip-btn active" data-win="3" type="button">Last 3 turns</button>
+            <button class="chip-btn" data-win="5" type="button">Last 5 turns</button>
+          </div>
+          <button class="chip-btn" id="spikeToggleBtn" type="button">⚡ Inject 3,000t stack trace at Turn 5</button>
+        </div>
+
+        <div class="lab2-columns">
+          <div class="strategy-panel">
+            <div class="strategy-head">
+              <span id="swTitle">Strategy 1: Sliding Window (Last 3 turns)</span>
+              <span class="strategy-badge badge-warn" id="swStatusBadge">Healthy</span>
+            </div>
+            <div class="strategy-body" id="slidingBody"></div>
+            <div class="strategy-foot">
+              <span id="swTokens">Tokens: 340</span>
+              <span id="swConstraintStatus">Turn 1 Constraint: Retained</span>
+            </div>
+          </div>
+
+          <div class="strategy-panel">
+            <div class="strategy-head">
+              <span id="rsTitle">Strategy 2: Rolling Summary + Recent Turns</span>
+              <span class="strategy-badge badge-ok" id="rsStatusBadge">Constraint Locked</span>
+            </div>
+            <div class="strategy-body" id="summaryBody"></div>
+            <div class="strategy-foot">
+              <span id="rsTokens">Tokens: 340</span>
+              <span id="rsConstraintStatus">Turn 1 Constraint: Always Preserved</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <details class="code-fold">
+      <summary>Reference Implementation: Sliding Window &amp; Rolling Summary (TypeScript)</summary>
+      <div class="code-fold-body">
+        <div class="code-card" style="margin: 0;">
+          <div class="code-header">
+            <span>multi-turn-context.ts — Sliding window vs. rolling summary</span>
+            <button class="copy-btn" type="button">Copy</button>
+          </div>
+          <pre><code>// 1. Sliding window: keep only the latest maxTurns exchanges
+function trimBySlidingWindow(messages: Message[], maxTurns: number): Message[] {
+  const maxMessages = maxTurns * 2;
+  return messages.length <= maxMessages ? messages : messages.slice(-maxMessages);
+}
+
+// 2. Rolling summary: compress older turns once history exceeds threshold
+async function compressIfNeeded(state: ConversationState, threshold = 6): Promise&lt;void&gt; {
+  if (state.recentMessages.length &lt;= threshold) return;
+  const toCompress = state.recentMessages.slice(0, -4);
+  state.recentMessages = state.recentMessages.slice(-4);
+  state.summary = await summarizeWithLLM(state.summary, toCompress);
+}</code></pre>
+        </div>
+      </div>
+    </details>
+
+    <h2>Just-In-Time Loading vs. Context Stuffing</h2>
+    <p class="key">
+      Dumping an entire repository or knowledge base into the prompt upfront is called <strong>Context Stuffing</strong>. The scalable alternative is <strong>Just-In-Time (JIT) loading</strong>: an Agent fetches only the file it needs at each step and clears stale tool outputs once consumed (see Anthropic’s <a href="https://platform.claude.com/docs/en/build-with-claude/context-editing" target="_blank" rel="noopener">Context Editing docs</a>).
+    </p>
+  </main>
+
+  <!-- INTERACTIVE LAB 3 -->
+  <section class="lab-wrap" id="lab-3">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <span class="lab-eyebrow">Interactive Lab 03 · Live Context Block Loader</span>
+          <h3 class="lab-title">Debugging a Login 500 Error: Stuffing vs. Just-In-Time</h3>
+          <p class="lab-desc">Switch loading strategies to compare which repository files enter the context window and how signal density changes.</p>
+        </div>
+        <span class="sim-tag">Simulated token trace</span>
+      </div>
+      <div class="lab-body">
+        <div class="lab3-modes">
+          <button class="chip-btn active" id="modeStuffingBtn" type="button">Mode A: Context Stuffing (Dump All)</button>
+          <button class="chip-btn" id="modeJitBtn" type="button">Mode B: Just-In-Time Loading</button>
+          <button class="btn btn-primary" id="jitStepBtn" type="button" style="display: none; margin-left: auto;">Next Agent Step →</button>
+        </div>
+
+        <div class="jit-layout">
+          <div class="file-pool">
+            <div style="font-size: 13.5px; font-weight: 700;">Repository Files (8 files)</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Green = active &amp; relevant · Red = noise · Dashed = cleared after use</div>
+            <div class="file-grid" id="fileGrid"></div>
+          </div>
+
+          <div class="jit-timeline">
+            <div>
+              <div style="font-size: 13.5px; font-weight: 700;" id="timelineTitle">Blocks Currently in Context Window</div>
+              <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;" id="timelineSub">All 8 files stuffed into the prompt upfront</div>
+              <div class="context-blocks-stack" id="contextBlocksStack"></div>
+            </div>
+            <div class="jit-stats">
+              <div>
+                <div class="jit-stat-val" id="jitTokens">14,200</div>
+                <div class="jit-stat-lbl">Token Usage</div>
+              </div>
+              <div>
+                <div class="jit-stat-val" id="jitDensity" style="color: var(--rose);">15%</div>
+                <div class="jit-stat-lbl">Signal Density</div>
+              </div>
+              <div>
+                <div class="jit-stat-val" id="jitSignal">Severe Noise</div>
+                <div class="jit-stat-lbl">Distraction Risk</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose" id="decision">
+    <h2>Quick Decision Matrix: Which Strategy Fits Your App</h2>
+    <p>Every common architecture pattern is laid out below for quick comparison. Click any workload tag to highlight matching strategies:</p>
+
+    <div class="filter-pills">
+      <button class="chip-btn active" data-filter="all" type="button">Show All (6)</button>
+      <button class="chip-btn" data-filter="docs" type="button">Large Knowledge Base</button>
+      <button class="chip-btn" data-filter="multi" type="button">Multi-Turn Chat</button>
+      <button class="chip-btn" data-filter="agent" type="button">Multi-Step Agent</button>
+      <button class="chip-btn" data-filter="cost" type="button">Latency &amp; Cost Sensitive</button>
+    </div>
+
+    <div class="decision-grid" id="decisionGrid">
+      <div class="decision-card" data-tags="docs cost">
+        <span class="dc-tag">Large Knowledge Base</span>
+        <div class="dc-title">Dynamic RAG + Reranker</div>
+        <p class="dc-desc">Never stuff large corpora. Retrieve candidates first, then use a Reranker to place the top 3–5 chunks at the edges.</p>
+      </div>
+      <div class="decision-card" data-tags="cost">
+        <span class="dc-tag">Static Background (&lt; 2K tokens)</span>
+        <div class="dc-title">Pin in System + Prompt Cache</div>
+        <p class="dc-desc">Keep stable docs in the System Prompt prefix to maximize KV-cache hit rates without RAG overhead.</p>
+      </div>
+      <div class="decision-card" data-tags="multi">
+        <span class="dc-tag">Long Multi-Turn Chat</span>
+        <div class="dc-title">Rolling Summary + Recent 4–6 Turns</div>
+        <p class="dc-desc">Compress older turns into structured memory while keeping recent exchanges verbatim so early constraints survive.</p>
+      </div>
+      <div class="decision-card" data-tags="agent cost">
+        <span class="dc-tag">Multi-Step Agent Workflows</span>
+        <div class="dc-title">Just-In-Time + Output Clearing</div>
+        <p class="dc-desc">Fetch files only when needed and clear stale tool outputs to protect reasoning quality across 10+ steps.</p>
+      </div>
+      <div class="decision-card" data-tags="cost">
+        <span class="dc-tag">One-Shot Tasks</span>
+        <div class="dc-title">Strict Token Budgeting</div>
+        <p class="dc-desc">Skip history management entirely; assign fixed budgets to Rules, Input, and Output.</p>
+      </div>
+      <div class="decision-card is-summary" data-tags="docs multi agent cost">
+        <span class="dc-tag">Golden Rule</span>
+        <div class="dc-title">Curate Signal, Never Stuff</div>
+        <p class="dc-desc">Context Engineering is not about filling the largest advertised window — it is about giving the next step only what it needs.</p>
+      </div>
+    </div>
+
+    <p>
+      Designing context boundaries gets your single-step LLM calls reliable. Next, we move into Spec-Driven Development and production RAG pipelines so your retrieval layer feeds the exact right evidence into those boundaries.
+    </p>
+  </main>
+
+  <footer>
+    <div>
+      Project repository: <a href="https://github.com/qufei1993/ai-agent-fullstack-roadmap" target="_blank" rel="noopener">qufei1993/ai-agent-fullstack-roadmap</a>
+    </div>
+  </footer>
+
+  <script>
+
+    // 1. Layer Explorer
+    const layerData = {
+      system: {
+        title: "System Prompt · Rules Layer",
+        color: "var(--purple)",
+        growth: "Growth: Static across turns",
+        policy: "Retention: Always pinned, kept concise",
+        desc: "Defines role identity, tone, tool schemas, and hard guardrails. Keep it at the very top of the payload so prompt caching hits every turn.",
+        snippet: `system: "You are a backend engineer. Answer strictly from retrieved docs. Cite doc IDs; abstain if evidence is missing."`,
+      },
+      memory: {
+        title: "History & Memory · State Layer",
+        color: "var(--blue)",
+        growth: "Growth: Linear per turn",
+        policy: "Retention: Sliding window or rolling summary",
+        desc: "Tracks multi-turn dialogue and decisions. Never let raw logs grow unbounded — compress older turns before they crowd out rules or evidence.",
+        snippet: `[Earlier Summary] Constraints: Node.js 22 + raw SQL only, no Prisma/TypeORM.\n[Turn 6] User: Add admin pagination endpoint.`,
+      },
+      knowledge: {
+        title: "RAG & Tools · Knowledge Layer",
+        color: "var(--teal)",
+        growth: "Growth: Dynamic per query",
+        policy: "Retention: Top-ranked at edges, clear stale tool outputs",
+        desc: "Injects retrieved docs and tool results. More chunks are not better — noise chunks push relevant evidence into the Lost in the Middle trough.",
+        snippet: `[1] (score 0.94) deleteAccount returns 409 on database constraint conflict.\n[2] (score 0.89) Always verify 2FA token before account deletion.`,
+      },
+      task: {
+        title: "User Input · Current Task Layer",
+        color: "var(--accent)",
+        growth: "Growth: Replaced each turn",
+        policy: "Retention: Pinned at the very end",
+        desc: "The immediate request the model must act on right now. Keeping it at the tail leverages recency attention.",
+        snippet: `{ role: "user", content: "Why is POST /api/account/delete returning HTTP 409?" }`,
+      },
+    };
+
+    const layerDetailPanel = document.getElementById("layerDetailPanel");
+    function renderLayerDetail(key) {
+      const d = layerData[key];
+      layerDetailPanel.innerHTML = `
+        <h3 class="layer-detail-title" style="color: ${d.color};">${d.title}</h3>
+        <div class="layer-meta-row">
+          <span class="meta-tag">${d.growth}</span>
+          <span class="meta-tag">${d.policy}</span>
+        </div>
+        <p style="font-size: 14.5px; color: var(--text-secondary); margin: 0;">${d.desc}</p>
+        <div class="layer-snippet">${d.snippet}</div>
+      `;
+    }
+    renderLayerDetail("system");
+
+    document.querySelectorAll("[data-layer-tab]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("[data-layer-tab]").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        renderLayerDetail(btn.dataset.layerTab);
+      });
+    });
+
+    document.querySelectorAll("#assemblyCode .code-line[data-layer-line]").forEach((line) => {
+      line.addEventListener("mouseenter", () => {
+        const target = line.dataset.layerLine;
+        document.querySelectorAll("#assemblyCode .code-line").forEach((l) => {
+          if (l.dataset.layerLine === target) {
+            l.classList.add("is-highlighted");
+            l.classList.remove("is-dimmed");
+          } else {
+            l.classList.add("is-dimmed");
+            l.classList.remove("is-highlighted");
+          }
+        });
+      });
+      line.addEventListener("mouseleave", () => {
+        document.querySelectorAll("#assemblyCode .code-line").forEach((l) => l.classList.remove("is-highlighted", "is-dimmed"));
+      });
+    });
+
+    // 2. Lab 1
+    const lab1State = { system: true, history: true, task: true, docCount: 20, answerPos: 10, xrayTab: "heatmap" };
+    const MAX_WINDOW = 16000;
+    const docSlotsEl = document.getElementById("docSlots");
+    const docCountSlider = document.getElementById("docCountSlider");
+    const docCountLabel = document.getElementById("docCountLabel");
+    const answerPosLabel = document.getElementById("answerPosLabel");
+    const accValEl = document.getElementById("accVal");
+    const latencyValEl = document.getElementById("latencyVal");
+    const lab1DiagnosisEl = document.getElementById("lab1Diagnosis");
+    const lab1TokenSummaryEl = document.getElementById("lab1TokenSummary");
+    const xrayContentEl = document.getElementById("xrayContent");
+
+    document.querySelectorAll("[data-layer]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const key = btn.dataset.layer;
+        lab1State[key] = !lab1State[key];
+        btn.classList.toggle("active", lab1State[key]);
+        renderLab1();
+      });
+    });
+
+    document.querySelectorAll("[data-xray]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        lab1State.xrayTab = btn.dataset.xray;
+        document.querySelectorAll("[data-xray]").forEach((b) => b.classList.toggle("active", b === btn));
+        renderXray();
+      });
+    });
+
+    docCountSlider.addEventListener("input", (e) => {
+      lab1State.docCount = Number(e.target.value);
+      if (lab1State.answerPos > lab1State.docCount) lab1State.answerPos = lab1State.docCount;
+      renderLab1();
+    });
+
+    function estimateAccuracy(pos, total) {
+      if (total <= 3) return Math.round(82 - (pos === 2 ? 4 : 0));
+      const t = (pos - 1) / (total - 1);
+      const noiseFactor = (total - 3) / 17;
+      const linear = (80 - noiseFactor * 5) * (1 - t) + (78 - noiseFactor * 6) * t;
+      const dip = 4 * t * (1 - t) * (6 + noiseFactor * 14);
+      return Math.round(linear - dip);
+    }
+
+    function attentionWeight(pos, total) {
+      if (total <= 2) return 0.95;
+      const t = (pos - 1) / (total - 1);
+      return Math.max(0.3, 1 - 4 * t * (1 - t) * 0.65);
+    }
+
+    function renderXray() {
+      if (lab1State.xrayTab === "heatmap") {
+        let html = `<div class="heatmap-stream">`;
+        if (lab1State.system) {
+          html += `<div class="hm-block" style="border-left: 3px solid var(--purple);">
+            <span>[System] Answer strictly from references; never fabricate API fields (600t)</span>
+            <span class="hm-badge">Attn 98%</span>
+          </div>`;
+        }
+        for (let i = 1; i <= lab1State.docCount; i++) {
+          const isKey = i === lab1State.answerPos;
+          const attnPct = Math.round(attentionWeight(i, lab1State.docCount) * 100);
+          const bgAlpha = isKey ? "var(--teal-soft)" : `rgba(156, 163, 175, ${(0.06 + (1 - attnPct / 100) * 0.16).toFixed(2)})`;
+          html += `<div class="hm-block ${isKey ? "is-answer" : ""}" style="background: ${bgAlpha}; opacity: ${isKey ? 1 : Math.max(0.45, attnPct / 100)};">
+            <span>[Doc #${i}] ${isKey ? "★ Key Evidence: deleteAccount returns 409 on DB constraint conflict" : "Noise chunk: unrelated UI copy / billing FAQ (550t)"}</span>
+            <span class="hm-badge">Attn ${attnPct}%</span>
+          </div>`;
+        }
+        if (lab1State.task) {
+          html += `<div class="hm-block" style="border-left: 3px solid var(--accent);">
+            <span>[User Task] Why does deleteAccount return 409? (200t)</span>
+            <span class="hm-badge">Attn 96%</span>
+          </div>`;
+        }
+        html += `</div>`;
+        xrayContentEl.innerHTML = html;
+      } else {
+        const docsPreview = [];
+        for (let i = 1; i <= Math.min(lab1State.docCount, 4); i++) {
+          docsPreview.push(i === lab1State.answerPos ? `[${i}] ★ Key Evidence: deleteAccount returns 409...` : `[${i}] Noise doc #${i}...`);
+        }
+        if (lab1State.docCount > 4) {
+          docsPreview.push(`... (${lab1State.docCount - 4} more chunks; key evidence at #${lab1State.answerPos}) ...`);
+        }
+        const payload = {
+          model: "qwen-plus",
+          max_tokens: 1024,
+          ...(lab1State.system ? { system: "Answer strictly from retrieved references." } : {}),
+          messages: [
+            { role: "user", content: `References (${lab1State.docCount} docs):\n${docsPreview.join("\n")}` },
+            ...(lab1State.history ? [{ role: "assistant", content: "...(1,800 tokens of recent history)..." }] : []),
+            ...(lab1State.task ? [{ role: "user", content: "Why does deleteAccount return 409?" }] : []),
+          ],
+        };
+        const rawJson = JSON.stringify(payload, null, 2);
+        if (window.Prism && Prism.languages.json) {
+          xrayContentEl.innerHTML = `<pre class="payload-pre language-json"><code class="language-json">${Prism.highlight(rawJson, Prism.languages.json, "json")}</code></pre>`;
+        } else {
+          xrayContentEl.innerHTML = `<pre class="payload-pre"><code>${rawJson}</code></pre>`;
+        }
+      }
+    }
+
+    function renderLab1() {
+      const sysTok = lab1State.system ? 600 : 0;
+      const histTok = lab1State.history ? 1800 : 0;
+      const ragTok = 550;
+      const noiseTok = (lab1State.docCount - 1) * 550;
+      const taskTok = lab1State.task ? 200 : 0;
+      const total = sysTok + histTok + ragTok + noiseTok + taskTok;
+
+      document.getElementById("segSystem").style.width = `${(sysTok / MAX_WINDOW) * 100}%`;
+      document.getElementById("segHistory").style.width = `${(histTok / MAX_WINDOW) * 100}%`;
+      document.getElementById("segRag").style.width = `${(ragTok / MAX_WINDOW) * 100}%`;
+      document.getElementById("segNoise").style.width = `${(noiseTok / MAX_WINDOW) * 100}%`;
+      document.getElementById("segTask").style.width = `${(taskTok / MAX_WINDOW) * 100}%`;
+
+      lab1TokenSummaryEl.textContent = `${total.toLocaleString()} / ${MAX_WINDOW.toLocaleString()} (${Math.round((total / MAX_WINDOW) * 100)}%)`;
+      docCountLabel.textContent = `${lab1State.docCount} docs`;
+
+      docSlotsEl.innerHTML = "";
+      for (let i = 1; i <= lab1State.docCount; i++) {
+        const slot = document.createElement("button");
+        slot.type = "button";
+        slot.className = `doc-slot${i === lab1State.answerPos ? " is-answer" : ""}`;
+        slot.textContent = i;
+        slot.addEventListener("click", () => {
+          lab1State.answerPos = i;
+          renderLab1();
+        });
+        docSlotsEl.appendChild(slot);
+      }
+
+      const rel = (lab1State.answerPos - 1) / Math.max(1, lab1State.docCount - 1);
+      const posTag = rel < 0.2 ? "Start" : rel > 0.8 ? "End" : "Middle";
+      answerPosLabel.textContent = `Pos ${lab1State.answerPos} (${posTag})`;
+
+      const acc = estimateAccuracy(lab1State.answerPos, lab1State.docCount);
+      accValEl.textContent = `${acc}%`;
+      accValEl.style.color = acc < 62 ? "var(--rose)" : acc < 72 ? "var(--accent)" : "var(--teal)";
+
+      if (total > 9000) {
+        latencyValEl.innerHTML = `<span style="color: var(--rose);">High</span><span class="metric-sub" style="display:block;">Noticeable TTFT slowdown</span>`;
+      } else if (total > 5000) {
+        latencyValEl.innerHTML = `<span style="color: var(--accent);">Medium</span><span class="metric-sub" style="display:block;">Manageable cost</span>`;
+      } else {
+        latencyValEl.innerHTML = `<span style="color: var(--teal);">Fast</span><span class="metric-sub" style="display:block;">Lean &amp; low cost</span>`;
+      }
+
+      const xStart = 28, xEnd = 344, yTop = 18, yBot = 108;
+      const accToY = (a) => yBot - ((a - 45) / 45) * (yBot - yTop);
+      let d = "";
+      for (let i = 1; i <= lab1State.docCount; i++) {
+        const x = xStart + ((i - 1) / Math.max(1, lab1State.docCount - 1)) * (xEnd - xStart);
+        const y = accToY(estimateAccuracy(i, lab1State.docCount));
+        d += i === 1 ? `M ${x.toFixed(1)} ${y.toFixed(1)}` : ` L ${x.toFixed(1)} ${y.toFixed(1)}`;
+      }
+      document.getElementById("uCurvePath").setAttribute("d", d);
+      const curX = xStart + ((lab1State.answerPos - 1) / Math.max(1, lab1State.docCount - 1)) * (xEnd - xStart);
+      const curY = accToY(acc);
+      const dot = document.getElementById("uCurveDot");
+      dot.setAttribute("cx", curX.toFixed(1));
+      dot.setAttribute("cy", curY.toFixed(1));
+
+      if (acc <= 56 && lab1State.docCount >= 14) {
+        lab1DiagnosisEl.className = "diagnosis-box warn";
+        lab1DiagnosisEl.innerHTML = `<strong>Diagnosis: Severe “Lost in the Middle”</strong><br>Key evidence sits in the middle noise zone, dropping accuracy (${acc}%) below the closed-book baseline (56.1%).`;
+      } else if (lab1State.docCount <= 6 && acc >= 75) {
+        lab1DiagnosisEl.className = "diagnosis-box good";
+        lab1DiagnosisEl.innerHTML = `<strong>Diagnosis: Lean &amp; Well-Placed</strong><br>Only high-signal chunks remain (~${total.toLocaleString()} tokens), keeping attention sharp and latency low.`;
+      } else {
+        lab1DiagnosisEl.className = "diagnosis-box";
+        lab1DiagnosisEl.innerHTML = `<strong>Diagnosis: Room to Trim</strong><br>Key evidence is at the ${posTag} (~${acc}% accuracy). Cutting noise below 5 docs improves both quality and speed.`;
+      }
+
+      renderXray();
+    }
+
+    // 3. Lab 2
+    const conversationTurns = [
+      { turn: 1, user: "Build user module. Hard rule: Node.js 22 + raw SQL only. No Prisma/TypeORM.", assistant: "Understood! Using Node.js 22 native APIs and raw SQL only.", tokens: 340, isConstraint: true },
+      { turn: 2, user: "Design the users table with email login and soft delete.", assistant: "Created schema with id, email, password_hash, deleted_at.", tokens: 310 },
+      { turn: 3, user: "Use crypto.scrypt or bcrypt for password hashing?", assistant: "Use built-in node:crypto scrypt with zero extra deps.", tokens: 280 },
+      { turn: 4, user: "Add Zod validation for the login endpoint.", assistant: "Added Zod schema for email and password.", tokens: 300 },
+      { turn: 5, user: "What TTL should we use for refresh tokens?", assistant: "15m access token, 7d refresh token.", spikeUser: "⚡ [Pasted 3,000t stack trace] Error: connect ECONNREFUSED 127.0.0.1:5432 at TCPConnectWrap.afterConnect ... (140 lines)", spikeAssistant: "Root cause: PostgreSQL 5432 is not listening.", tokens: 290, spikeTokens: 3000 },
+      { turn: 6, user: "Add an admin paginated search endpoint by email.", assistant: "Implemented parameterized LIMIT / OFFSET query.", tokens: 310 },
+      { turn: 7, user: "Add audit logging for user deletion.", assistant: "Added audit_logs insert inside transaction.", tokens: 295 },
+      { turn: 8, user: "Now write the batch user export query!", assistant: "⚠️ Notice whether the model remembers the “No Prisma” rule from Turn 1.", tokens: 320 },
+    ];
+
+    let currentTurn = 1, winSize = 3, injectSpike = false;
+    const spikeToggleBtn = document.getElementById("spikeToggleBtn");
+    document.querySelectorAll("[data-win]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        winSize = Number(btn.dataset.win);
+        document.querySelectorAll("[data-win]").forEach((b) => b.classList.toggle("active", b === btn));
+        renderLab2();
+      });
+    });
+
+    spikeToggleBtn.addEventListener("click", () => {
+      injectSpike = !injectSpike;
+      spikeToggleBtn.classList.toggle("danger-active", injectSpike);
+      spikeToggleBtn.textContent = injectSpike ? "⚡ 3,000t stack trace active (click to remove)" : "⚡ Inject 3,000t stack trace at Turn 5";
+      renderLab2();
+    });
+
+    document.getElementById("lab2Prev").addEventListener("click", () => { if (currentTurn > 1) { currentTurn--; renderLab2(); } });
+    document.getElementById("lab2Next").addEventListener("click", () => { if (currentTurn < conversationTurns.length) { currentTurn++; renderLab2(); } });
+    document.getElementById("lab2Reset").addEventListener("click", () => {
+      currentTurn = 1;
+      injectSpike = false;
+      spikeToggleBtn.classList.remove("danger-active");
+      spikeToggleBtn.textContent = "⚡ Inject 3,000t stack trace at Turn 5";
+      renderLab2();
+    });
+
+    function renderLab2() {
+      document.getElementById("lab2TurnBadge").textContent = `Progress: Turn ${currentTurn} / ${conversationTurns.length}`;
+      document.getElementById("lab2Prev").disabled = currentTurn === 1;
+      document.getElementById("lab2Next").disabled = currentTurn === conversationTurns.length;
+      document.getElementById("swTitle").textContent = `Strategy 1: Sliding Window (Last ${winSize} turns)`;
+
+      const history = conversationTurns.slice(0, currentTurn);
+      const tokenBudgetHardCap = 2400;
+      let keptTurns = history.slice(-winSize);
+      let swTokenTotal = keptTurns.reduce((acc, t) => acc + (injectSpike && t.turn === 5 ? t.spikeTokens : t.tokens), 0);
+      let budgetSqueezed = false;
+      if (swTokenTotal > tokenBudgetHardCap && keptTurns.length > 1) {
+        keptTurns = keptTurns.slice(-1);
+        swTokenTotal = keptTurns.reduce((acc, t) => acc + (injectSpike && t.turn === 5 ? t.spikeTokens : t.tokens), 0);
+        budgetSqueezed = true;
+      }
+
+      const keptIds = new Set(keptTurns.map((t) => t.turn));
+      const constraintKept = keptIds.has(1);
+      const slidingEl = document.getElementById("slidingBody");
+      slidingEl.innerHTML = "";
+      history.forEach((item) => {
+        const isKept = keptIds.has(item.turn);
+        const isSpikeTurn = injectSpike && item.turn === 5;
+        if (!isKept && item.turn !== 1) return;
+        const div = document.createElement("div");
+        div.className = `msg-bubble ${!isKept ? "is-dropped" : ""} ${isSpikeTurn ? "is-spike" : ""}`;
+        div.innerHTML = `
+          <div class="msg-role">
+            <span>Turn ${item.turn}${item.isConstraint ? " · Core Constraint" : ""}</span>
+            <span>${!isKept ? (budgetSqueezed ? "Evicted by spike!" : "Evicted") : `${isSpikeTurn ? item.spikeTokens : item.tokens}t`}</span>
+          </div>
+          <div>${isSpikeTurn ? item.spikeUser : item.user}</div>
+        `;
+        slidingEl.appendChild(div);
+      });
+
+      const swBadge = document.getElementById("swStatusBadge");
+      const swFoot = document.getElementById("swConstraintStatus");
+      document.getElementById("swTokens").textContent = `Tokens: ${swTokenTotal.toLocaleString()}`;
+      if (!constraintKept) {
+        swBadge.className = "strategy-badge badge-warn";
+        swBadge.textContent = budgetSqueezed ? "Spiked & Evicted!" : "Constraint Lost";
+        swFoot.innerHTML = `<span style="color: var(--rose); font-weight: 700;">Turn 1 Rule: Evicted (Prisma risk)</span>`;
+      } else {
+        swBadge.className = "strategy-badge badge-ok";
+        swBadge.textContent = "Rule Intact";
+        swFoot.textContent = "Turn 1 Constraint: Retained";
+      }
+
+      const summaryBody = document.getElementById("summaryBody");
+      summaryBody.innerHTML = "";
+      const recentForSummary = history.slice(-2);
+      const hasSummary = currentTurn > 2;
+      if (hasSummary) {
+        const pin = document.createElement("div");
+        pin.className = "summary-pin";
+        pin.innerHTML = `
+          <div class="summary-pin-title">Pinned System Summary (180t · Locked Constraints)</div>
+          <div>• Stack: Node.js 22 + raw SQL only (<strong>No Prisma/TypeORM</strong>)<br>• Completed: users table, scrypt hashing, Zod login${currentTurn >= 5 && injectSpike ? "<br>• Incident: PG 5432 refused connection (3,000t log compressed to 1 line)" : ""}</div>
+        `;
+        summaryBody.appendChild(pin);
+      }
+      recentForSummary.forEach((item) => {
+        const isSpikeTurn = injectSpike && item.turn === 5;
+        const div = document.createElement("div");
+        div.className = "msg-bubble";
+        div.innerHTML = `
+          <div class="msg-role"><span>Turn ${item.turn} (Recent)</span><span>${isSpikeTurn ? "Compressed 380t" : `${item.tokens}t`}</span></div>
+          <div>${isSpikeTurn ? "[Log Spike Compressed] PG 5432 refused connection -> fixed" : item.user}</div>
+        `;
+        summaryBody.appendChild(div);
+      });
+      const rsTok = (hasSummary ? 180 : 0) + recentForSummary.reduce((a, b) => a + b.tokens, 0);
+      document.getElementById("rsTokens").textContent = `Tokens: ${rsTok.toLocaleString()}`;
+    }
+
+    // 4. Lab 3
+    const repoFiles = [
+      { name: "auth.controller.ts", tokens: 1800, useful: true },
+      { name: "session.service.ts", tokens: 1600, useful: true },
+      { name: "db.pool.ts", tokens: 1200, useful: true },
+      { name: "billing.webhook.ts", tokens: 2400, useful: false },
+      { name: "email.templates.ts", tokens: 1900, useful: false },
+      { name: "admin.analytics.ts", tokens: 2100, useful: false },
+      { name: "legacy.v1.routes.ts", tokens: 1700, useful: false },
+      { name: "README.design.md", tokens: 1500, useful: false },
+    ];
+    const jitSteps = [
+      { title: "Step 1: Search login error routes", sub: "Read only auth.controller.ts (1,800t)", active: ["auth.controller.ts"], cleared: [], blocks: [{ label: "[Rule] Diagnose login 500 error", tok: 400, bg: "var(--purple-soft)" }, { label: "[Read] auth.controller.ts", tok: 1800, bg: "var(--teal-soft)" }], tokens: "2,200", density: "92%", risk: "Low" },
+      { title: "Step 2: Trace session validation", sub: "Clear controller, load session.service.ts", active: ["session.service.ts"], cleared: ["auth.controller.ts"], blocks: [{ label: "[Rule + Summary] Controller calls verifySession()", tok: 520, bg: "var(--purple-soft)" }, { label: "[Read] session.service.ts", tok: 1600, bg: "var(--teal-soft)" }], tokens: "2,120", density: "95%", risk: "Low" },
+      { title: "Step 3: Pinpoint pool timeout", sub: "Clear session service, inspect db.pool.ts", active: ["db.pool.ts"], cleared: ["auth.controller.ts", "session.service.ts"], blocks: [{ label: "[Rule + Summary] Root cause narrowed to DB acquire", tok: 600, bg: "var(--purple-soft)" }, { label: "[Read] db.pool.ts (max: 2, timeout: 100ms)", tok: 1200, bg: "var(--teal-soft)" }], tokens: "1,800", density: "98%", risk: "Minimal" },
+    ];
+
+    let lab3Mode = "stuffing", jitIdx = 0;
+    const modeStuffingBtn = document.getElementById("modeStuffingBtn");
+    const modeJitBtn = document.getElementById("modeJitBtn");
+    const jitStepBtn = document.getElementById("jitStepBtn");
+
+    modeStuffingBtn.addEventListener("click", () => { lab3Mode = "stuffing"; renderLab3(); });
+    modeJitBtn.addEventListener("click", () => { lab3Mode = "jit"; jitIdx = 0; renderLab3(); });
+    jitStepBtn.addEventListener("click", () => { jitIdx = (jitIdx + 1) % jitSteps.length; renderLab3(); });
+
+    function renderLab3() {
+      modeStuffingBtn.classList.toggle("active", lab3Mode === "stuffing");
+      modeJitBtn.classList.toggle("active", lab3Mode === "jit");
+      jitStepBtn.style.display = lab3Mode === "jit" ? "inline-block" : "none";
+
+      const grid = document.getElementById("fileGrid");
+      const stack = document.getElementById("contextBlocksStack");
+      const titleEl = document.getElementById("timelineTitle");
+      const subEl = document.getElementById("timelineSub");
+      const tokEl = document.getElementById("jitTokens");
+      const densityEl = document.getElementById("jitDensity");
+      const signalEl = document.getElementById("jitSignal");
+
+      if (lab3Mode === "stuffing") {
+        grid.innerHTML = repoFiles.map((f) => `<div class="file-chip ${f.useful ? "in-context-useful" : "in-context-noise"}"><span>${f.name}</span><span class="file-tok">${f.tokens}t</span></div>`).join("");
+        titleEl.textContent = "Blocks Currently in Context Window";
+        subEl.textContent = "All 8 files stuffed upfront (~85% irrelevant noise)";
+        stack.innerHTML = `<div class="context-block" style="background: var(--purple-soft);"><span>[Rule] Diagnose login 500 error</span><span>400t</span></div><div class="context-block" style="background: var(--teal-soft);"><span>3 relevant auth/db files</span><span>4,600t</span></div><div class="context-block" style="background: var(--rose-soft);"><span>5 unrelated billing/email/legacy files (Noise)</span><span>9,600t</span></div>`;
+        tokEl.textContent = "14,200";
+        densityEl.textContent = "15%";
+        densityEl.style.color = "var(--rose)";
+        signalEl.textContent = "Severe Noise";
+      } else {
+        const cur = jitSteps[jitIdx];
+        jitStepBtn.textContent = jitIdx < jitSteps.length - 1 ? `Next Agent Step (${jitIdx + 1}/${jitSteps.length}) →` : "Restart JIT Trace ↺";
+        grid.innerHTML = repoFiles.map((f) => {
+          const cls = cur.active.includes(f.name) ? "in-context-useful" : cur.cleared.includes(f.name) ? "cleared" : "";
+          return `<div class="file-chip ${cls}"><span>${f.name}</span><span class="file-tok">${cur.cleared.includes(f.name) ? "Cleared" : `${f.tokens}t`}</span></div>`;
+        }).join("");
+        titleEl.textContent = cur.title;
+        subEl.textContent = cur.sub;
+        stack.innerHTML = cur.blocks.map((b) => `<div class="context-block" style="background: ${b.bg};"><span>${b.label}</span><span>${b.tok}t</span></div>`).join("");
+        tokEl.textContent = cur.tokens;
+        densityEl.textContent = cur.density;
+        densityEl.style.color = "var(--teal)";
+        signalEl.textContent = cur.risk;
+      }
+    }
+
+    // 5. Decision Matrix Filter
+    document.querySelectorAll("[data-filter]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const filter = btn.dataset.filter;
+        document.querySelectorAll("[data-filter]").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        document.querySelectorAll("#decisionGrid .decision-card").forEach((card) => {
+          const tags = (card.dataset.tags || "").split(" ");
+          if (filter === "all") card.classList.remove("is-match", "is-dim");
+          else if (tags.includes(filter)) { card.classList.add("is-match"); card.classList.remove("is-dim"); }
+          else { card.classList.remove("is-match"); card.classList.add("is-dim"); }
+        });
+      });
+    });
+
+    // 6. Predict-First Hook, Reset & Inline Preset
+    function pulseLabCard(labId) {
+      const card = document.querySelector(`#${labId} .lab-card`);
+      if (!card) return;
+      card.classList.remove("is-pulsing");
+      void card.offsetWidth;
+      card.classList.add("is-pulsing");
+      setTimeout(() => card.classList.remove("is-pulsing"), 950);
+    }
+
+    function scrollToLab(labId) {
+      const el = document.getElementById(labId);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      setTimeout(() => pulseLabCard(labId), 320);
+    }
+
+    const predictFeedback1 = document.getElementById("predictFeedback1");
+    document.querySelectorAll("#predictHook1 .predict-opt").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const choice = btn.dataset.predict;
+        document.querySelectorAll("#predictHook1 .predict-opt").forEach((b) => b.classList.remove("is-right", "is-wrong"));
+        if (choice === "low") {
+          btn.classList.add("is-right");
+          predictFeedback1.innerHTML = "<strong>Spot on:</strong> Middle-position noise buries the answer, pulling accuracy down to <strong>55%</strong> — worse than giving no documents at all (56.1%).";
+        } else {
+          btn.classList.add("is-wrong");
+          const rightBtn = document.querySelector('#predictHook1 .predict-opt[data-predict="low"]');
+          if (rightBtn) rightBtn.classList.add("is-right");
+          predictFeedback1.innerHTML = "<strong>Counterintuitive result:</strong> Accuracy actually drops <strong>lower</strong> (55% vs. 56.1% closed-book). Look at the U-curve and dimmed middle rows below.";
+        }
+        predictFeedback1.classList.add("show");
+      });
+    });
+
+    document.getElementById("lab1ResetBtn")?.addEventListener("click", () => {
+      lab1State.system = true; lab1State.history = true; lab1State.task = true;
+      lab1State.docCount = 20; lab1State.answerPos = 10; lab1State.xrayTab = "heatmap";
+      docCountSlider.value = "20";
+      document.querySelectorAll("[data-layer]").forEach((b) => b.classList.add("active"));
+      document.querySelectorAll("[data-xray]").forEach((b) => b.classList.toggle("active", b.dataset.xray === "heatmap"));
+      renderLab1();
+      pulseLabCard("lab-1");
+    });
+
+    document.getElementById("presetMiddleBtn")?.addEventListener("click", () => {
+      lab1State.system = true; lab1State.history = true; lab1State.task = true;
+      lab1State.docCount = 20; lab1State.answerPos = 10; lab1State.xrayTab = "heatmap";
+      docCountSlider.value = "20";
+      document.querySelectorAll("[data-layer]").forEach((b) => b.classList.add("active"));
+      document.querySelectorAll("[data-xray]").forEach((b) => b.classList.toggle("active", b.dataset.xray === "heatmap"));
+      renderLab1();
+      scrollToLab("lab-1");
+    });
+
+    document.getElementById("presetSpikeBtn")?.addEventListener("click", () => {
+      currentTurn = 5;
+      injectSpike = true;
+      spikeToggleBtn.classList.add("danger-active");
+      spikeToggleBtn.textContent = "⚡ 3,000t stack trace active (click to remove)";
+      renderLab2();
+      scrollToLab("lab-2");
+    });
+
+    renderLab1();
+    renderLab2();
+    renderLab3();
+
+    function highlightAllCode() {
+      window.bookHighlightCode && window.bookHighlightCode();
+      if (lab1State.xrayTab === "payload") renderXray();
+    }
+    window.addEventListener("load", () => { if (lab1State.xrayTab === "payload") renderXray(); });
+  </script>
+  <script src="../shared/site.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-json.min.js"></script>
+</body>
+</html>

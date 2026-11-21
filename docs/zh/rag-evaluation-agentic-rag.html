@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RAG 评测与 Agentic RAG：先量化断点，再决定是否动态检索 · AI Agent Guide</title>
+  <!-- SEO:START (auto-synced by scripts/generate-seo.mjs) -->
+  <meta name="description" content="分别评估检索和回答质量，对比固定检索流程与 Agent 自主检索，判断动态检索是否值得引入" />
+  <link rel="canonical" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/rag-evaluation-agentic-rag.html" />
+  <link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/rag-evaluation-agentic-rag.html" />
+  <link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/rag-evaluation-agentic-rag.html" />
+  <link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/rag-evaluation-agentic-rag.html" />
+  <meta property="og:type" content="article" />
+  <meta property="og:locale" content="zh_CN" />
+  <meta property="og:locale:alternate" content="en_US" />
+  <meta property="og:title" content="RAG 评测与 Agentic RAG" />
+  <meta property="og:description" content="分别评估检索和回答质量，对比固定检索流程与 Agent 自主检索，判断动态检索是否值得引入" />
+  <meta property="og:url" content="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/rag-evaluation-agentic-rag.html" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "RAG 评测与 Agentic RAG",
+    "description": "分别评估检索和回答质量，对比固定检索流程与 Agent 自主检索，判断动态检索是否值得引入",
+    "inLanguage": "zh-CN",
+    "url": "https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/rag-evaluation-agentic-rag.html",
+    "isPartOf": {
+      "@type": "Book",
+      "name": "AI Agent Guide"
+    }
+  }
+  </script>
+  <!-- SEO:END -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css" />
+  <link rel="stylesheet" href="../shared/tokens.css" />
+  <style>
+    /* Chapter-specific lab widgets */
+    .c-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+    }
+    .c-badge.ok { background: var(--green-soft); color: var(--green); }
+    .c-badge.warn { background: var(--accent-soft); color: var(--accent); }
+    .c-badge.bad { background: var(--rose-soft); color: var(--rose); }
+    .c-badge.info { background: var(--blue-soft); color: var(--blue); }
+
+    /* Lab 01: Top-K cutoff matrix */
+    .k-slider-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      margin-bottom: 16px;
+    }
+    .k-slider-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+      min-width: 220px;
+    }
+    .k-slider-group input[type="range"] {
+      flex: 1;
+      accent-color: var(--teal);
+      cursor: pointer;
+    }
+    .k-value-pill {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: var(--teal-soft);
+      color: var(--teal);
+      white-space: nowrap;
+    }
+    .kpi-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 720px) { .kpi-strip { grid-template-columns: 1fr; } }
+    .kpi-card {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+    }
+    .kpi-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .kpi-val {
+      font-family: var(--font-mono);
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1.2;
+      color: var(--text);
+    }
+    .kpi-sub {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .rank-table {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .rank-row {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+    }
+    .rank-row-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .rank-query {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .rank-scores {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-secondary);
+      display: flex;
+      gap: 10px;
+    }
+    .rank-slots {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+    }
+    @media (max-width: 760px) { .rank-slots { grid-template-columns: repeat(2, 1fr); } }
+    .doc-slot {
+      position: relative;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-size: 11.5px;
+      font-family: var(--font-mono);
+      background: var(--bg-muted);
+      color: var(--text-secondary);
+      transition: all 0.15s ease;
+    }
+    .doc-slot .slot-rank {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10.5px;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+    .doc-slot .slot-id {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 600;
+    }
+    .doc-slot.in-k.is-rel {
+      background: var(--green-soft);
+      border-color: var(--green);
+      color: var(--green);
+    }
+    .doc-slot.out-k {
+      opacity: 0.52;
+      border-style: dashed;
+    }
+    .doc-slot.out-k.is-rel {
+      opacity: 0.92;
+      background: var(--rose-soft);
+      border-color: var(--rose);
+      color: var(--rose);
+      border-style: dashed;
+    }
+    .doc-slot.cutoff-edge {
+      box-shadow: 2px 0 0 0 var(--teal);
+    }
+
+    /* Lab 02: RAGAS diagnostic workbench */
+    .case-context-box {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      margin-bottom: 14px;
+      font-size: 13.5px;
+      line-height: 1.65;
+    }
+    .case-context-box p { margin: 0 0 8px; }
+    .case-context-box p:last-child { margin-bottom: 0; }
+    .case-label {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 4px;
+      margin-right: 6px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+    .ragas-bars {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px 16px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 680px) { .ragas-bars { grid-template-columns: 1fr; } }
+    .metric-row {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+    }
+    .metric-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12.5px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .metric-track {
+      height: 8px;
+      border-radius: 999px;
+      background: var(--bg-muted);
+      overflow: hidden;
+    }
+    .metric-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.25s ease;
+    }
+    .metric-fill.ok { background: var(--green); }
+    .metric-fill.warn { background: var(--accent); }
+    .metric-fill.bad { background: var(--rose); }
+
+    /* Lab 03: Fixed vs Agentic step-by-step sandbox */
+    .lab3-sim-zone {
+      padding: 38px 14px 14px;
+    }
+    .trace-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 14px;
+      align-items: stretch;
+    }
+    @media (max-width: 680px) { .trace-grid { grid-template-columns: 1fr; } }
+    .trace-pane {
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+    }
+    .trace-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+      margin-bottom: 12px;
+    }
+    .trace-step {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--border-strong);
+      border-radius: 6px;
+      padding: 9px 11px;
+      font-size: 12.5px;
+      line-height: 1.55;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+    .trace-step.pending { opacity: 0.35; }
+    .trace-step.kind-tool { border-left-color: var(--blue); }
+    .trace-step.kind-grade { border-left-color: var(--accent); }
+    .trace-step.kind-ok { border-left-color: var(--green); }
+    .trace-step.kind-miss { border-left-color: var(--rose); }
+    .step-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .ledger-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      padding-top: 10px;
+      border-top: 1px dashed var(--border-strong);
+    }
+    .ledger-cell {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 8px;
+      text-align: center;
+    }
+    .ledger-k {
+      font-size: 10.5px;
+      color: var(--text-muted);
+      display: block;
+    }
+    .ledger-v {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    /* Decision matrix cards */
+    .decision-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      margin-top: 16px;
+    }
+    @media (max-width: 720px) { .decision-grid { grid-template-columns: 1fr; } }
+    .decision-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+    }
+    .decision-card h4 {
+      margin: 0 0 6px;
+      font-size: 15.5px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .decision-card p {
+      margin: 0 0 8px;
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      line-height: 1.65;
+    }
+    .decision-card p:last-child { margin-bottom: 0; }
+    .decision-card.is-dimmed { opacity: 0.32; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./index.html">
+        <span>AI Agent Guide</span>
+        <span class="brand-badge">Interactive</span>
+      </a>
+      <nav class="topbar-nav">
+        <a href="#section-retrieval">检索层评测</a>
+        <a href="#lab-retrieval-metrics">实验 01</a>
+        <a href="#section-ragas">生成层四指标</a>
+        <a href="#section-agentic">Agentic RAG</a>
+        <a href="#decision">落地与选型</a>
+      </nav>
+      <button class="theme-btn" id="themeToggle" type="button">
+        <span id="themeIcon">☀</span>
+        <span id="themeText">浅色</span>
+      </button>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-meta">
+      <span class="hero-pill">模块三 · RAG 检索与证据</span>
+      <span class="hero-pill">3 个交互实验台</span>
+      <span class="hero-pill">TypeScript 可运行示例</span>
+    </div>
+    <h1>RAG 评测与 Agentic RAG：先量化断点，再决定是否动态检索</h1>
+    <p class="hero-lead">
+      改完分块、换了 Embedding、调了 Prompt，团队觉得“好像变好了”，直到线上跨文档问题持续漏答。没有分层评测，调参就是盲猜；不看延迟与 Token 账本，盲目上 Agentic RAG 只会让简单查询变慢 3 倍。
+    </p>
+  </section>
+
+  <section class="tldr">
+    <div class="tldr-card">
+      <div class="tldr-head">
+        <span>30 秒核心结论</span>
+        <span>先定位瓶颈，再做架构升级</span>
+      </div>
+      <div class="tldr-list">
+        <div class="tldr-item">
+          <div><strong>1. 检索层和生成层必须拆开测：</strong>相关文档没进 Top-K，再怎么改 Prompt 都救不回来。先用 Recall@K 与 MRR 锁死检索问题。</div>
+          <a class="tldr-go" href="#lab-retrieval-metrics">去实验 01 →</a>
+        </div>
+        <div class="tldr-item">
+          <div><strong>2. RAGAS 四指标对应四条修法：</strong>忠实度低修 Prompt 约束，上下文召回低修 Top-K 或切片，精准度低提 Reranker 阈值。</div>
+          <a class="tldr-go" href="#lab-ragas-diagnose">去实验 02 →</a>
+        </div>
+        <div class="tldr-item">
+          <div><strong>3. Agentic RAG 只赚复杂多跳的钱：</strong>单文档事实查询走固定链路更快更省；只有跨文档推理或首轮证据不足时，动态多步检索才值得引入。</div>
+          <a class="tldr-go" href="#lab-agentic-rag">去实验 03 →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2 id="section-retrieval">一、检索层评测：先分清“没找到”还是“排太后”</h2>
+    <p class="key">
+      RAG 评测必须拆成两层：<strong>检索质量评测</strong>看证据有没有进 Top-K，<strong>答案质量评测</strong>看模型有没有用对证据。混在一起只看最终得分，往往会把检索故障错当成 Prompt 问题来修。
+    </p>
+    <p>
+      检索层最实用的两个指标是 <strong>Recall@K</strong> 和 <strong>MRR（Mean Reciprocal Rank）</strong>。Recall@K 计算的是“所有人工标注的相关文档里，有多少比例进入了前 K 位”；MRR 计算的是“第一篇相关文档出现位置的倒数均值”，排在第 1 位得 1.0，第 2 位得 0.5，第 4 位得 0.25。
+    </p>
+    <p>
+      这两个数字合在一起看才不会误判。<strong>Recall@5 达标但 Recall@3 偏低、同时 MRR 尚可</strong>，说明文档已经被召回，只是被 Reranker 挤到了第 4、5 位；如果 Recall@5 和 MRR 一起掉下去，才是 Embedding 模型或分块粒度出了问题。
+    </p>
+  </main>
+
+  <section class="lab-wrap" id="lab-retrieval-metrics">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div class="lab-eyebrow">LAB 01 · RETRIEVAL METRICS MATRIX</div>
+        <div class="lab-title">Top-K 截断线与排序位次实验台</div>
+        <div class="lab-desc">
+          基于 5 条真实业务问答数据集（覆盖 6 篇标注文档），拖动 K 值切线或切换检索配置，观察 Recall@K 与 MRR 如何分叉并指向不同的修复动作。
+        </div>
+      </div>
+      <div class="lab-body">
+        <div class="lab-toolbar">
+          <div class="toolbar-group">
+            <span class="toolbar-label">检索状态</span>
+            <button class="chip-btn teal-active" data-ret-mode="baseline" type="button">当前基线</button>
+            <button class="chip-btn" data-ret-mode="rerank" type="button">优化 Reranker</button>
+            <button class="chip-btn" data-ret-mode="drift" type="button">Embedding 退化</button>
+          </div>
+          <span class="src-tag">来自 retrieval-metrics.ts 实时计算</span>
+        </div>
+
+        <div class="k-slider-row">
+          <div class="k-slider-group">
+            <span class="toolbar-label">送入 LLM 的 Top-K 窗口</span>
+            <input id="lab1KSlider" type="range" min="1" max="5" step="1" value="3" aria-label="Top-K 滑块" />
+            <span class="k-value-pill" id="lab1KVal">K = 3</span>
+          </div>
+          <div style="font-size:12.5px;color:var(--text-secondary);">
+            实线绿色 = 命中且在 Top-K 内；虚线红色 = 相关文档但被截断在 K 之外
+          </div>
+        </div>
+
+        <div class="kpi-strip">
+          <div class="kpi-card">
+            <div class="kpi-label">
+              <span id="lab1RecallLabel">Recall@3</span>
+              <span class="c-badge" id="lab1RecallBadge">--</span>
+            </div>
+            <div class="kpi-val" id="lab1RecallVal">--</div>
+            <div class="kpi-sub">起始参考门槛：≥ 80.0%</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">
+              <span>MRR</span>
+              <span class="c-badge" id="lab1MrrBadge">--</span>
+            </div>
+            <div class="kpi-val" id="lab1MrrVal">--</div>
+            <div class="kpi-sub">起始参考门槛：≥ 0.600</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label"><span>漏召回片段数</span></div>
+            <div class="kpi-val" id="lab1MissVal">--</div>
+            <div class="kpi-sub" id="lab1MissSub">--</div>
+          </div>
+        </div>
+
+        <div class="rank-table" id="lab1Matrix"></div>
+
+        <div class="outcome" id="lab1Outcome" style="margin-top:14px;"></div>
+
+        <details class="code-fold" style="margin-top:16px;">
+          <summary>查看对应的 TypeScript 评测实现（同步当前 K 值）</summary>
+          <div class="code-fold-body">
+            <div class="code-card">
+              <div class="code-header">
+                <span>examples/rag/rag-evaluation-agentic-rag/retrieval-metrics.ts</span>
+                <button class="copy-btn" type="button">复制</button>
+              </div>
+              <pre><code class="language-typescript" id="lab1Code"></code></pre>
+            </div>
+            <p style="font-size:13px;color:var(--text-secondary);margin:10px 0 0;">
+              完整可运行脚本：<a href="https://github.com/qufei1993/ai-agent-fullstack-roadmap/blob/main/examples/rag/rag-evaluation-agentic-rag/retrieval-metrics.ts" target="_blank" rel="noopener">retrieval-metrics.ts</a>
+            </p>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2 id="section-ragas">二、生成层评测：用 RAGAS 四指标定位链路断点</h2>
+    <p class="key">
+      检索通过不代表回答可靠。RAGAS（<a href="https://docs.ragas.io" target="_blank" rel="noopener">docs.ragas.io</a>）把端到端质量拆成四个独立指标，每个指标只负责盯紧链路上的一个断点。
+    </p>
+
+    <figure class="diagram-figure">
+      <svg viewBox="0 0 860 250" width="100%" role="img" aria-label="RAGAS 四指标与 RAG 链路断点映射图">
+        <defs>
+          <marker id="arrowHead" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--text-muted)" />
+          </marker>
+        </defs>
+        <!-- Main pipeline -->
+        <rect x="20" y="34" width="130" height="54" rx="10" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="1.5" />
+        <text x="85" y="57" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="700">用户问题</text>
+        <text x="85" y="75" text-anchor="middle" fill="var(--text-secondary)" font-size="11">Question</text>
+
+        <line x1="150" y1="61" x2="198" y2="61" stroke="var(--text-muted)" stroke-width="1.6" marker-end="url(#arrowHead)" />
+
+        <rect x="204" y="34" width="170" height="54" rx="10" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="1.5" />
+        <text x="289" y="57" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="700">检索与重排</text>
+        <text x="289" y="75" text-anchor="middle" fill="var(--text-secondary)" font-size="11">Top-K Contexts</text>
+
+        <line x1="374" y1="61" x2="422" y2="61" stroke="var(--text-muted)" stroke-width="1.6" marker-end="url(#arrowHead)" />
+
+        <rect x="428" y="34" width="170" height="54" rx="10" fill="var(--purple-soft)" stroke="var(--purple)" stroke-width="1.5" />
+        <text x="513" y="57" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="700">LLM 生成回答</text>
+        <text x="513" y="75" text-anchor="middle" fill="var(--text-secondary)" font-size="11">Grounded Answer</text>
+
+        <line x1="598" y1="61" x2="646" y2="61" stroke="var(--text-muted)" stroke-width="1.6" marker-end="url(#arrowHead)" />
+
+        <rect x="652" y="34" width="188" height="54" rx="10" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5" />
+        <text x="746" y="57" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="700">人工参考答案</text>
+        <text x="746" y="75" text-anchor="middle" fill="var(--text-secondary)" font-size="11">Ground Truth（离线）</text>
+
+        <!-- 4 diagnostic cards -->
+        <line x1="250" y1="88" x2="120" y2="146" stroke="var(--teal)" stroke-width="1.4" stroke-dasharray="4 3" />
+        <rect x="20" y="148" width="196" height="76" rx="10" fill="var(--bg-elevated)" stroke="var(--teal)" stroke-width="1.4" />
+        <text x="118" y="172" text-anchor="middle" fill="var(--teal)" font-size="12.5" font-weight="700">Context Precision</text>
+        <text x="118" y="192" text-anchor="middle" fill="var(--text)" font-size="12">检索噪音高不高？</text>
+        <text x="118" y="210" text-anchor="middle" fill="var(--text-muted)" font-size="11">低 → 缩 K / 提 Reranker 阈值</text>
+
+        <line x1="330" y1="88" x2="326" y2="146" stroke="var(--accent)" stroke-width="1.4" stroke-dasharray="4 3" />
+        <rect x="228" y="148" width="196" height="76" rx="10" fill="var(--bg-elevated)" stroke="var(--accent)" stroke-width="1.4" />
+        <text x="326" y="172" text-anchor="middle" fill="var(--accent)" font-size="12.5" font-weight="700">Context Recall</text>
+        <text x="326" y="192" text-anchor="middle" fill="var(--text)" font-size="12">关键事实漏没漏？</text>
+        <text x="326" y="210" text-anchor="middle" fill="var(--text-muted)" font-size="11">低 → 扩 K / 改切片 / 多步检索</text>
+
+        <line x1="485" y1="88" x2="534" y2="146" stroke="var(--rose)" stroke-width="1.4" stroke-dasharray="4 3" />
+        <rect x="436" y="148" width="196" height="76" rx="10" fill="var(--bg-elevated)" stroke="var(--rose)" stroke-width="1.4" />
+        <text x="534" y="172" text-anchor="middle" fill="var(--rose)" font-size="12.5" font-weight="700">Faithfulness</text>
+        <text x="534" y="192" text-anchor="middle" fill="var(--text)" font-size="12">有没有脱离证据编造？</text>
+        <text x="534" y="210" text-anchor="middle" fill="var(--text-muted)" font-size="11">低 → 严约束 Prompt / 触发拒答</text>
+
+        <line x1="555" y1="88" x2="742" y2="146" stroke="var(--purple)" stroke-width="1.4" stroke-dasharray="4 3" />
+        <rect x="644" y="148" width="196" height="76" rx="10" fill="var(--bg-elevated)" stroke="var(--purple)" stroke-width="1.4" />
+        <text x="742" y="172" text-anchor="middle" fill="var(--purple)" font-size="12.5" font-weight="700">Answer Relevancy</text>
+        <text x="742" y="192" text-anchor="middle" fill="var(--text)" font-size="12">回答切不切题？</text>
+        <text x="742" y="210" text-anchor="middle" fill="var(--text-muted)" font-size="11">低 → 聚焦提问 / 裁掉冗余背景</text>
+      </svg>
+      <figcaption>图 1：RAGAS 四指标与 RAG 链路断点的对应关系。两个看检索层，两个看生成层，修错层就会白费力气。</figcaption>
+    </figure>
+
+    <p>
+      注意三条实战底线：第一，<strong>评测集必须来自真实用户问题</strong>，用 LLM 根据文档反向生成的合成问题措辞和原文太像，Recall 会虚高；第二，RAGAS 官方只定义算法，0.8 只是社区常用的起始门槛，更重要的是<strong>单指标不能低于 0.6</strong>；第三，当精准度与召回率冲突时，<strong>优先保证 Context Recall</strong>，漏掉关键步骤比多带两段无关文本更危险。
+    </p>
+  </main>
+
+  <section class="lab-wrap" id="lab-ragas-diagnose">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div class="lab-eyebrow">LAB 02 · RAGAS FAILURE DIAGNOSIS</div>
+        <div class="lab-title">RAG 故障工单诊断台</div>
+        <div class="lab-desc">
+          切换 3 条典型评测病例，阅读四项得分后，从 4 个工程动作中选出最先该改的那一项，验证你的排障直觉。
+        </div>
+      </div>
+      <div class="lab-body">
+        <div class="lab-toolbar">
+          <div class="toolbar-group">
+            <span class="toolbar-label">选择病例</span>
+            <button class="chip-btn active" data-case-id="missing" type="button">病例 A：令牌刷新（证据缺失）</button>
+            <button class="chip-btn" data-case-id="offtopic" type="button">病例 B：高忠实但跑题</button>
+            <button class="chip-btn" data-case-id="noisy" type="button">病例 C：Top-8 噪音过载</button>
+          </div>
+          <span class="sim-tag">教学诊断样本 · 还原常见故障形态</span>
+        </div>
+
+        <div class="case-context-box" id="lab2CaseBox"></div>
+        <div class="ragas-bars" id="lab2Bars"></div>
+
+        <div style="font-size:13px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;">
+          如果你是值班工程师，第一步优先做什么改动？
+        </div>
+        <div class="pick-options" id="lab2Options"></div>
+        <div class="outcome" id="lab2Outcome" style="display:none;margin-top:14px;"></div>
+
+        <details class="code-fold" style="margin-top:16px;">
+          <summary>查看并发 LLM-as-Judge 评测核心代码（OpenAI 兼容接口）</summary>
+          <div class="code-fold-body">
+            <div class="code-card">
+              <div class="code-header">
+                <span>examples/rag/rag-evaluation-agentic-rag/ragas-evaluation.ts</span>
+                <button class="copy-btn" type="button">复制</button>
+              </div>
+              <pre><code class="language-typescript">async function evaluateSample(sample: EvalSample): Promise&lt;RagasScore&gt; {
+  const [faithfulness, answerRelevancy, contextPrecision, contextRecall] =
+    await Promise.all([
+      scoreFaithfulness(sample.contexts, sample.answer),
+      scoreAnswerRelevancy(sample.question, sample.answer),
+      scoreContextPrecision(sample.question, sample.contexts),
+      scoreContextRecall(sample.contexts, sample.groundTruth),
+    ]);
+
+  const overall = (faithfulness + answerRelevancy + contextPrecision + contextRecall) / 4;
+  return { faithfulness, answerRelevancy, contextPrecision, contextRecall, overall };
+}</code></pre>
+            </div>
+            <p style="font-size:13px;color:var(--text-secondary);margin:10px 0 0;">
+              完整可运行脚本：<a href="https://github.com/qufei1993/ai-agent-fullstack-roadmap/blob/main/examples/rag/rag-evaluation-agentic-rag/ragas-evaluation.ts" target="_blank" rel="noopener">ragas-evaluation.ts</a>
+            </p>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2 id="section-agentic">三、固定 RAG 的天花板，与 Agentic RAG 的真实代价</h2>
+    <p class="key">
+      评测跑了一轮又一轮，你会遇到一类固定流水线怎么调都卡死的问题：<strong>跨文档多跳推理</strong>。第一份文档里只写着“详见《审计日志合规规范》”，在拿到第一份文档之前，单轮检索根本不知道要去搜“SOC2 7 年归档”。
+    </p>
+    <p>
+      <strong>Agentic RAG</strong> 的本质并不神秘：不再把“检索 → 生成”写死成一次单向调用，而是把检索器封装成 Agent 的工具（Tool），让模型先判断当前证据够不够，不够就拆分子查询、换词再查，直到满足证据要求或触达最大步数预算（<code>MAX_STEPS</code>）。
+    </p>
+    <p>
+      但它不是免费午餐。每多一轮工具调用，就会多一次完整上下文的 LLM 推理、多一段网络延迟、多一层失败路径。下面先做个直觉预测，再进沙盒对照账本。
+    </p>
+
+    <div class="predict-hook" id="predictAgentic">
+      <div class="predict-q">
+        <span class="predict-badge">先猜再验</span>
+        面对“deleteAccount 报 409 时该走什么删除流程？审计日志能不能一起物理删除？”这类跨 3 份文档的问题，把固定 RAG 的 Top-K 从 3 拉大到 15，对比 Agentic RAG 跑 2 轮工具检索，最容易出现什么结果？
+      </div>
+      <div class="predict-opts">
+        <button class="predict-opt" data-p="wrong1" type="button">A. 固定 RAG 拉到 Top-15 就能完全解决，而且更省 Token</button>
+        <button class="predict-opt" data-p="right" type="button">B. 固定 RAG 仍可能漏掉深层引用文档且塞满噪音；Agentic RAG 召回更高，但延迟与调用次数明显上升</button>
+        <button class="predict-opt" data-p="wrong2" type="button">C. Agentic RAG 在所有问题上都比固定 RAG 更快、更便宜</button>
+      </div>
+      <div class="predict-feedback" id="predictFeedback"></div>
+      <button class="predict-verify" id="predictVerifyBtn" type="button" style="display:none;">在实验 03 中亲眼对比两条轨迹 →</button>
+    </div>
+  </main>
+
+  <section class="lab-wrap" id="lab-agentic-rag">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div class="lab-eyebrow">LAB 03 · FIXED PIPELINE VS. AGENTIC RAG</div>
+        <div class="lab-title">固定检索 vs. Agent 自主检索：步进轨迹与成本对照台</div>
+        <div class="lab-desc">
+          切换 3 类查询难度，单步或自动播放执行过程，对比左右两套架构的证据覆盖率、LLM 调用次数、延迟与 Token 消耗。
+        </div>
+      </div>
+      <div class="lab-body">
+        <div class="lab-toolbar">
+          <div class="toolbar-group">
+            <span class="toolbar-label">查询类型</span>
+            <button class="chip-btn active" data-q-type="simple" type="button">① 单文档事实</button>
+            <button class="chip-btn" data-q-type="ambiguous" type="button">② 术语模糊</button>
+            <button class="chip-btn" data-q-type="multihop" type="button">③ 跨文档多跳</button>
+          </div>
+          <div class="toolbar-group">
+            <button class="btn btn-primary" id="lab3StepBtn" type="button">下一步</button>
+            <button class="btn" id="lab3RunAllBtn" type="button">跑完全程</button>
+            <button class="btn" id="lab3ResetBtn" type="button">重置</button>
+          </div>
+        </div>
+
+        <div class="case-context-box" id="lab3PromptBox" style="margin-bottom:14px;"></div>
+
+        <div class="sim-zone lab3-sim-zone" data-sim-label="教学模拟 · 对比执行步数、延迟与 Token 账本">
+          <div class="trace-grid">
+            <div class="trace-pane">
+              <div class="pane-head">
+                <span>Fixed RAG（固定单轮检索 Top-2）</span>
+                <span class="c-badge" id="lab3FixedStatus">待运行</span>
+              </div>
+              <div class="trace-steps" id="lab3FixedSteps"></div>
+              <div class="ledger-row" id="lab3FixedLedger"></div>
+            </div>
+            <div class="trace-pane">
+              <div class="pane-head">
+                <span>Agentic RAG（工具调用 + 步数预算 MAX=4）</span>
+                <span class="c-badge" id="lab3AgentStatus">待运行</span>
+              </div>
+              <div class="trace-steps" id="lab3AgentSteps"></div>
+              <div class="ledger-row" id="lab3AgentLedger"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="outcome" id="lab3Outcome" style="margin-top:14px;"></div>
+
+        <details class="code-fold" style="margin-top:16px;">
+          <summary>查看带 MAX_STEPS 预算的最小 Agentic RAG 循环（TypeScript）</summary>
+          <div class="code-fold-body">
+            <div class="code-card">
+              <div class="code-header">
+                <span>examples/rag/rag-evaluation-agentic-rag/agentic-rag-loop.ts</span>
+                <button class="copy-btn" type="button">复制</button>
+              </div>
+              <pre><code class="language-typescript">for (let step = 1; step &lt;= MAX_STEPS; step++) {
+  const res = await client.chat.completions.create({
+    model: MODEL,
+    temperature: 0,
+    messages,
+    tools,
+  });
+
+  const msg = res.choices[0]?.message;
+  if (!msg) break;
+  messages.push(msg);
+
+  // 模型判断证据已充足，不再调用检索工具，直接返回答案
+  if (!msg.tool_calls || msg.tool_calls.length === 0) {
+    return msg.content;
+  }
+
+  for (const call of msg.tool_calls) {
+    const { query } = JSON.parse(call.function.arguments);
+    const docs = searchKnowledgeBase(query, 2);
+    messages.push({
+      role: "tool",
+      tool_call_id: call.id,
+      content: JSON.stringify(docs),
+    });
+  }
+}</code></pre>
+            </div>
+            <p style="font-size:13px;color:var(--text-secondary);margin:10px 0 0;">
+              完整可运行脚本：<a href="https://github.com/qufei1993/ai-agent-fullstack-roadmap/blob/main/examples/rag/rag-evaluation-agentic-rag/agentic-rag-loop.ts" target="_blank" rel="noopener">agentic-rag-loop.ts</a>
+            </p>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2 id="decision">四、务实落地顺序与架构选型</h2>
+    <p class="key">
+      不要一上来就搭建全套评测平台和复杂 Agentic RAG。最稳的演进路径是：<strong>先用 20 条真实业务问题跑出 Recall@5 基线，再用 RAGAS 锁定线上 bad case，最后只把固定链路解不了的高价值多跳问题路由给 Agentic RAG</strong>。
+    </p>
+    <p>
+      另一个高频踩坑是<strong>在同一批评测题上反复调参</strong>，导致指标虚高。手里有 100 条标注数据时，拆出 80 条做调优集、20 条锁死做验证集，上线前只跑一次验证集看是否真的泛化。
+    </p>
+
+    <div class="lab-toolbar" style="margin-top:18px;border-bottom:none;padding-bottom:0;">
+      <div class="toolbar-group">
+        <span class="toolbar-label">按场景筛选架构</span>
+        <button class="chip-btn active" data-filter="all" type="button">全部方案</button>
+        <button class="chip-btn" data-filter="low-latency" type="button">低延迟 / 高并发</button>
+        <button class="chip-btn" data-filter="multi-hop" type="button">跨文档多跳</button>
+        <button class="chip-btn" data-filter="eval-first" type="button">冷启动评测</button>
+      </div>
+    </div>
+
+    <div class="decision-grid" id="decisionGrid">
+      <div class="decision-card" data-tags="low-latency eval-first">
+        <h4>Fixed RAG（混合检索 + Reranker） <span class="c-badge ok">默认起点</span></h4>
+        <p><strong>适用场景：</strong>FAQ、API 手册、单文档政策查询，要求 P95 延迟低于 2 秒且成本可控。</p>
+        <p><strong>工程要点：</strong>先把 Recall@5 推到 80% 以上、MRR 稳定在 0.6 以上，90% 的常规企业知识库问题不需要升级架构。</p>
+      </div>
+      <div class="decision-card" data-tags="low-latency multi-hop">
+        <h4>Router + 条件升级（Hybrid） <span class="c-badge info">生产推荐</span></h4>
+        <p><strong>适用场景：</strong>80% 是简单查询、20% 是跨文档排查的真实线上流量。</p>
+        <p><strong>工程要点：</strong>入口加一层轻量分类器或首轮相关性分数门槛：高置信度直接走固定生成，低置信度或复合问题才进入多步检索。</p>
+      </div>
+      <div class="decision-card" data-tags="multi-hop">
+        <h4>Full Agentic RAG <span class="c-badge warn">按需引入</span></h4>
+        <p><strong>适用场景：</strong>故障根因排查、法务/合规跨条款核对、代码库深度研究等高价值复杂任务。</p>
+        <p><strong>工程要点：</strong>必须配齐 <code>MAX_STEPS</code> 步数上限、Token 预算、重复查询去重和降级拒答，防止陷入死循环。</p>
+      </div>
+      <div class="decision-card" data-tags="eval-first">
+        <h4>最小离线评测门禁 <span class="c-badge ok">必备护栏</span></h4>
+        <p><strong>适用场景：</strong>每次修改切片大小、Embedding 模型、Prompt 或引入 Agentic 循环之前。</p>
+        <p><strong>工程要点：</strong>20 到 50 条真实提问 + Ground Truth ID 跑 Recall@K 与 MRR；出现幻觉或跑题投诉再加 RAGAS 回归，单指标不低于 0.6。</p>
+      </div>
+    </div>
+
+    <p style="margin-top:26px;">
+      到这里，整个 RAG 模块从文档解析、向量检索、混合重排、引用溯源，到分层评测与 Agentic RAG 的演进闭环已经完整。评测把“凭感觉调优”变成了工程循环，而把检索器交到 Agent 手里作为工具，也正好把 RAG 自然接入了下一阶段要深入拆解的 Agent Runtime 与 Tool Calling 世界。
+    </p>
+  </main>
+
+  <footer>
+    <p>AI Agent Guide · 开源交互式工程指南</p>
+  </footer>
+
+  <script>
+    (function () {
+      /* ================= LAB 01: Retrieval Metrics ================= */
+      const LAB1_DATASETS = {
+        baseline: {
+          label: "当前基线",
+          records: [
+            {
+              query: "deleteAccount API 返回 409 是什么原因？",
+              relevant: ["api-error-codes-001", "account-deletion-flow-003"],
+              retrieved: ["api-error-codes-001", "auth-token-refresh-007", "account-deletion-flow-003", "user-permissions-012", "session-management-004"]
+            },
+            {
+              query: "软删除和硬删除的区别是什么？",
+              relevant: ["account-deletion-flow-003"],
+              retrieved: ["account-deletion-flow-003", "data-retention-policy-009", "gdpr-compliance-011", "user-permissions-012", "audit-log-schema-006"]
+            },
+            {
+              query: "审计日志保留多少天？",
+              relevant: ["audit-log-schema-006", "data-retention-policy-009"],
+              retrieved: ["data-retention-policy-009", "gdpr-compliance-011", "audit-log-schema-006", "backup-strategy-015", "auth-token-refresh-007"]
+            },
+            {
+              query: "令牌过期后如何刷新认证？",
+              relevant: ["auth-token-refresh-007"],
+              retrieved: ["session-management-004", "user-permissions-012", "api-error-codes-001", "auth-token-refresh-007", "account-deletion-flow-003"]
+            },
+            {
+              query: "GDPR 合规要求删除哪些用户数据？",
+              relevant: ["gdpr-compliance-011", "data-retention-policy-009", "audit-log-schema-006"],
+              retrieved: ["gdpr-compliance-011", "data-retention-policy-009", "user-permissions-012", "account-deletion-flow-003", "backup-strategy-015"]
+            }
+          ]
+        },
+        rerank: {
+          label: "优化 Reranker",
+          records: [
+            {
+              query: "deleteAccount API 返回 409 是什么原因？",
+              relevant: ["api-error-codes-001", "account-deletion-flow-003"],
+              retrieved: ["api-error-codes-001", "account-deletion-flow-003", "auth-token-refresh-007", "user-permissions-012", "session-management-004"]
+            },
+            {
+              query: "软删除和硬删除的区别是什么？",
+              relevant: ["account-deletion-flow-003"],
+              retrieved: ["account-deletion-flow-003", "data-retention-policy-009", "gdpr-compliance-011", "user-permissions-012", "audit-log-schema-006"]
+            },
+            {
+              query: "审计日志保留多少天？",
+              relevant: ["audit-log-schema-006", "data-retention-policy-009"],
+              retrieved: ["audit-log-schema-006", "data-retention-policy-009", "gdpr-compliance-011", "backup-strategy-015", "auth-token-refresh-007"]
+            },
+            {
+              query: "令牌过期后如何刷新认证？",
+              relevant: ["auth-token-refresh-007"],
+              retrieved: ["auth-token-refresh-007", "session-management-004", "user-permissions-012", "api-error-codes-001", "account-deletion-flow-003"]
+            },
+            {
+              query: "GDPR 合规要求删除哪些用户数据？",
+              relevant: ["gdpr-compliance-011", "data-retention-policy-009", "audit-log-schema-006"],
+              retrieved: ["gdpr-compliance-011", "data-retention-policy-009", "audit-log-schema-006", "account-deletion-flow-003", "backup-strategy-015"]
+            }
+          ]
+        },
+        drift: {
+          label: "Embedding 退化",
+          records: [
+            {
+              query: "deleteAccount API 返回 409 是什么原因？",
+              relevant: ["api-error-codes-001", "account-deletion-flow-003"],
+              retrieved: ["session-management-004", "user-permissions-012", "backup-strategy-015", "api-error-codes-001", "auth-token-refresh-007"]
+            },
+            {
+              query: "软删除和硬删除的区别是什么？",
+              relevant: ["account-deletion-flow-003"],
+              retrieved: ["backup-strategy-015", "data-retention-policy-009", "account-deletion-flow-003", "user-permissions-012", "audit-log-schema-006"]
+            },
+            {
+              query: "审计日志保留多少天？",
+              relevant: ["audit-log-schema-006", "data-retention-policy-009"],
+              retrieved: ["backup-strategy-015", "gdpr-compliance-011", "session-management-004", "data-retention-policy-009", "user-permissions-012"]
+            },
+            {
+              query: "令牌过期后如何刷新认证？",
+              relevant: ["auth-token-refresh-007"],
+              retrieved: ["session-management-004", "user-permissions-012", "api-error-codes-001", "backup-strategy-015", "account-deletion-flow-003"]
+            },
+            {
+              query: "GDPR 合规要求删除哪些用户数据？",
+              relevant: ["gdpr-compliance-011", "data-retention-policy-009", "audit-log-schema-006"],
+              retrieved: ["user-permissions-012", "account-deletion-flow-003", "gdpr-compliance-011", "backup-strategy-015", "session-management-004"]
+            }
+          ]
+        }
+      };
+
+      let lab1Mode = "baseline";
+      let lab1K = 3;
+
+      const kSlider = document.getElementById("lab1KSlider");
+      const kValEl = document.getElementById("lab1KVal");
+      const recallLabelEl = document.getElementById("lab1RecallLabel");
+      const recallValEl = document.getElementById("lab1RecallVal");
+      const recallBadgeEl = document.getElementById("lab1RecallBadge");
+      const mrrValEl = document.getElementById("lab1MrrVal");
+      const mrrBadgeEl = document.getElementById("lab1MrrBadge");
+      const missValEl = document.getElementById("lab1MissVal");
+      const missSubEl = document.getElementById("lab1MissSub");
+      const matrixEl = document.getElementById("lab1Matrix");
+      const lab1OutcomeEl = document.getElementById("lab1Outcome");
+      const lab1CodeEl = document.getElementById("lab1Code");
+
+      function calcRecall(retrieved, relevant, k) {
+        const topK = retrieved.slice(0, k);
+        const hits = topK.filter((id) => relevant.includes(id)).length;
+        return hits / relevant.length;
+      }
+
+      function calcRR(retrieved, relevant) {
+        for (let i = 0; i < retrieved.length; i++) {
+          if (relevant.includes(retrieved[i])) return 1 / (i + 1);
+        }
+        return 0;
+      }
+
+      function renderLab1() {
+        const records = LAB1_DATASETS[lab1Mode].records;
+        kValEl.textContent = "K = " + lab1K;
+        recallLabelEl.textContent = "Recall@" + lab1K;
+
+        let recallSum = 0;
+        let rrSum = 0;
+        let totalRel = 0;
+        let missedInK = 0;
+        let missedOutsideTop5 = 0;
+
+        matrixEl.innerHTML = records.map((rec) => {
+          const r = calcRecall(rec.retrieved, rec.relevant, lab1K);
+          const rr = calcRR(rec.retrieved, rec.relevant);
+          recallSum += r;
+          rrSum += rr;
+          totalRel += rec.relevant.length;
+
+          const topK = rec.retrieved.slice(0, lab1K);
+          const hitsK = rec.relevant.filter((id) => topK.includes(id)).length;
+          const hits5 = rec.relevant.filter((id) => rec.retrieved.includes(id)).length;
+          missedInK += rec.relevant.length - hitsK;
+          missedOutsideTop5 += rec.relevant.length - hits5;
+
+          const slotsHtml = rec.retrieved.map((docId, idx) => {
+            const rank = idx + 1;
+            const inK = rank <= lab1K;
+            const isRel = rec.relevant.includes(docId);
+            const cls = [
+              "doc-slot",
+              inK ? "in-k" : "out-k",
+              isRel ? "is-rel" : "",
+              rank === lab1K ? "cutoff-edge" : ""
+            ].join(" ");
+            const tag = isRel ? (inK ? "命中" : "被截断") : "干扰";
+            return (
+              '<div class="' + cls + '" title="' + docId + '">' +
+                '<div class="slot-rank"><span>#' + rank + '</span><span>' + tag + '</span></div>' +
+                '<span class="slot-id">' + docId + '</span>' +
+              '</div>'
+            );
+          }).join("");
+
+          return (
+            '<div class="rank-row">' +
+              '<div class="rank-row-head">' +
+                '<span class="rank-query">' + rec.query + '</span>' +
+                '<span class="rank-scores">' +
+                  '<span>Recall@' + lab1K + ' = <strong>' + (r * 100).toFixed(0) + '%</strong></span>' +
+                  '<span>RR = <strong>' + rr.toFixed(2) + '</strong></span>' +
+                '</span>' +
+              '</div>' +
+              '<div class="rank-slots">' + slotsHtml + '</div>' +
+            '</div>'
+          );
+        }).join("");
+
+        const avgRecall = recallSum / records.length;
+        const avgMrr = rrSum / records.length;
+
+        recallValEl.textContent = (avgRecall * 100).toFixed(1) + "%";
+        mrrValEl.textContent = avgMrr.toFixed(3);
+        missValEl.textContent = missedInK + " / " + totalRel;
+        missSubEl.textContent = missedOutsideTop5 > 0
+          ? "其中 " + missedOutsideTop5 + " 篇完全不在 Top-5 候选池"
+          : "全部相关文档都在 Top-5 内，只是排序靠后";
+
+        recallBadgeEl.className = "c-badge " + (avgRecall >= 0.8 ? "ok" : "bad");
+        recallBadgeEl.textContent = avgRecall >= 0.8 ? "达标" : "未达标";
+        mrrBadgeEl.className = "c-badge " + (avgMrr >= 0.6 ? "ok" : "bad");
+        mrrBadgeEl.textContent = avgMrr >= 0.6 ? "达标" : "未达标";
+
+        if (avgRecall >= 0.8 && avgMrr >= 0.6) {
+          lab1OutcomeEl.className = "outcome good";
+          lab1OutcomeEl.innerHTML =
+            '<div class="outcome-title">诊断结论：检索层健康（Recall@' + lab1K + ' 与 MRR 双达标）</div>' +
+            '当前配置下绝大多数相关文档已进入 Top-' + lab1K + ' 且排名靠前。如果线上答案仍然不理想，下一步应去查生成层 Prompt 与忠实度，而不是继续折腾 Embedding。';
+        } else if (avgRecall < 0.8 && avgMrr >= 0.6) {
+          lab1OutcomeEl.className = "outcome meh";
+          lab1OutcomeEl.innerHTML =
+            '<div class="outcome-title">诊断结论：典型“找得到但排太后”（Recall@' + lab1K + ' 未达标，MRR 达标）</div>' +
+            '例如“令牌过期后如何刷新认证？”的相关文档排在第 4 位，K=' + lab1K + ' 时刚好被切掉。优先尝试增大 K 到 5 或调优 Reranker，而不是贸然替换 Embedding 模型。';
+        } else {
+          lab1OutcomeEl.className = "outcome bad";
+          lab1OutcomeEl.innerHTML =
+            '<div class="outcome-title">诊断结论：底层召回失效（Recall@' + lab1K + ' 与 MRR 双双偏低）</div>' +
+            '相关文档大量掉出候选池，说明底层向量召回或切片本身存在盲区。需要检查 Embedding 领域适配度、引入 BM25 混合检索，并复核分块粒度。';
+        }
+
+        lab1CodeEl.textContent =
+          '// 当前实验台参数：K = ' + lab1K + '，场景 = ' + LAB1_DATASETS[lab1Mode].label + '\n' +
+          'function recallAtK(retrieved: string[], relevant: string[], k = ' + lab1K + '): number {\n' +
+          '  const topK = retrieved.slice(0, k);\n' +
+          '  const hits = topK.filter((id) => relevant.includes(id)).length;\n' +
+          '  return hits / relevant.length;\n' +
+          '}\n\n' +
+          'function reciprocalRank(retrieved: string[], relevant: string[]): number {\n' +
+          '  for (let i = 0; i < retrieved.length; i++) {\n' +
+          '    if (relevant.includes(retrieved[i])) return 1 / (i + 1);\n' +
+          '  }\n' +
+          '  return 0;\n' +
+          '}\n\n' +
+          '// 当前实时结果：Recall@' + lab1K + ' = ' + (avgRecall * 100).toFixed(1) + '% | MRR = ' + avgMrr.toFixed(3);
+
+        if (window.bookHighlightCode) window.bookHighlightCode(document.getElementById("lab-retrieval-metrics"));
+      }
+
+      document.querySelectorAll("[data-ret-mode]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll("[data-ret-mode]").forEach((b) => b.classList.remove("teal-active"));
+          btn.classList.add("teal-active");
+          lab1Mode = btn.getAttribute("data-ret-mode");
+          renderLab1();
+        });
+      });
+
+      kSlider.addEventListener("input", () => {
+        lab1K = Number(kSlider.value);
+        renderLab1();
+      });
+
+      /* ================= LAB 02: RAGAS Failure Diagnosis ================= */
+      const LAB2_CASES = {
+        missing: {
+          question: "如何刷新过期的认证令牌？",
+          context: "[1] deleteAccount API 在删除用户前必须校验二次确认令牌。令牌过期会返回 401，数据库约束冲突会返回 409。",
+          answer: "令牌过期会返回 401。请调用 /oauth/token 接口，携带 refresh_token 换取新的 access_token。",
+          scores: [
+            { name: "Faithfulness（忠实度）", val: 0.15 },
+            { name: "Answer Relevancy（切题度）", val: 0.78 },
+            { name: "Context Precision（精准度）", val: 0.10 },
+            { name: "Context Recall（召回率）", val: 0.00 }
+          ],
+          options: [
+            {
+              kicker: "动作 1",
+              title: "先补检索召回，同时在无证据时强制拒答",
+              sub: "把认证刷新文档召回进 Top-K，并收紧证据不足的拒答阈值",
+              grade: "good",
+              feedback: "判断准确。Context Recall 为 0 说明根本没搜到刷新流程文档，模型只能靠预训练记忆脑补 /oauth/token（导致 Faithfulness 暴跌至 0.15）。先修检索召回，同时加上证据不足拒答护栏。"
+            },
+            {
+              kicker: "动作 2",
+              title: "把回答 Prompt 改得更简洁",
+              sub: "要求模型用 2 句话回答问题",
+              grade: "bad",
+              feedback: "修错层了。Answer Relevancy 本身有 0.78，真正归零的是 Context Recall 和 Faithfulness。相关文档根本没进上下文，改回答风格毫无帮助。"
+            },
+            {
+              kicker: "动作 3",
+              title: "把 Top-K 从 5 缩小到 2",
+              sub: "减少上下文长度降低噪音",
+              grade: "bad",
+              feedback: "方向相反。现在连关键证据都没进候选池，缩小 Top-K 只会让漏召回更严重。"
+            },
+            {
+              kicker: "动作 4",
+              title: "调低生成温度 Temperature 到 0",
+              sub: "让模型输出更稳定",
+              grade: "meh",
+              feedback: "治标不治本。Temperature=0 只能减少随机性，但在上下文缺少依据时，模型依然可能稳定地输出脑补内容。"
+            }
+          ]
+        },
+        offtopic: {
+          question: "审计日志最短要保留几年？",
+          context: "[1] 账号注销流程分为软删除和硬删除。软删除保留 30 天冷静期。[2] 审计日志独立归档保留 7 年以满足 SOC2 合规，不随账号删除清除。",
+          answer: "我们的系统非常重视数据安全与合规，账号注销分为软删除和硬删除两个阶段，其中软删除会保留 30 天冷静期，确保用户有反悔时间，同时系统也全面遵循 SOC2 安全审计规范。",
+          scores: [
+            { name: "Faithfulness（忠实度）", val: 0.95 },
+            { name: "Answer Relevancy（切题度）", val: 0.32 },
+            { name: "Context Precision（精准度）", val: 0.50 },
+            { name: "Context Recall（召回率）", val: 0.95 }
+          ],
+          options: [
+            {
+              kicker: "动作 1",
+              title: "换更贵的 Embedding 模型",
+              sub: "提升语义向量表征能力",
+              grade: "bad",
+              feedback: "白花钱。Context Recall 已经高达 0.95，“保留 7 年”就在上下文第 2 段里，检索层没有任何问题。"
+            },
+            {
+              kicker: "动作 2",
+              title: "改写生成 Prompt，要求首句直接回答核心数字",
+              sub: "禁止大段复述无关背景，直接回应提问焦点",
+              grade: "good",
+              feedback: "命中根因。这是一个典型的“高忠实但答非所问”病例：模型句句都在复述上下文（Faithfulness 0.95），却把最关键的“7 年”漏掉了（Answer Relevancy 仅 0.32）。收紧生成 Prompt 即可立竿见影。"
+            },
+            {
+              kicker: "动作 3",
+              title: "把 Top-K 扩大到 12",
+              sub: "给模型提供更全面的背景",
+              grade: "bad",
+              feedback: "雪上加霜。上下文越长、背景越多，模型越容易在无关段落上跑偏。"
+            },
+            {
+              kicker: "动作 4",
+              title: "引入 Agentic RAG 多步检索",
+              sub: "让 Agent 自主发起第二轮查询",
+              grade: "bad",
+              feedback: "过度设计。第一轮检索就已经完整拿到答案，加多步检索只会白白增加延迟和成本。"
+            }
+          ]
+        },
+        noisy: {
+          question: "deleteAccount API 返回 409 的原因是什么？",
+          context: "Top-8 上下文里第 1 段包含 409 数据库约束冲突说明，其余 7 段分别是登录超时、账单导出、邮件模板、Webhook 重试等无关片段。",
+          answer: "deleteAccount API 返回 409 是因为数据库外键约束冲突，建议先检查审计记录是否仍被其他服务引用。",
+          scores: [
+            { name: "Faithfulness（忠实度）", val: 0.92 },
+            { name: "Answer Relevancy（切题度）", val: 0.90 },
+            { name: "Context Precision（精准度）", val: 0.22 },
+            { name: "Context Recall（召回率）", val: 0.94 }
+          ],
+          options: [
+            {
+              kicker: "动作 1",
+              title: "缩小 Top-K 或提高 Reranker 分数截断阈值",
+              sub: "在进 LLM 之前过滤掉低相关性噪音片段",
+              grade: "good",
+              feedback: "精准施策。虽然这次模型勉强从 8 段里挑出了正确答案，但 Context Precision 只有 0.22，意味着近 80% 的输入 Token 都是噪音，既烧钱又容易在长问题上诱发注意力稀释。"
+            },
+            {
+              kicker: "动作 2",
+              title: "既然最终答案对了，什么都不用改",
+              sub: "只关注最终回答是否准确",
+              grade: "meh",
+              feedback: "短期看似没事，长期是定时炸弹。单指标 0.22 远低于 0.6 底线，换个稍弱的模型或复杂提问，噪音很快就会把正确答案淹没。"
+            },
+            {
+              kicker: "动作 3",
+              title: "继续把 Top-K 放大到 15",
+              sub: "提高候选覆盖面",
+              grade: "bad",
+              feedback: "方向完全相反。Context Recall 已经 0.94，继续扩 K 只会把 Precision 压得更低。"
+            },
+            {
+              kicker: "动作 4",
+              title: "给 Prompt 加上“不要胡编”",
+              sub: "加强忠实度约束",
+              grade: "bad",
+              feedback: "没打在痛点上。Faithfulness 已经 0.92，问题出在检索层进了太多低分噪音。"
+            }
+          ]
+        }
+      };
+
+      let lab2CaseId = "missing";
+      const lab2CaseBox = document.getElementById("lab2CaseBox");
+      const lab2Bars = document.getElementById("lab2Bars");
+      const lab2Options = document.getElementById("lab2Options");
+      const lab2Outcome = document.getElementById("lab2Outcome");
+
+      function renderLab2() {
+        const c = LAB2_CASES[lab2CaseId];
+        lab2CaseBox.innerHTML =
+          '<p><span class="case-label">Question</span>' + c.question + '</p>' +
+          '<p><span class="case-label">Contexts</span>' + c.context + '</p>' +
+          '<p><span class="case-label">Answer</span>' + c.answer + '</p>';
+
+        lab2Bars.innerHTML = c.scores.map((s) => {
+          const cls = s.val >= 0.8 ? "ok" : (s.val >= 0.6 ? "warn" : "bad");
+          return (
+            '<div class="metric-row">' +
+              '<div class="metric-top">' +
+                '<span>' + s.name + '</span>' +
+                '<span class="c-badge ' + cls + '">' + s.val.toFixed(2) + '</span>' +
+              '</div>' +
+              '<div class="metric-track"><div class="metric-fill ' + cls + '" style="width:' + Math.round(s.val * 100) + '%"></div></div>' +
+            '</div>'
+          );
+        }).join("");
+
+        lab2Outcome.style.display = "none";
+        lab2Options.innerHTML = c.options.map((opt, idx) => (
+          '<button class="pick-card" data-opt-idx="' + idx + '" type="button">' +
+            '<div class="pick-kicker">' + opt.kicker + '</div>' +
+            '<div class="pick-title">' + opt.title + '</div>' +
+            '<div class="pick-sub">' + opt.sub + '</div>' +
+          '</button>'
+        )).join("");
+
+        lab2Options.querySelectorAll(".pick-card").forEach((card) => {
+          card.addEventListener("click", () => {
+            lab2Options.querySelectorAll(".pick-card").forEach((el) => el.classList.remove("active"));
+            card.classList.add("active");
+            const opt = c.options[Number(card.getAttribute("data-opt-idx"))];
+            lab2Outcome.style.display = "block";
+            lab2Outcome.className = "outcome " + opt.grade;
+            const prefix = opt.grade === "good" ? "✓ 最佳诊断：" : (opt.grade === "meh" ? "⚠ 部分有效但未治本：" : "✕ 诊断偏差：");
+            lab2Outcome.innerHTML = '<div class="outcome-title">' + prefix + opt.title + '</div>' + opt.feedback;
+          });
+        });
+      }
+
+      document.querySelectorAll("[data-case-id]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll("[data-case-id]").forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          lab2CaseId = btn.getAttribute("data-case-id");
+          renderLab2();
+        });
+      });
+
+      /* ================= PREDICT HOOK ================= */
+      const predictHook = document.getElementById("predictAgentic");
+      const predictFb = document.getElementById("predictFeedback");
+      const predictVerifyBtn = document.getElementById("predictVerifyBtn");
+
+      predictHook.querySelectorAll(".predict-opt").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          predictHook.querySelectorAll(".predict-opt").forEach((b) => b.classList.remove("is-right", "is-wrong"));
+          const p = btn.getAttribute("data-p");
+          if (p === "right") {
+            btn.classList.add("is-right");
+            predictFb.textContent = "判断准确。在拿到第一份文档里的“详见《审计日志合规规范》”线索之前，单轮检索很难直接把深层依赖文档拉进 Top-K；但 Agentic RAG 赢得召回的同时，也确实会付出 2 到 3 倍的延迟与 Token 成本。";
+          } else {
+            btn.classList.add("is-wrong");
+            predictFb.textContent = "再想一步：单轮拉大 Top-K 会把大量无关文本塞进上下文，却仍可能抓不到需要先看第一份文档才知道的关键词；而 Agentic RAG 因为要多轮推理，在简单问题上反而更慢更贵。";
+          }
+          predictFb.classList.add("show");
+          predictVerifyBtn.style.display = "inline-flex";
+        });
+      });
+
+      predictVerifyBtn.addEventListener("click", () => {
+        lab3QueryType = "multihop";
+        document.querySelectorAll("[data-q-type]").forEach((b) => {
+          b.classList.toggle("active", b.getAttribute("data-q-type") === "multihop");
+        });
+        lab3Step = LAB3_SCENARIOS.multihop.maxSteps;
+        renderLab3();
+        if (window.bookJumpToLab) window.bookJumpToLab("lab-agentic-rag");
+      });
+
+      /* ================= LAB 03: Fixed vs Agentic Sandbox ================= */
+      const LAB3_SCENARIOS = {
+        simple: {
+          question: "审计日志在系统里保留几年？",
+          requiredDocs: ["audit-log-schema-006"],
+          maxSteps: 3,
+          fixed: {
+            steps: [
+              { kind: "tool", title: "Step 1 · 单轮向量+BM25检索", text: "命中 [audit-log-schema-006, data-retention-policy-009]，核心证据一次拿全。" },
+              { kind: "ok", title: "Step 2 · 直接生成回答", text: "输出：审计日志独立归档保留 7 年（SOC2 合规）[audit-log-schema-006]。" }
+            ],
+            ledger: { recall: "100%", calls: "1 次", latency: "680 ms", tokens: "920" },
+            status: { text: "完美命中", cls: "ok" }
+          },
+          agentic: {
+            steps: [
+              { kind: "tool", title: "Step 1 · Agent 规划并调用搜索工具", text: "调用 search_knowledge_base(\"审计日志 保留 年限\") -> 命中 [audit-log-schema-006]。" },
+              { kind: "grade", title: "Step 2 · 证据充分性自检", text: "确认已有明确年限（7 年）与合规来源，停止继续检索。" },
+              { kind: "ok", title: "Step 3 · 汇总最终回答", text: "输出与固定链路完全一致的答案，但多走了一轮工具决策与回传开销。" }
+            ],
+            ledger: { recall: "100%", calls: "2 次", latency: "1,650 ms", tokens: "2,180" },
+            status: { text: "杀鸡用牛刀", cls: "warn" }
+          },
+          verdict: {
+            cls: "meh",
+            title: "结论：简单事实查询上 Agentic RAG 纯属负优化",
+            body: "两套系统召回率都是 100%，但 Agentic RAG 多花了一倍多的 Token 和 2.4 倍的延迟。高频单文档查询应当直接留在 Fixed RAG。"
+          }
+        },
+        ambiguous: {
+          question: "删账号接口老是报冲突，到底怎么处理？",
+          requiredDocs: ["api-error-codes-001", "account-deletion-flow-003"],
+          maxSteps: 4,
+          fixed: {
+            steps: [
+              { kind: "tool", title: "Step 1 · 原始口语直接检索", text: "命中 [account-deletion-flow-003, user-permissions-012]，漏掉了 409 错误码文档。" },
+              { kind: "miss", title: "Step 2 · 凭残缺证据生成", text: "只能泛泛回答软删除流程，说不清 409 外键约束冲突的排查方法。" }
+            ],
+            ledger: { recall: "50%", calls: "1 次", latency: "710 ms", tokens: "980" },
+            status: { text: "漏掉错误码", cls: "bad" }
+          },
+          agentic: {
+            steps: [
+              { kind: "tool", title: "Step 1 · 首轮检索", text: "search_knowledge_base(\"删除账号 冲突\") -> 命中 [account-deletion-flow-003]。" },
+              { kind: "grade", title: "Step 2 · 证据自检发现缺口", text: "缺少具体 API 错误码与排查原因，触发改写追问。" },
+              { kind: "tool", title: "Step 3 · 二次工具检索", text: "search_knowledge_base(\"deleteAccount 409 外键 冲突\") -> 命中 [api-error-codes-001]。" },
+              { kind: "ok", title: "Step 4 · 拼合完整回答", text: "完整给出 409 外键冲突原因与软删除替代路径，两份来源全部覆盖。" }
+            ],
+            ledger: { recall: "100%", calls: "3 次", latency: "2,420 ms", tokens: "3,340" },
+            status: { text: "改写补全", cls: "ok" }
+          },
+          verdict: {
+            cls: "good",
+            title: "结论：术语模糊场景下，动态改写与二次检索能挽回漏召回",
+            body: "不过注意：如果仅仅是单轮口语改写，在 Fixed RAG 前面加一个轻量的 Query Rewrite（成本更低）往往就够用，不一定非要上完整 Agent 循环。"
+          }
+        },
+        multihop: {
+          question: "deleteAccount 返回 409 时该走什么删除流程？审计日志最后能一起物理删除吗？",
+          requiredDocs: ["api-error-codes-001", "account-deletion-flow-003", "audit-log-schema-006"],
+          maxSteps: 4,
+          fixed: {
+            steps: [
+              { kind: "tool", title: "Step 1 · 单轮 Top-2 检索", text: "命中 [api-error-codes-001, account-deletion-flow-003]，第 3 份合规文档未进 Top-2。" },
+              { kind: "miss", title: "Step 2 · 证据链断裂", text: "拿到了软删除 30 天规则，但看不到《SOC2 审计日志合规规范》的“7 年不可物理删除 + 匿名化 user_hash”约束，极易产生漏答或幻觉。" }
+            ],
+            ledger: { recall: "66.7%", calls: "1 次", latency: "740 ms", tokens: "1,050" },
+            status: { text: "多跳断裂", cls: "bad" }
+          },
+          agentic: {
+            steps: [
+              { kind: "tool", title: "Step 1 · 第一跳检索错误码", text: "search_knowledge_base(\"deleteAccount 409 删除流程\") -> 命中 [api-error-codes-001, account-deletion-flow-003]。" },
+              { kind: "grade", title: "Step 2 · 顺藤摸瓜发现外部引用", text: "文档提到“硬删除前必须确认《SOC2 审计日志合规规范》”，但当前上下文缺少该规范细则。" },
+              { kind: "tool", title: "Step 3 · 第二跳补查合规规范", text: "search_knowledge_base(\"SOC2 审计日志 合规 物理删除\") -> 命中 [audit-log-schema-006]。" },
+              { kind: "ok", title: "Step 4 · 串联 3 份证据作答", text: "给出完整闭环：409 先走软删除（30 天）→ 审计日志须保留 7 年不可物理删除，须通过匿名化 user_hash 解除外键依赖。" }
+            ],
+            ledger: { recall: "100%", calls: "3 次", latency: "2,680 ms", tokens: "3,890" },
+            status: { text: "多跳闭环", cls: "ok" }
+          },
+          verdict: {
+            cls: "good",
+            title: "结论：跨文档多跳推理才是 Agentic RAG 真正赚回成本的主场",
+            body: "当答案分散在互相引用的多份文档中，固定单轮检索无论怎么微调阈值都很难稳定覆盖全部依赖；Agent 顺着首轮证据发起第二跳查询，虽然多花了约 3.7 倍 Token 和近 2 秒延迟，但把关键合规判断从漏答拉到了 100% 覆盖。"
+          }
+        }
+      };
+
+      let lab3QueryType = "simple";
+      let lab3Step = 0;
+
+      const lab3PromptBox = document.getElementById("lab3PromptBox");
+      const lab3FixedSteps = document.getElementById("lab3FixedSteps");
+      const lab3AgentSteps = document.getElementById("lab3AgentSteps");
+      const lab3FixedLedger = document.getElementById("lab3FixedLedger");
+      const lab3AgentLedger = document.getElementById("lab3AgentLedger");
+      const lab3FixedStatus = document.getElementById("lab3FixedStatus");
+      const lab3AgentStatus = document.getElementById("lab3AgentStatus");
+      const lab3Outcome = document.getElementById("lab3Outcome");
+
+      function renderSteps(steps, shownCount) {
+        return steps.map((s, i) => {
+          const isShown = i < shownCount;
+          return (
+            '<div class="trace-step kind-' + s.kind + (isShown ? "" : " pending") + '">' +
+              '<div class="step-head"><span>' + s.title + '</span><span>' + (isShown ? "已执行" : "待执行") + '</span></div>' +
+              '<div>' + s.text + '</div>' +
+            '</div>'
+          );
+        }).join("");
+      }
+
+      function renderLedger(ledger, ready) {
+        const val = (v) => ready ? v : "--";
+        return (
+          '<div class="ledger-cell"><span class="ledger-k">证据覆盖</span><span class="ledger-v">' + val(ledger.recall) + '</span></div>' +
+          '<div class="ledger-cell"><span class="ledger-k">LLM 调用</span><span class="ledger-v">' + val(ledger.calls) + '</span></div>' +
+          '<div class="ledger-cell"><span class="ledger-k">模拟延迟</span><span class="ledger-v">' + val(ledger.latency) + '</span></div>' +
+          '<div class="ledger-cell"><span class="ledger-k">模拟 Token</span><span class="ledger-v">' + val(ledger.tokens) + '</span></div>'
+        );
+      }
+
+      function renderLab3() {
+        const sc = LAB3_SCENARIOS[lab3QueryType];
+        lab3PromptBox.innerHTML =
+          '<p><span class="case-label">用户提问</span><strong>' + sc.question + '</strong></p>' +
+          '<p><span class="case-label">必备证据</span><code>' + sc.requiredDocs.join("</code> + <code>") + '</code></p>';
+
+        const fixedDone = lab3Step >= sc.fixed.steps.length;
+        const agentDone = lab3Step >= sc.agentic.steps.length;
+
+        lab3FixedSteps.innerHTML = renderSteps(sc.fixed.steps, lab3Step);
+        lab3AgentSteps.innerHTML = renderSteps(sc.agentic.steps, lab3Step);
+        lab3FixedLedger.innerHTML = renderLedger(sc.fixed.ledger, fixedDone);
+        lab3AgentLedger.innerHTML = renderLedger(sc.agentic.ledger, agentDone);
+
+        lab3FixedStatus.className = "c-badge " + (fixedDone ? sc.fixed.status.cls : "info");
+        lab3FixedStatus.textContent = fixedDone ? sc.fixed.status.text : "步骤 " + Math.min(lab3Step, sc.fixed.steps.length) + "/" + sc.fixed.steps.length;
+        lab3AgentStatus.className = "c-badge " + (agentDone ? sc.agentic.status.cls : "info");
+        lab3AgentStatus.textContent = agentDone ? sc.agentic.status.text : "步骤 " + Math.min(lab3Step, sc.agentic.steps.length) + "/" + sc.agentic.steps.length;
+
+        if (agentDone) {
+          lab3Outcome.style.display = "block";
+          lab3Outcome.className = "outcome " + sc.verdict.cls;
+          lab3Outcome.innerHTML = '<div class="outcome-title">' + sc.verdict.title + '</div>' + sc.verdict.body;
+        } else {
+          lab3Outcome.style.display = "block";
+          lab3Outcome.className = "outcome";
+          lab3Outcome.innerHTML = '<div class="outcome-title">点击“下一步”或“跑完全程”对比执行轨迹</div>逐步观察两套架构在证据收集与资源消耗上的分叉点。';
+        }
+      }
+
+      document.querySelectorAll("[data-q-type]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll("[data-q-type]").forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          lab3QueryType = btn.getAttribute("data-q-type");
+          lab3Step = 0;
+          renderLab3();
+        });
+      });
+
+      document.getElementById("lab3StepBtn").addEventListener("click", () => {
+        const max = LAB3_SCENARIOS[lab3QueryType].maxSteps;
+        if (lab3Step < max) lab3Step += 1;
+        renderLab3();
+      });
+      document.getElementById("lab3RunAllBtn").addEventListener("click", () => {
+        lab3Step = LAB3_SCENARIOS[lab3QueryType].maxSteps;
+        renderLab3();
+      });
+      document.getElementById("lab3ResetBtn").addEventListener("click", () => {
+        lab3Step = 0;
+        renderLab3();
+      });
+
+      // Init all 3 labs
+      renderLab1();
+      renderLab2();
+      renderLab3();
+    })();
+  </script>
+  <script src="../shared/site.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-json.min.js"></script>
+</body>
+</html>
