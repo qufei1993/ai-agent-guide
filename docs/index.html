@@ -6,6 +6,17 @@
   <title>AI Agent Guide · 交互式工程指南</title>
   <link rel="stylesheet" href="./shared/tokens.css" />
   <script>
+    var _hmt = _hmt || [];
+    (function () {
+      if (!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname)) {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?c1470fb3535d138fd875f09ec4c16a8a";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+      }
+    })();
+  </script>
+  <script>
     (function () {
       const params = new URLSearchParams(window.location.search);
       if (params.get("choose") === "1") return;
