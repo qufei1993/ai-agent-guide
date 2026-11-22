@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://qufei1993.github.io/ai-agent-fullstack-roadmap/sitemap.xml
+Sitemap: https://qufei1993.github.io/ai-agent-guide/sitemap.xml

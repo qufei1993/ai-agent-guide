@@ -2,8 +2,8 @@
 
 **English** | [简体中文](README.zh.md)
 
-> **Live Interactive Site**: **https://qufei1993.github.io/ai-agent-fullstack-roadmap/**  
-> Direct links: [English Edition](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/index.html) · [中文版](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/index.html)
+> **Live Interactive Site**: **https://qufei1993.github.io/ai-agent-guide/**  
+> Direct links: [English Edition](https://qufei1993.github.io/ai-agent-guide/en/index.html) · [中文版](https://qufei1993.github.io/ai-agent-guide/zh/index.html)
 
 An open-source, zero-build **interactive engineering guide** to LLMs, Agents, and RAG. Every chapter pairs concise engineering mental models with browser labs where you can tune parameters, inspect live payloads, and test failure boundaries—backed by runnable reference code in the same repository.
 
@@ -31,16 +31,16 @@ Catalog metadata and language availability are maintained in [`docs/chapters.jso
 
 | # | Chapter | Focus | Edition |
 | --- | --- | --- | --- |
-| 1 | **AI Agent Engineering Architecture Map** | End-to-end task walkthrough of LLM, context, tools, memory, RAG, and harness collaboration, plus a quick glossary of easily confused concepts. | [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/agent-architecture-map.html) · [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/agent-architecture-map.html) |
+| 1 | **AI Agent Engineering Architecture Map** | End-to-end task walkthrough of LLM, context, tools, memory, RAG, and harness collaboration, plus a quick glossary of easily confused concepts. | [EN](https://qufei1993.github.io/ai-agent-guide/en/agent-architecture-map.html) · [中文](https://qufei1993.github.io/ai-agent-guide/zh/agent-architecture-map.html) |
 
 ### Module 1 · LLM Engineering Foundations
 
 | # | Chapter | Focus | Edition |
 | --- | --- | --- | --- |
-| 2 | **Prompt Engineering** | Model calls, sampling parameters, task constraints, few-shot, and prompt boundaries. | [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/prompt-engineering.html) · [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/prompt-engineering.html) |
-| 3 | **Structured Output & Schema Validation** | Output contracts with JSON Schema and Zod, handling format/business errors and bounded retries. | [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/structured-output.html) · [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/structured-output.html) |
-| 4 | **Context Engineering** | Context sources, information placement, token budgets, and Just-In-Time loading. | [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/context-engineering.html) · [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/context-engineering.html) |
-| 5 | **Prompt Regression & Evaluation Gates** | Evaluation suites, assertion rules, and version gates to catch regressions. | [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/prompt-regression.html) · [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/prompt-regression.html) |
+| 2 | **Prompt Engineering** | Model calls, sampling parameters, task constraints, few-shot, and prompt boundaries. | [EN](https://qufei1993.github.io/ai-agent-guide/en/prompt-engineering.html) · [中文](https://qufei1993.github.io/ai-agent-guide/zh/prompt-engineering.html) |
+| 3 | **Structured Output & Schema Validation** | Output contracts with JSON Schema and Zod, handling format/business errors and bounded retries. | [EN](https://qufei1993.github.io/ai-agent-guide/en/structured-output.html) · [中文](https://qufei1993.github.io/ai-agent-guide/zh/structured-output.html) |
+| 4 | **Context Engineering** | Context sources, information placement, token budgets, and Just-In-Time loading. | [EN](https://qufei1993.github.io/ai-agent-guide/en/context-engineering.html) · [中文](https://qufei1993.github.io/ai-agent-guide/zh/context-engineering.html) |
+| 5 | **Prompt Regression & Evaluation Gates** | Evaluation suites, assertion rules, and version gates to catch regressions. | [EN](https://qufei1993.github.io/ai-agent-guide/en/prompt-regression.html) · [中文](https://qufei1993.github.io/ai-agent-guide/zh/prompt-regression.html) |
 
 ### Module 2 · Agent Core Mechanics
 
@@ -60,11 +60,11 @@ Catalog metadata and language availability are maintained in [`docs/chapters.jso
 
 | # | Chapter | Focus | Edition |
 | --- | --- | --- | --- |
-| 15 | **Document Parsing & Chunking Strategies** | Converting raw documents into structure- and source-preserving chunks and comparing splitting strategies. | [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/document-parsing-chunking.html) · [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/document-parsing-chunking.html) |
-| 16 | **Embeddings & Vector Search** | Semantic vectors, similarity metrics, recall boundaries, metadata filtering, and index updates. | [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/embedding-vector-search.html) · [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/embedding-vector-search.html) |
-| 17 | **Hybrid Search, Query Rewriting & Reranking** | Combining BM25 and dense recall with query rewriting, RRF fusion, and Reranker. | [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/hybrid-search-reranking.html) · [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/hybrid-search-reranking.html) |
-| 18 | **Citations & Evidence Verification** | Grounding claims to sources, detecting unsupported statements, and handling conflicts or abstention. | [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/citation-hallucination.html) · [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/citation-hallucination.html) |
-| 19 | **RAG Evaluation & Agentic RAG** | Evaluating retrieval vs. generation quality and comparing fixed pipelines with Agentic RAG. | [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/rag-evaluation-agentic-rag.html) · [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/rag-evaluation-agentic-rag.html) |
+| 15 | **Document Parsing & Chunking Strategies** | Converting raw documents into structure- and source-preserving chunks and comparing splitting strategies. | [EN](https://qufei1993.github.io/ai-agent-guide/en/document-parsing-chunking.html) · [中文](https://qufei1993.github.io/ai-agent-guide/zh/document-parsing-chunking.html) |
+| 16 | **Embeddings & Vector Search** | Semantic vectors, similarity metrics, recall boundaries, metadata filtering, and index updates. | [EN](https://qufei1993.github.io/ai-agent-guide/en/embedding-vector-search.html) · [中文](https://qufei1993.github.io/ai-agent-guide/zh/embedding-vector-search.html) |
+| 17 | **Hybrid Search, Query Rewriting & Reranking** | Combining BM25 and dense recall with query rewriting, RRF fusion, and Reranker. | [EN](https://qufei1993.github.io/ai-agent-guide/en/hybrid-search-reranking.html) · [中文](https://qufei1993.github.io/ai-agent-guide/zh/hybrid-search-reranking.html) |
+| 18 | **Citations & Evidence Verification** | Grounding claims to sources, detecting unsupported statements, and handling conflicts or abstention. | [EN](https://qufei1993.github.io/ai-agent-guide/en/citation-hallucination.html) · [中文](https://qufei1993.github.io/ai-agent-guide/zh/citation-hallucination.html) |
+| 19 | **RAG Evaluation & Agentic RAG** | Evaluating retrieval vs. generation quality and comparing fixed pipelines with Agentic RAG. | [EN](https://qufei1993.github.io/ai-agent-guide/en/rag-evaluation-agentic-rag.html) · [中文](https://qufei1993.github.io/ai-agent-guide/zh/rag-evaluation-agentic-rag.html) |
 
 ## Repository Structure
 

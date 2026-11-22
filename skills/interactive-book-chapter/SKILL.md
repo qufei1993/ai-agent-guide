@@ -1,11 +1,11 @@
 ---
 name: interactive-book-chapter
-description: Create or update zero-build interactive HTML chapters (Chinese zh/ and English en/) for the AI Agent Full-Stack Roadmap static site. Use whenever the user asks to turn a Markdown chapter into an interactive HTML explainer, add a new chapter or English translation to ai-agent-fullstack-roadmap, or update chapters.json and shared navigation.
+description: Create or update zero-build interactive HTML chapters (Chinese zh/ and English en/) for the AI Agent Full-Stack Roadmap static site. Use whenever the user asks to turn a Markdown chapter into an interactive HTML explainer, add a new chapter or English translation to ai-agent-guide, or update chapters.json and shared navigation.
 ---
 
 # Interactive Book Chapter Skill
 
-Turn technical Markdown chapters into zero-build, single-HTML interactive explainers for `ai-agent-fullstack-roadmap`, keeping narrative flow, interactive labs, TypeScript references, and bilingual (`zh/` + `en/`) structure consistent.
+Turn technical Markdown chapters into zero-build, single-HTML interactive explainers for `ai-agent-guide`, keeping narrative flow, interactive labs, TypeScript references, and bilingual (`zh/` + `en/`) structure consistent.
 
 ## Site Layout
 
@@ -55,7 +55,7 @@ Read [html-architecture.md](references/html-architecture.md) before writing HTML
 5. **Visual-First Diagrams (Theme-Aware Inline SVG)**: Use `.diagram-figure` with `tokens.css` CSS variables (`--bg-elevated`, `--text`, `--border`, `--teal-soft`, `--rose-soft`). Show state transformations, branching paths, or bottleneck contrast rather than plain "4 boxes + 3 arrows" labels.
 6. **Predict → Verify in Lab (`.predict-hook` + `.predict-verify`)**: Pair counterintuitive predictions with a `.predict-verify` button that jumps to and configures the matching lab so readers verify the answer with their own eyes.
 7. **Strict Data Provenance (`.src-tag` vs `.sim-tag` / `.bar-sim` / `.sim-zone`)**: Real benchmark/experiment numbers must carry `.src-tag` with a verifiable source; simulated or illustrative visuals must use `.sim-tag` / `.bar-sim` / `.sim-zone` (dashed border + diagonal stripes) and never share identical bar styling with real metrics.
-8. **Code Integration (`details.code-fold` + Prism + Same-Repo GitHub Links)**: Keep runnable TypeScript inside `<details class="code-fold">` and sync key lab parameters into the code block + `Prism.highlightElement(codeEl)`. When linking to full runnable scripts in `examples/<module>/<slug>/`, always use full GitHub URLs pointing to this repository (`https://github.com/qufei1993/ai-agent-fullstack-roadmap/blob/main/examples/...` or `tree/main/examples/...`)—never relative paths outside `docs/` (which 404 on GitHub Pages).
+8. **Code Integration (`details.code-fold` + Prism + Same-Repo GitHub Links)**: Keep runnable TypeScript inside `<details class="code-fold">` and sync key lab parameters into the code block + `Prism.highlightElement(codeEl)`. When linking to full runnable scripts in `examples/<module>/<slug>/`, always use full GitHub URLs pointing to this repository (`https://github.com/qufei1993/ai-agent-guide/blob/main/examples/...` or `tree/main/examples/...`)—never relative paths outside `docs/` (which 404 on GitHub Pages).
 
 ## Accuracy & Citations
 

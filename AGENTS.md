@@ -14,7 +14,7 @@
 ## 目录结构
 
 ```text
-ai-agent-fullstack-roadmap/
+ai-agent-guide/
 ├── AGENTS.md                        # 本文件：项目唯一规范入口
 ├── README.md                        # 课程大纲、术语安排与本地预览说明
 ├── docs/                            # GitHub Pages 静态站点根目录（零构建，完全隔离）
@@ -69,7 +69,7 @@ ai-agent-fullstack-roadmap/
 1. **核心叙事链**：每篇解决一个工程问题、增加一个关键机制，围绕 **“具体问题 → 最简实现 → 触发失败 → 增加机制 → 对比验证”** 展开。
 2. **交互因果性**：交互实验台必须揭示参数或机制变化带来的因果关系，禁止无意义的纯装饰动画。
 3. **公共层复用**：所有页面必须复用 `../shared/tokens.css` 与 `../shared/site.js`，不在单页 HTML 内重复实现全局顶栏、抽屉目录或暗黑模式逻辑。
-4. **代码与复现同仓**：正文 `<details class="code-fold">` 展示核心 TypeScript 机制代码，并在 `.code-header` 或文末附带指向本仓库 `https://github.com/qufei1993/ai-agent-fullstack-roadmap/blob/main/examples/...` 的绝对源码链接（不可使用会 404 的相对路径）。
+4. **代码与复现同仓**：正文 `<details class="code-fold">` 展示核心 TypeScript 机制代码，并在 `.code-header` 或文末附带指向本仓库 `https://github.com/qufei1993/ai-agent-guide/blob/main/examples/...` 的绝对源码链接（不可使用会 404 的相对路径）。
 5. **Skill 维护规范**：更新 `interactive-book-chapter` 时，必须编辑本仓库的 `skills/interactive-book-chapter/` 源目录，再通过 `skillshub-cli skills update` 同步到 Skills Hub，严禁直接修改 `~/.gemini/config/skills/` 下的软链接副本。
 
 ## 信息准确性与引用规范

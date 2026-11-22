@@ -2,8 +2,8 @@
 
 [English](README.md) | **简体中文**
 
-> **在线交互阅读**：**https://qufei1993.github.io/ai-agent-fullstack-roadmap/**  
-> 直达入口：[中文版](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/index.html) · [English Edition](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/index.html)
+> **在线交互阅读**：**https://qufei1993.github.io/ai-agent-guide/**  
+> 直达入口：[中文版](https://qufei1993.github.io/ai-agent-guide/zh/index.html) · [English Edition](https://qufei1993.github.io/ai-agent-guide/en/index.html)
 
 面向软件工程师的零构建**开源交互式 AI Agent 工程指南**。每一章都将精炼的工程原理与浏览器交互实验台结合，支持调参、透视 Payload 与验证边界条件，并在同仓提供可运行参考代码。
 
@@ -31,16 +31,16 @@ flowchart LR
 
 | 序号 | 章节 | 核心内容 | 在线阅读 |
 | --- | --- | --- | --- |
-| 1 | **AI Agent 工程全景图** | 通过一次完整任务说明 LLM、上下文、工具、记忆、RAG 与 Harness 的协作关系，并提供易混概念术语速查。 | [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/agent-architecture-map.html) · [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/agent-architecture-map.html) |
+| 1 | **AI Agent 工程全景图** | 通过一次完整任务说明 LLM、上下文、工具、记忆、RAG 与 Harness 的协作关系，并提供易混概念术语速查。 | [中文](https://qufei1993.github.io/ai-agent-guide/zh/agent-architecture-map.html) · [EN](https://qufei1993.github.io/ai-agent-guide/en/agent-architecture-map.html) |
 
 ### 模块一 · LLM 工程基础
 
 | 序号 | 章节 | 核心内容 | 在线阅读 |
 | --- | --- | --- | --- |
-| 2 | **Prompt Engineering** | 讲清模型调用、采样参数、任务约束与 Few-shot，理解 Prompt 能解决什么、不能解决什么。 | [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/prompt-engineering.html) · [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/prompt-engineering.html) |
-| 3 | **结构化输出与结果校验** | 使用 JSON Schema 与 Zod 建立输出契约，处理格式错误、业务校验失败与有限重试。 | [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/structured-output.html) · [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/structured-output.html) |
-| 4 | **Context Engineering** | 理解上下文来源、信息位置与预算，通过筛选、组织和按需加载提高有效信息比例。 | [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/context-engineering.html) · [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/context-engineering.html) |
-| 5 | **Prompt 回归评测** | 建立用例集、评分规则与版本门禁，验证 Prompt、模型和参数改动是否带来退步。 | [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/prompt-regression.html) · [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/prompt-regression.html) |
+| 2 | **Prompt Engineering** | 讲清模型调用、采样参数、任务约束与 Few-shot，理解 Prompt 能解决什么、不能解决什么。 | [中文](https://qufei1993.github.io/ai-agent-guide/zh/prompt-engineering.html) · [EN](https://qufei1993.github.io/ai-agent-guide/en/prompt-engineering.html) |
+| 3 | **结构化输出与结果校验** | 使用 JSON Schema 与 Zod 建立输出契约，处理格式错误、业务校验失败与有限重试。 | [中文](https://qufei1993.github.io/ai-agent-guide/zh/structured-output.html) · [EN](https://qufei1993.github.io/ai-agent-guide/en/structured-output.html) |
+| 4 | **Context Engineering** | 理解上下文来源、信息位置与预算，通过筛选、组织和按需加载提高有效信息比例。 | [中文](https://qufei1993.github.io/ai-agent-guide/zh/context-engineering.html) · [EN](https://qufei1993.github.io/ai-agent-guide/en/context-engineering.html) |
+| 5 | **Prompt 回归评测** | 建立用例集、评分规则与版本门禁，验证 Prompt、模型和参数改动是否带来退步。 | [中文](https://qufei1993.github.io/ai-agent-guide/zh/prompt-regression.html) · [EN](https://qufei1993.github.io/ai-agent-guide/en/prompt-regression.html) |
 
 ### 模块二 · Agent 核心机制
 
@@ -60,11 +60,11 @@ flowchart LR
 
 | 序号 | 章节 | 核心内容 | 在线阅读 |
 | --- | --- | --- | --- |
-| 15 | **文档解析与分块策略** | 将原始文档转为保留结构和来源的检索单元，对比不同分块方式对证据完整性的影响。 | [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/document-parsing-chunking.html) · [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/document-parsing-chunking.html) |
-| 16 | **Embedding 与向量检索** | 理解语义向量、相似度与召回边界，跑通索引、查询、元数据过滤和内容更新。 | [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/embedding-vector-search.html) · [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/embedding-vector-search.html) |
-| 17 | **混合检索、查询改写与重排** | 组合关键词与向量召回，通过查询改写、RRF 和 Reranker 改善候选证据的覆盖与排序。 | [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/hybrid-search-reranking.html) · [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/hybrid-search-reranking.html) |
-| 18 | **引用溯源与证据校验** | 将回答中的论断绑定到来源，识别不受证据支持的内容，并处理证据冲突、不足和拒答。 | [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/citation-hallucination.html) · [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/citation-hallucination.html) |
-| 19 | **RAG 评测与 Agentic RAG** | 分别评估检索和回答质量，对比固定检索流程与 Agent 自主检索，判断动态检索是否值得引入。 | [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/rag-evaluation-agentic-rag.html) · [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/rag-evaluation-agentic-rag.html) |
+| 15 | **文档解析与分块策略** | 将原始文档转为保留结构和来源的检索单元，对比不同分块方式对证据完整性的影响。 | [中文](https://qufei1993.github.io/ai-agent-guide/zh/document-parsing-chunking.html) · [EN](https://qufei1993.github.io/ai-agent-guide/en/document-parsing-chunking.html) |
+| 16 | **Embedding 与向量检索** | 理解语义向量、相似度与召回边界，跑通索引、查询、元数据过滤和内容更新。 | [中文](https://qufei1993.github.io/ai-agent-guide/zh/embedding-vector-search.html) · [EN](https://qufei1993.github.io/ai-agent-guide/en/embedding-vector-search.html) |
+| 17 | **混合检索、查询改写与重排** | 组合关键词与向量召回，通过查询改写、RRF 和 Reranker 改善候选证据的覆盖与排序。 | [中文](https://qufei1993.github.io/ai-agent-guide/zh/hybrid-search-reranking.html) · [EN](https://qufei1993.github.io/ai-agent-guide/en/hybrid-search-reranking.html) |
+| 18 | **引用溯源与证据校验** | 将回答中的论断绑定到来源，识别不受证据支持的内容，并处理证据冲突、不足和拒答。 | [中文](https://qufei1993.github.io/ai-agent-guide/zh/citation-hallucination.html) · [EN](https://qufei1993.github.io/ai-agent-guide/en/citation-hallucination.html) |
+| 19 | **RAG 评测与 Agentic RAG** | 分别评估检索和回答质量，对比固定检索流程与 Agent 自主检索，判断动态检索是否值得引入。 | [中文](https://qufei1993.github.io/ai-agent-guide/zh/rag-evaluation-agentic-rag.html) · [EN](https://qufei1993.github.io/ai-agent-guide/en/rag-evaluation-agentic-rag.html) |
 
 ## 目录结构
 

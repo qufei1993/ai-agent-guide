@@ -6,16 +6,16 @@
   <title>文档解析与分块策略：RAG 检索不准，问题可能出在向量化之前 · AI Agent Guide</title>
   <!-- SEO:START (auto-synced by scripts/generate-seo.mjs) -->
   <meta name="description" content="将原始文档转为保留结构和来源的检索单元，对比不同分块方式对证据完整性的影响" />
-  <link rel="canonical" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/document-parsing-chunking.html" />
-  <link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/document-parsing-chunking.html" />
-  <link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/document-parsing-chunking.html" />
-  <link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/document-parsing-chunking.html" />
+  <link rel="canonical" href="https://qufei1993.github.io/ai-agent-guide/zh/document-parsing-chunking.html" />
+  <link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-guide/zh/document-parsing-chunking.html" />
+  <link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-guide/en/document-parsing-chunking.html" />
+  <link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-guide/en/document-parsing-chunking.html" />
   <meta property="og:type" content="article" />
   <meta property="og:locale" content="zh_CN" />
   <meta property="og:locale:alternate" content="en_US" />
   <meta property="og:title" content="文档解析与分块策略" />
   <meta property="og:description" content="将原始文档转为保留结构和来源的检索单元，对比不同分块方式对证据完整性的影响" />
-  <meta property="og:url" content="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/document-parsing-chunking.html" />
+  <meta property="og:url" content="https://qufei1993.github.io/ai-agent-guide/zh/document-parsing-chunking.html" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -23,7 +23,7 @@
     "headline": "文档解析与分块策略",
     "description": "将原始文档转为保留结构和来源的检索单元，对比不同分块方式对证据完整性的影响",
     "inLanguage": "zh-CN",
-    "url": "https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/document-parsing-chunking.html",
+    "url": "https://qufei1993.github.io/ai-agent-guide/zh/document-parsing-chunking.html",
     "isPartOf": {
       "@type": "Book",
       "name": "AI Agent Guide"
@@ -944,7 +944,7 @@
   <main class="prose">
     <h3>跑通完整文档处理链路</h3>
     <p>
-      把解析、清洗、预留 Overlap 的递归切片和元数据注入串起来，就能得到可直接喂给下游 Embedding 环节的 <code>DocumentChunk[]</code>。完整可运行脚本与测试样例保存在公开仓库 <a href="https://github.com/qufei1993/ai-agent-fullstack-roadmap/tree/main/examples/rag/document-parsing-chunking" target="_blank" rel="noopener"><code>examples/rag/document-parsing-chunking/</code></a>。
+      把解析、清洗、预留 Overlap 的递归切片和元数据注入串起来，就能得到可直接喂给下游 Embedding 环节的 <code>DocumentChunk[]</code>。完整可运行脚本与测试样例保存在公开仓库 <a href="https://github.com/qufei1993/ai-agent-guide/tree/main/examples/rag/document-parsing-chunking" target="_blank" rel="noopener"><code>examples/rag/document-parsing-chunking/</code></a>。
     </p>
 
     <details class="code-fold">

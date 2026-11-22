@@ -13,7 +13,7 @@ If you find:
 - 🔗 **Broken links or formatting** — dead links, layout issues
 - 💡 **Suggestions** — better organization, clearer wording
 
-Please open an [Issue](https://github.com/qufei1993/ai-agent-fullstack-roadmap/issues) with the appropriate template.
+Please open an [Issue](https://github.com/qufei1993/ai-agent-guide/issues) with the appropriate template.
 
 ### Submit a Pull Request
 

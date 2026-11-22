@@ -7,7 +7,7 @@ const docsDir = path.resolve(__dirname, "../docs");
 const chaptersPath = path.join(docsDir, "chapters.json");
 const data = JSON.parse(fs.readFileSync(chaptersPath, "utf8"));
 
-const baseUrl = (data.siteUrl || "https://qufei1993.github.io/ai-agent-fullstack-roadmap").replace(/\/+$/, "");
+const baseUrl = (data.siteUrl || "https://qufei1993.github.io/ai-agent-guide").replace(/\/+$/, "");
 const today = new Date().toISOString().slice(0, 10);
 
 function escapeAttr(str) {

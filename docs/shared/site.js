@@ -555,7 +555,7 @@
 
         const githubLink = document.createElement("a");
         githubLink.className = "github-btn";
-        githubLink.href = "https://github.com/qufei1993/ai-agent-fullstack-roadmap";
+        githubLink.href = "https://github.com/qufei1993/ai-agent-guide";
         githubLink.target = "_blank";
         githubLink.rel = "noopener noreferrer";
         githubLink.setAttribute("aria-label", isEn ? "GitHub Repository" : "GitHub 仓库");
