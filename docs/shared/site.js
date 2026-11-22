@@ -1,21 +1,4 @@
 (function () {
-  // 0. Baidu Tongji analytics (production only, skip localhost / local files)
-  if (
-    window.location.protocol.startsWith("http") &&
-    !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname)
-  ) {
-    window._hmt = window._hmt || [];
-    const hm = document.createElement("script");
-    hm.src = "https://hm.baidu.com/hm.js?c1470fb3535d138fd875f09ec4c16a8a";
-    hm.async = true;
-    const firstScript = document.getElementsByTagName("script")[0];
-    if (firstScript && firstScript.parentNode) {
-      firstScript.parentNode.insertBefore(hm, firstScript);
-    } else {
-      document.head.appendChild(hm);
-    }
-  }
-
   const isEn =
     window.location.pathname.includes("/en/") ||
     (document.documentElement.lang || "").toLowerCase().startsWith("en");

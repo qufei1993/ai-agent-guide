@@ -10,6 +10,20 @@ const data = JSON.parse(fs.readFileSync(chaptersPath, "utf8"));
 const baseUrl = (data.siteUrl || "https://qufei1993.github.io/ai-agent-guide").replace(/\/+$/, "");
 const today = new Date().toISOString().slice(0, 10);
 
+const baiduAnalyticsSnippet = [
+  "  <script>",
+  "    var _hmt = _hmt || [];",
+  "    (function () {",
+  '      if (!/^(localhost|127\\.0\\.0\\.1|\\[::1\\])$/.test(window.location.hostname)) {',
+  '        var hm = document.createElement("script");',
+  '        hm.src = "https://hm.baidu.com/hm.js?c1470fb3535d138fd875f09ec4c16a8a";',
+  '        var s = document.getElementsByTagName("script")[0];',
+  "        s.parentNode.insertBefore(hm, s);",
+  "      }",
+  "    })();",
+  "  </script>",
+].join("\n");
+
 function escapeAttr(str) {
   return String(str).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
@@ -67,6 +81,7 @@ function buildSeoBlock(ch, lang) {
     `  <script type="application/ld+json">`,
     jsonLd,
     `  </script>`,
+    baiduAnalyticsSnippet,
     "  <!-- SEO:END -->",
   ].join("\n");
 }
@@ -152,6 +167,7 @@ for (const lang of ["zh", "en"]) {
     `  <script type="application/ld+json">`,
     homeJsonLd,
     `  </script>`,
+    baiduAnalyticsSnippet,
     "  <!-- SEO:END -->",
   ].join("\n");
   const idxPath = path.join(docsDir, lang, "index.html");
