@@ -2,9 +2,11 @@
 
 [English](README.md) | **简体中文**
 
+> **在线交互阅读**：**https://qufei1993.github.io/ai-agent-fullstack-roadmap/**  
+> 直达入口：[中文版](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/index.html) · [English Edition](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/index.html)
+
 面向软件工程师的零构建**开源交互式 AI Agent 工程指南**。每一章都将精炼的工程原理与浏览器交互实验台结合，支持调参、透视 Payload 与验证边界条件，并在同仓提供可运行参考代码。
 
-- **在线阅读（GitHub Pages）**：[中文版](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/index.html) · [English Edition](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/index.html)
 - **核心机制与语言无关**：参考代码默认使用 TypeScript，所有工程模式与架构权衡同样适用于 Python、Go、Java 等技术栈。
 - **聚焦核心边界**：重点覆盖 LLM 约束、Agent 执行机制与 RAG 证据链路，不包含重型商业 SaaS 脚手架、模型后训练（SFT / RL）或复杂多 Agent 编排。
 

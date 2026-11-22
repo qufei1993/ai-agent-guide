@@ -2,9 +2,11 @@
 
 **English** | [简体中文](README.zh.md)
 
+> **Live Interactive Site**: **https://qufei1993.github.io/ai-agent-fullstack-roadmap/**  
+> Direct links: [English Edition](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/index.html) · [中文版](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/index.html)
+
 An open-source, zero-build **interactive engineering guide** to LLMs, Agents, and RAG. Every chapter pairs concise engineering mental models with browser labs where you can tune parameters, inspect live payloads, and test failure boundaries—backed by runnable reference code in the same repository.
 
-- **Online Reading (GitHub Pages)**: [English Edition](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/index.html) · [中文版](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/index.html)
 - **Language-Agnostic Mechanics**: Reference examples use TypeScript, while all engineering patterns apply directly to Python, Go, Java, or any stack.
 - **Focused Scope**: Covers LLM control, Agent execution mechanics, and grounded RAG pipelines—intentionally excluding heavyweight SaaS boilerplate, post-training (SFT/RL), and complex multi-agent orchestration.
 
