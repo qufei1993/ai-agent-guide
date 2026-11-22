@@ -12,7 +12,7 @@ An open-source, zero-build **interactive engineering guide** to LLMs, Agents, an
 
 ```mermaid
 flowchart LR
-  O["Overview<br/>Architecture & Glossary"] --> M1["Module 1 · Ready (4/4)<br/>LLM Foundations"]
+  O["Overview · Ready (1/1)<br/>Architecture & Glossary"] --> M1["Module 1 · Ready (4/4)<br/>LLM Foundations"]
   M1 --> M2["Module 2 · In Progress (0/9)<br/>Agent Core Mechanics"]
   M1 --> M3["Module 3 · Ready (5/5)<br/>RAG Retrieval & Grounding"]
   M2 --> E["Reliable AI Systems<br/>Eval · Guardrails · Grounding"]
@@ -21,15 +21,15 @@ flowchart LR
 
 > **Design Principle**: Build a working minimal Agent early—full RAG is not a prerequisite for understanding tool calling, loops, and execution boundaries. Security, evaluation, observability, and cost control run through every module.
 
-## Curriculum (19 Chapters · 9 Bilingual Ready)
+## Curriculum (19 Chapters · 10 Bilingual Ready)
 
 Catalog metadata and language availability are maintained in [`docs/chapters.json`](docs/chapters.json).
 
 ### Overview · Architecture & Glossary
 
-| # | Chapter | Focus | Status |
+| # | Chapter | Focus | Edition |
 | --- | --- | --- | --- |
-| 1 | AI Agent Engineering Architecture Map | End-to-end task walkthrough of LLM, context, tools, memory, RAG, and harness collaboration, plus a quick glossary of easily confused concepts. | Planned |
+| 1 | **AI Agent Engineering Architecture Map** | End-to-end task walkthrough of LLM, context, tools, memory, RAG, and harness collaboration, plus a quick glossary of easily confused concepts. | [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/agent-architecture-map.html) · [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/agent-architecture-map.html) |
 
 ### Module 1 · LLM Engineering Foundations
 

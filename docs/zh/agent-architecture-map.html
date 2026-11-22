@@ -1,0 +1,1849 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Agent 工程全景图：从单次任务看清 6 层协作与术语边界 · AI Agent Guide</title>
+  <!-- SEO:START (auto-synced by scripts/generate-seo.mjs) -->
+  <meta name="description" content="通过一次完整任务说明 LLM、上下文、工具、记忆、RAG 与 Harness 的协作关系，并提供术语速查与易混概念对照" />
+  <link rel="canonical" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/agent-architecture-map.html" />
+  <link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/agent-architecture-map.html" />
+  <link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/agent-architecture-map.html" />
+  <link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/agent-architecture-map.html" />
+  <meta property="og:type" content="article" />
+  <meta property="og:locale" content="zh_CN" />
+  <meta property="og:locale:alternate" content="en_US" />
+  <meta property="og:title" content="AI Agent 工程全景图" />
+  <meta property="og:description" content="通过一次完整任务说明 LLM、上下文、工具、记忆、RAG 与 Harness 的协作关系，并提供术语速查与易混概念对照" />
+  <meta property="og:url" content="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/agent-architecture-map.html" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "AI Agent 工程全景图",
+    "description": "通过一次完整任务说明 LLM、上下文、工具、记忆、RAG 与 Harness 的协作关系，并提供术语速查与易混概念对照",
+    "inLanguage": "zh-CN",
+    "url": "https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/agent-architecture-map.html",
+    "isPartOf": {
+      "@type": "Book",
+      "name": "AI Agent Guide"
+    }
+  }
+  </script>
+  <!-- SEO:END -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css" />
+  <link rel="stylesheet" href="../shared/tokens.css" />
+  <style>
+    /* Chapter-specific styles for agent-architecture-map */
+    .arch-stage {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      margin-bottom: 16px;
+      overflow-x: auto;
+    }
+
+    .arch-svg {
+      width: 100%;
+      min-width: 680px;
+      height: auto;
+      display: block;
+    }
+
+    .arch-node {
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.2s ease;
+    }
+
+    .arch-node rect {
+      transition: fill 0.2s ease, stroke 0.2s ease, stroke-width 0.2s ease;
+    }
+
+    .arch-node:hover rect {
+      stroke: var(--teal);
+    }
+
+    .step-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px 14px;
+      margin-bottom: 14px;
+    }
+
+    .step-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .step-pill {
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      color: var(--text-secondary);
+      border-radius: 999px;
+      padding: 4px 11px;
+      font-size: 12.5px;
+      font-family: var(--font-sans);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .step-pill:hover {
+      border-color: var(--border-strong);
+      color: var(--text);
+    }
+
+    .step-pill.is-done {
+      border-color: var(--teal);
+      background: var(--teal-soft);
+      color: var(--teal);
+    }
+
+    .step-pill.is-active {
+      background: var(--text);
+      color: var(--bg);
+      border-color: var(--text);
+      font-weight: 700;
+    }
+
+    .step-pill.is-danger {
+      background: var(--rose);
+      color: #fff;
+      border-color: var(--rose);
+      font-weight: 700;
+    }
+
+    .step-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .layer-meta-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .layer-meta-item {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+    }
+
+    .layer-meta-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .layer-meta-val {
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .layer-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 2px 9px;
+      border-radius: 999px;
+      background: var(--teal-soft);
+      color: var(--teal);
+    }
+
+    .layer-badge.danger {
+      background: var(--rose-soft);
+      color: var(--rose);
+    }
+
+    .layer-badge.blue {
+      background: var(--blue-soft);
+      color: var(--blue);
+    }
+
+    .layer-badge.purple {
+      background: var(--purple-soft);
+      color: var(--purple);
+    }
+
+    .layer-badge.accent {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .layer-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 8px 0 6px;
+    }
+
+    .layer-summary {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.65;
+      margin: 0;
+    }
+
+    .layer-chapter-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--teal);
+      text-decoration: none;
+    }
+
+    .layer-chapter-link:hover {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .layer-chapter-soon {
+      display: inline-flex;
+      align-items: center;
+      margin-top: 12px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--bg-elevated);
+      border: 1px dashed var(--border-strong);
+      border-radius: 999px;
+      padding: 2px 10px;
+    }
+
+    /* Lab 2: Concept Boundaries */
+    .pair-compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin: 14px 0 16px;
+    }
+
+    @media (max-width: 760px) {
+      .pair-compare { grid-template-columns: 1fr; }
+    }
+
+    .concept-box {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 15px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .concept-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .concept-name {
+      font-size: 15.5px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .concept-plane {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+
+    .concept-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+
+    .concept-rows strong {
+      color: var(--text);
+      font-weight: 650;
+    }
+
+    .incident-panel {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-elevated);
+      padding: 15px 16px;
+    }
+
+    .incident-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .incident-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .incident-log {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.55;
+      background: var(--bg-code);
+      color: #e6edf3;
+      border-radius: var(--radius-sm);
+      padding: 11px 13px;
+      margin: 10px 0 0;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+
+    /* Glossary Matrix (#decisionGrid) */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 16px 0 18px;
+    }
+
+    .decision-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      margin-top: 12px;
+    }
+
+    @media (max-width: 760px) {
+      .decision-grid { grid-template-columns: 1fr; }
+    }
+
+    .decision-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 10px;
+      transition: opacity 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+    }
+
+    .decision-card.is-match {
+      border-color: var(--teal);
+      box-shadow: 0 0 0 1px var(--teal-soft);
+    }
+
+    .decision-card.is-dim {
+      opacity: 0.28;
+    }
+
+    .gloss-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .gloss-heading {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .gloss-term {
+      font-size: 15.5px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.3;
+    }
+
+    .gloss-sub {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    /* 3-Tier Architecture Spectrum */
+    .spectrum-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin: 20px 0 24px;
+    }
+
+    @media (max-width: 820px) {
+      .spectrum-grid { grid-template-columns: 1fr; }
+    }
+
+    .spectrum-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .spectrum-card.is-focus {
+      border-color: var(--teal);
+      background: var(--teal-soft);
+    }
+
+    .spectrum-tier {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.03em;
+    }
+
+    .spectrum-card.is-focus .spectrum-tier { color: var(--teal); }
+
+    .spectrum-title {
+      font-size: 15.5px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .spectrum-desc {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    .spectrum-meta {
+      margin-top: auto;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Lab 01 Loop Telemetry */
+    .telemetry-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    @media (max-width: 640px) {
+      .telemetry-strip { grid-template-columns: 1fr; }
+    }
+
+    .telemetry-cell {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .telemetry-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .telemetry-val {
+      font-family: var(--font-mono);
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .telemetry-val.is-warn { color: var(--rose); }
+    .telemetry-val.is-ok { color: var(--teal); }
+
+    /* Responsive 4-card pair picker in Lab 02 */
+    .pair-picker {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    @media (max-width: 820px) {
+      .pair-picker { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 520px) {
+      .pair-picker { grid-template-columns: 1fr; }
+    }
+
+    .gloss-cat {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .gloss-cat.info { background: var(--blue-soft); color: var(--blue); }
+    .gloss-cat.runtime { background: var(--teal-soft); color: var(--teal); }
+    .gloss-cat.guard { background: var(--purple-soft); color: var(--purple); }
+
+    .gloss-def {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin: 0 0 8px;
+    }
+
+    .gloss-ex {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      background: var(--bg-muted);
+      border-radius: 6px;
+      padding: 7px 10px;
+      line-height: 1.5;
+    }
+
+    .gloss-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+      font-size: 12.5px;
+    }
+
+    .gloss-link {
+      font-weight: 650;
+      color: var(--teal);
+      text-decoration: none;
+    }
+
+    .gloss-link:hover {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .gloss-soon {
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .payload-code-card {
+      margin: 0;
+      min-width: 0;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .payload-code-card pre {
+      flex: 1;
+      max-height: 360px;
+      font-size: 12.5px;
+      line-height: 1.6;
+      overflow-x: auto;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .payload-code-card pre code {
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./index.html">
+        <span>AI Agent Guide</span>
+        <span class="brand-badge">开源交互版</span>
+      </a>
+      <nav class="topbar-nav">
+        <a href="#section-spectrum">3 级架构选型</a>
+        <a href="#lab-lifecycle">实验 01 · 双轮循环</a>
+        <a href="#lab-confusions">实验 02 · 易混概念</a>
+        <a href="#section-minimal">最小 Agent 骨架</a>
+        <a href="#glossary">术语速查矩阵</a>
+      </nav>
+      <button class="theme-btn" id="themeToggle" type="button">
+        <span id="themeIcon">☀</span>
+        <span id="themeText">浅色</span>
+      </button>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-meta">
+      <span class="hero-pill">导览 · 01</span>
+      <span>全局坐标与术语</span>
+      <span>·</span>
+      <span>2 个交互实验台 + 术语导航</span>
+    </div>
+    <h1>AI Agent 工程全景图</h1>
+    <p class="hero-lead">
+      当线上 Agent 陷入死循环、编造错误堆栈，或者未经确认就执行了回滚命令时，真正难定位的往往不是“模型笨不笨”，而是故障出在 Context、RAG、Tool Calling、Harness 还是状态恢复。把一次真实的线上排障任务拆成 6 个工程阶段，每个组件的边界就会立刻清晰。
+    </p>
+  </section>
+
+  <section class="tldr">
+    <div class="tldr-card">
+      <div class="tldr-head">
+        <span class="tldr-kicker">30 秒速览</span>
+      </div>
+      <div class="tldr-list">
+        <div class="tldr-item">
+          <span class="tldr-num">01</span>
+          <div>
+            <div class="tldr-claim">Agent 不是“更聪明的模型”，而是包在无状态 LLM 外面的有状态控制循环。上下文拼装、权限拦截、工具执行与断点保存全部运行在业务代码里。</div>
+            <button class="tldr-go" type="button" onclick="window.bookJumpToLab('lab-lifecycle')">跳到实验 01：单步透视 6 层协作 →</button>
+          </div>
+        </div>
+        <div class="tldr-item">
+          <span class="tldr-num">02</span>
+          <div>
+            <div class="tldr-claim">大量线上故障来自概念混用：把 RAG 当 Memory 存可变状态、加了 MCP 却省掉 Harness 护栏、拿上下文摘要冒充崩溃检查点。</div>
+            <button class="tldr-go" type="button" onclick="window.bookJumpToLab('lab-confusions')">跳到实验 02：对比 4 组易混概念 →</button>
+          </div>
+        </div>
+        <div class="tldr-item">
+          <span class="tldr-num">03</span>
+          <div>
+            <div class="tldr-claim">跑通最小可用 Agent 不需要先把整套 RAG 搭齐。先掌握 LLM 约束与有界循环，再按瓶颈叠加检索、记忆与评测体系。</div>
+            <a class="tldr-go" href="#glossary">直达术语速查与全书导航 →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2 id="section-spectrum">先别急着上 Agent：3 级架构选型光谱</h2>
+    <p class="key">
+      工程落地中最容易踩的坑，是把本该用 20 行代码写死的流程包装成自主 Agent。Anthropic 在 <a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener">Building Effective Agents ↗</a> 中给出的核心建议同样适用于所有团队：<strong>始终从最简单的方案开始，只有当任务路径无法提前穷举时，才引入模型自主循环。</strong> <span class="src-tag">一手参考 · Anthropic Engineering</span>
+    </p>
+
+    <div class="spectrum-grid">
+      <div class="spectrum-card">
+        <span class="spectrum-tier">LEVEL 01 · 单次调用</span>
+        <div class="spectrum-title">单次 LLM + 结构化输出</div>
+        <p class="spectrum-desc">输入确定、一步出结果，用 Prompt 约束、JSON Schema 校验和按需检索即可闭环。</p>
+        <div class="spectrum-meta"><strong>典型场景：</strong>工单分类、合同字段抽取、单篇摘要。<br /><strong>优势：</strong>最低延迟、成本可控、最易回归测试。</div>
+      </div>
+
+      <div class="spectrum-card">
+        <span class="spectrum-tier">LEVEL 02 · 代码编排</span>
+        <div class="spectrum-title">确定性 Workflow</div>
+        <p class="spectrum-desc">多步串行、条件路由或并行汇总，但每一步的流转分支都提前写死在业务代码里。</p>
+        <div class="spectrum-meta"><strong>典型场景：</strong>发票 OCR → 规则校验 → 写入 ERP。<br /><strong>优势：</strong>路径 100% 可预测、可审计。</div>
+      </div>
+
+      <div class="spectrum-card is-focus">
+        <span class="spectrum-tier">LEVEL 03 · 自主循环</span>
+        <div class="spectrum-title">自主 Agent Loop</div>
+        <p class="spectrum-desc">问题开放、步骤无法写死，必须让模型根据工具实时返回的环境反馈动态决定下一步。</p>
+        <div class="spectrum-meta"><strong>典型场景：</strong>排查未知线上 500、跨仓修 Bug。<br /><strong>代价：</strong>必须配套 Harness 护栏、检查点与轨迹评测。</div>
+      </div>
+    </div>
+
+    <h2 id="section-runtime">把一次 2 轮线上排障拆成 6 个工程阶段</h2>
+    <p class="key">
+      假设值班工程师向内部运维 Agent 下达一条指令：“今天 <code>v2.14.2</code> 发布后结账接口开始报 500，查出根因并准备回滚方案。” 这是一个典型的 Level 03 开放式任务：模型必须先查日志拿到证据（Turn 1），再基于证据提出回滚方案并经过护栏审批（Turn 2）。
+    </p>
+    <p>
+      把这两轮循环的网络包和状态流拆开来看，LLM 在整条链路里只负责一件事：<strong>根据当前输入的 Token 序列，推理出下一步该输出文本还是调用工具</strong>。其余的取数、查库、鉴权、落盘和熔断，全是确定性代码的工作。
+    </p>
+
+    <div class="predict-hook" id="predict-1">
+      <div class="predict-q">
+        <span class="predict-badge">先猜一下</span>
+        在排查结账接口 500 报错的过程中，究竟是哪一层真正执行了 <code>kubectl logs</code> 和 <code>git diff</code> 命令？
+      </div>
+      <div class="predict-opts">
+        <button class="predict-opt" type="button" data-answer="wrong">A. LLM 在推理容器内直接执行 Shell 命令</button>
+        <button class="predict-opt" type="button" data-answer="right">B. 业务侧 Harness 校验权限后，由 Tool Runtime 执行并把文本结果写回上下文</button>
+        <button class="predict-opt" type="button" data-answer="wrong">C. RAG 向量数据库自动触发运维工具</button>
+      </div>
+      <div class="predict-feedback"></div>
+      <button class="predict-verify" type="button" id="verifyStep4Btn">在实验 01 的第 5 步亲自验证 →</button>
+    </div>
+  </main>
+
+  <!-- LAB 01: Single Agent Task Lifecycle Stepper -->
+  <section class="lab-wrap" id="lab-lifecycle">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <div class="lab-eyebrow">实验 01 · 全链路步进器</div>
+          <h3 class="lab-title">单次 Agent 任务如何穿过 6 层架构</h3>
+          <p class="lab-desc">点击架构图节点或步进按钮，观察每一层的输入、输出与真实 Payload 变化；切换护栏开关测试高危动作被拦截的瞬间。</p>
+        </div>
+        <span class="sim-tag">模拟轨迹 · 单次排障任务</span>
+      </div>
+      <div class="lab-body">
+        <div class="lab-toolbar">
+          <div class="toolbar-group">
+            <span class="toolbar-label">当前任务</span>
+            <span style="font-size: 13px; color: var(--text);">“排查 <code>v2.14.2</code> 结账接口 500 报错并准备回滚”</span>
+          </div>
+          <div class="toolbar-group">
+            <span class="toolbar-label">护栏策略</span>
+            <button class="chip-btn teal-active" id="harnessOnBtn" type="button">开启 Harness 护栏</button>
+            <button class="chip-btn" id="harnessOffBtn" type="button">关闭护栏（故障演练）</button>
+          </div>
+        </div>
+
+        <div class="telemetry-strip">
+          <div class="telemetry-cell">
+            <span class="telemetry-label">当前循环轮次</span>
+            <span class="telemetry-val is-ok" id="telTurn">Turn 1 / 2（只读查证）</span>
+          </div>
+          <div class="telemetry-cell">
+            <span class="telemetry-label">累计 Context Tokens</span>
+            <span class="telemetry-val" id="telTokens">3,200 / 16,000</span>
+          </div>
+          <div class="telemetry-cell">
+            <span class="telemetry-label">外部写操作状态</span>
+            <span class="telemetry-val is-ok" id="telRisk">无写入（安全）</span>
+          </div>
+        </div>
+
+        <!-- Interactive 6-node SVG Architecture Map -->
+        <div class="arch-stage">
+          <svg class="arch-svg" viewBox="0 0 880 198" role="img" aria-label="AI Agent 双轮循环 6 层协作架构图">
+            <defs>
+              <marker id="arrowNorm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--text-muted)" />
+              </marker>
+              <marker id="arrowActive" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--teal)" />
+              </marker>
+              <marker id="arrowDanger" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--rose)" />
+              </marker>
+            </defs>
+
+            <!-- Connectors -->
+            <line id="edge-0" x1="138" y1="68" x2="156" y2="68" stroke="var(--border-strong)" stroke-width="2" marker-end="url(#arrowNorm)" />
+            <line id="edge-1" x1="282" y1="68" x2="300" y2="68" stroke="var(--border-strong)" stroke-width="2" marker-end="url(#arrowNorm)" />
+            <line id="edge-2" x1="426" y1="68" x2="444" y2="68" stroke="var(--border-strong)" stroke-width="2" marker-end="url(#arrowNorm)" />
+            <line id="edge-3" x1="570" y1="68" x2="588" y2="68" stroke="var(--border-strong)" stroke-width="2" marker-end="url(#arrowNorm)" />
+            <line id="edge-4" x1="714" y1="68" x2="732" y2="68" stroke="var(--border-strong)" stroke-width="2" marker-end="url(#arrowNorm)" />
+
+            <!-- Turn 1 -> Turn 2 Feedback loop -->
+            <path id="edge-loop" d="M 363 106 L 363 160 L 507 160 L 507 110" fill="none" stroke="var(--border-strong)" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arrowNorm)" />
+            <text x="435" y="178" text-anchor="middle" font-size="11.5" fill="var(--text-muted)" font-family="var(--font-mono)">Turn 1 日志结果写回 Context → 进入 Turn 2 推理</text>
+
+            <!-- 6 Clickable Nodes -->
+            <g class="arch-node" data-step="0" transform="translate(12, 30)">
+              <rect id="node-rect-0" width="126" height="76" rx="10" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="2" />
+              <text x="63" y="25" text-anchor="middle" font-size="10.5" font-weight="700" fill="var(--text-muted)" font-family="var(--font-mono)">T1 · CONTEXT+RAG</text>
+              <text x="63" y="48" text-anchor="middle" font-size="13.5" font-weight="700" fill="var(--text)">拼装与取证</text>
+              <text x="63" y="65" text-anchor="middle" font-size="11" fill="var(--text-secondary)">规则 + Runbook</text>
+            </g>
+
+            <g class="arch-node" data-step="1" transform="translate(156, 30)">
+              <rect id="node-rect-1" width="126" height="76" rx="10" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="2" />
+              <text x="63" y="25" text-anchor="middle" font-size="10.5" font-weight="700" fill="var(--text-muted)" font-family="var(--font-mono)">T1 · LLM CORE</text>
+              <text x="63" y="48" text-anchor="middle" font-size="13.5" font-weight="700" fill="var(--text)">首轮推理查证</text>
+              <text x="63" y="65" text-anchor="middle" font-size="11" fill="var(--text-secondary)">只请求查日志</text>
+            </g>
+
+            <g class="arch-node" data-step="2" transform="translate(300, 30)">
+              <rect id="node-rect-2" width="126" height="76" rx="10" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="2" />
+              <text x="63" y="25" text-anchor="middle" font-size="10.5" font-weight="700" fill="var(--text-muted)" font-family="var(--font-mono)">T1 · TOOL / MCP</text>
+              <text x="63" y="48" text-anchor="middle" font-size="13.5" font-weight="700" fill="var(--text)">执行只读工具</text>
+              <text x="63" y="65" text-anchor="middle" font-size="11" fill="var(--text-secondary)">裁剪堆栈写回</text>
+            </g>
+
+            <g class="arch-node" data-step="3" transform="translate(444, 30)">
+              <rect id="node-rect-3" width="126" height="76" rx="10" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="2" />
+              <text x="63" y="25" text-anchor="middle" font-size="10.5" font-weight="700" fill="var(--text-muted)" font-family="var(--font-mono)">T2 · LLM LOOP</text>
+              <text x="63" y="48" text-anchor="middle" font-size="13.5" font-weight="700" fill="var(--text)">二轮提出回滚</text>
+              <text x="63" y="65" text-anchor="middle" font-size="11" fill="var(--text-secondary)">基于日志做决策</text>
+            </g>
+
+            <g class="arch-node" data-step="4" transform="translate(588, 30)">
+              <rect id="node-rect-4" width="126" height="76" rx="10" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="2" />
+              <text x="63" y="25" text-anchor="middle" font-size="10.5" font-weight="700" fill="var(--text-muted)" font-family="var(--font-mono)">T2 · HARNESS</text>
+              <text x="63" y="48" text-anchor="middle" font-size="13.5" font-weight="700" fill="var(--text)">护栏拦截写入</text>
+              <text x="63" y="65" text-anchor="middle" font-size="11" fill="var(--text-secondary)">转人工审批确认</text>
+            </g>
+
+            <g class="arch-node" data-step="5" transform="translate(732, 30)">
+              <rect id="node-rect-5" width="136" height="76" rx="10" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="2" />
+              <text x="68" y="25" text-anchor="middle" font-size="10.5" font-weight="700" fill="var(--text-muted)" font-family="var(--font-mono)">06 · STATE / EVAL</text>
+              <text x="68" y="48" text-anchor="middle" font-size="13.5" font-weight="700" fill="var(--text)">检查点与观测</text>
+              <text x="68" y="65" text-anchor="middle" font-size="11" fill="var(--text-secondary)">持久化 + 轨迹记录</text>
+            </g>
+          </svg>
+        </div>
+
+        <div class="step-bar">
+          <div class="step-pills" id="stepPills"></div>
+          <div class="step-controls">
+            <button class="btn" id="prevStepBtn" type="button">← 上一步</button>
+            <button class="btn btn-primary" id="nextStepBtn" type="button">下一步 →</button>
+            <button class="btn" id="autoPlayBtn" type="button">▶ 自动播放</button>
+          </div>
+        </div>
+
+        <div class="split-2">
+          <div class="pane-box" id="stepDetailPane">
+            <div class="pane-head">
+              <span>当前阶段职责</span>
+              <span class="layer-badge" id="stepLayerBadge">STEP 01 / 06</span>
+            </div>
+            <div class="layer-title" id="stepTitle"></div>
+            <p class="layer-summary" id="stepSummary"></p>
+            <div class="layer-meta-grid">
+              <div class="layer-meta-item">
+                <div class="layer-meta-label">本层输入</div>
+                <div class="layer-meta-val" id="stepInput"></div>
+              </div>
+              <div class="layer-meta-item">
+                <div class="layer-meta-label">本层产出</div>
+                <div class="layer-meta-val" id="stepOutput"></div>
+              </div>
+            </div>
+            <div id="stepOutcomeSlot"></div>
+            <div id="stepChapterSlot"></div>
+          </div>
+
+          <div class="pane-box">
+            <div class="pane-head">
+              <span id="payloadTitle">实时数据结构透视</span>
+              <span class="sim-tag" style="font-size: 11px;">Payload</span>
+            </div>
+            <div class="code-card payload-code-card">
+              <div class="code-header">
+                <span id="payloadLangLabel">JSON · Step 01</span>
+                <button class="copy-btn" type="button">复制</button>
+              </div>
+              <pre><code class="language-json" id="stepPayloadCode"></code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2 id="section-confusions">为什么工程上必须把“信息平面”和“执行平面”拆开</h2>
+    <p class="key">
+      Agent 系统里最容易踩的坑，是把两个听起来相近的机制当成同一件事。把所有组件分成两条正交主线，边界就会一目了然：一条管“送进模型的信息质量”，另一条管“模型做出决定后程序怎么安全执行”。
+    </p>
+
+    <figure class="diagram-figure">
+      <svg viewBox="0 0 860 236" role="img" aria-label="信息平面与执行控制平面正交分层图">
+        <!-- Plane 1: Information Plane -->
+        <rect x="12" y="14" width="836" height="96" rx="12" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="1.5" />
+        <text x="30" y="38" font-size="12.5" font-weight="700" fill="var(--blue)" font-family="var(--font-mono)">信息平面 · INFORMATION PLANE（决定模型“看到什么”）</text>
+
+        <rect x="30" y="50" width="148" height="46" rx="8" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="1.5" />
+        <text x="104" y="70" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">Prompt 约束</text>
+        <text x="104" y="87" text-anchor="middle" font-size="11" fill="var(--text-muted)">角色、目标、格式契约</text>
+
+        <rect x="194" y="50" width="148" height="46" rx="8" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="1.5" />
+        <text x="268" y="70" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">Context 窗口</text>
+        <text x="268" y="87" text-anchor="middle" font-size="11" fill="var(--text-muted)">预算、排序、按需加载</text>
+
+        <rect x="358" y="50" width="148" height="46" rx="8" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="1.5" />
+        <text x="432" y="70" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">RAG 外部证据</text>
+        <text x="432" y="87" text-anchor="middle" font-size="11" fill="var(--text-muted)">共享文档、可溯源引用</text>
+
+        <rect x="522" y="50" width="148" height="46" rx="8" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="1.5" />
+        <text x="596" y="70" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">Memory 长期记忆</text>
+        <text x="596" y="87" text-anchor="middle" font-size="11" fill="var(--text-muted)">用户偏好、会更新遗忘</text>
+
+        <rect x="686" y="50" width="144" height="46" rx="8" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="1.5" />
+        <text x="758" y="70" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">上下文压缩</text>
+        <text x="758" y="87" text-anchor="middle" font-size="11" fill="var(--text-muted)">缩减 Token 避免溢出</text>
+
+        <!-- Plane 2: Execution & Control Plane -->
+        <rect x="12" y="126" width="836" height="96" rx="12" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="1.5" />
+        <text x="30" y="150" font-size="12.5" font-weight="700" fill="var(--teal)" font-family="var(--font-mono)">执行与控制平面 · EXECUTION PLANE（决定程序“怎么做与如何恢复”）</text>
+
+        <rect x="30" y="162" width="148" height="46" rx="8" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="1.5" />
+        <text x="104" y="182" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">Tool Calling</text>
+        <text x="104" y="199" text-anchor="middle" font-size="11" fill="var(--text-muted)">声明、分发、停止条件</text>
+
+        <rect x="194" y="162" width="148" height="46" rx="8" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="1.5" />
+        <text x="268" y="182" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">MCP 接入协议</text>
+        <text x="268" y="199" text-anchor="middle" font-size="11" fill="var(--text-muted)">外部工具发现与通信标准</text>
+
+        <rect x="358" y="162" width="148" height="46" rx="8" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="1.5" />
+        <text x="432" y="182" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">Harness 护栏</text>
+        <text x="432" y="199" text-anchor="middle" font-size="11" fill="var(--text-muted)">权限、审批、沙箱、预算</text>
+
+        <rect x="522" y="162" width="148" height="46" rx="8" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="1.5" />
+        <text x="596" y="182" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">检查点恢复</text>
+        <text x="596" y="199" text-anchor="middle" font-size="11" fill="var(--text-muted)">断点续跑与幂等键</text>
+
+        <rect x="686" y="162" width="144" height="46" rx="8" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="1.5" />
+        <text x="758" y="182" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">评测与轨迹</text>
+        <text x="758" y="199" text-anchor="middle" font-size="11" fill="var(--text-muted)">回归门禁与根因诊断</text>
+      </svg>
+      <figcaption>图 1：AI Agent 系统的两条正交主线。信息平面解决“模型能不能看清事实”，执行平面解决“程序会不会跑飞或重复扣费”。</figcaption>
+    </figure>
+  </main>
+
+  <!-- LAB 02: 4 Confused Concept Pairs -->
+  <section class="lab-wrap" id="lab-confusions">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <div class="lab-eyebrow">实验 02 · 易混概念对照台</div>
+          <h3 class="lab-title">4 组高频易混概念：用混了会出什么线上故障？</h3>
+          <p class="lab-desc">点选任意一组概念，对比它们的职责边界，再切换“混用反模式”与“正确分工”查看真实生产事故日志。</p>
+        </div>
+        <span class="sim-tag">模拟故障对照</span>
+      </div>
+      <div class="lab-body">
+        <div class="pick-options pair-picker" id="pairPicker">
+          <button class="pick-card active" type="button" data-pair="prompt-context">
+            <span class="pick-kicker">PAIR 01</span>
+            <span class="pick-title">Prompt vs Context</span>
+            <span class="pick-sub">单条指令 vs 整个窗口</span>
+          </button>
+          <button class="pick-card" type="button" data-pair="rag-memory">
+            <span class="pick-kicker">PAIR 02</span>
+            <span class="pick-title">RAG vs Memory</span>
+            <span class="pick-sub">共享事实 vs 个体状态</span>
+          </button>
+          <button class="pick-card" type="button" data-pair="tool-mcp">
+            <span class="pick-kicker">PAIR 03</span>
+            <span class="pick-title">Tool Calling vs MCP</span>
+            <span class="pick-sub">调用循环 vs 接入协议</span>
+          </button>
+          <button class="pick-card" type="button" data-pair="compact-checkpoint">
+            <span class="pick-kicker">PAIR 04</span>
+            <span class="pick-title">上下文压缩 vs 检查点</span>
+            <span class="pick-sub">省 Token vs 断点续跑</span>
+          </button>
+        </div>
+
+        <div class="pair-compare" id="pairCompareCards"></div>
+
+        <div class="incident-panel">
+          <div class="incident-head">
+            <div class="incident-title" id="incidentScenarioTitle">线上场景模拟</div>
+            <div class="toolbar-group">
+              <button class="chip-btn danger-active" id="modeMisuseBtn" type="button">查看混用故障</button>
+              <button class="chip-btn" id="modeCleanBtn" type="button">查看正确分工</button>
+            </div>
+          </div>
+          <div id="incidentOutcome"></div>
+          <pre class="incident-log" id="incidentLog"></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2 id="section-minimal">剥掉框架包装，最小 Agent 只有 35 行核心循环</h2>
+    <p class="key">
+      无论底层用哪种编程语言，也不管外层包了什么编排框架，生产级单 Agent 的核心控制流都长成下面这个骨架：<strong>组装 Context → 调用 LLM → 经过 Harness 校验 → 执行 Tool → 落盘 Checkpoint</strong>，直到模型返回最终结论或触及步数预算。
+    </p>
+
+    <details class="code-fold" open>
+      <summary>展开参考代码 · 最小 Agent 6 层协作骨架（TypeScript）</summary>
+      <div class="code-fold-body">
+        <div class="code-card">
+          <div class="code-header">
+            <span>TypeScript · 6 层最小协作伪代码骨架（非单文件依赖）</span>
+            <button class="copy-btn" type="button">复制</button>
+          </div>
+          <pre><code class="language-typescript">async function runAgentTask(taskId: string, userGoal: string) {
+  // 01 + 02. Context 拼装：只加载必要系统规则、RAG 证据与用户记忆
+  const evidence = await retrieveRunbook(userGoal);
+  const memory = await loadOnCallPreferences(taskId);
+  const messages: Message[] = buildContext({ userGoal, evidence, memory });
+
+  for (let step = 1; step <= MAX_STEPS; step++) {
+    // 03. LLM 推理：无状态调用，决定直接回答还是发起工具调用
+    const reply = await callModel({ messages, tools: declaredTools });
+    messages.push(reply.assistantMessage);
+
+    if (reply.stopReason === "end_turn") {
+      await saveCheckpoint(taskId, { step, status: "done", messages });
+      return reply.finalText;
+    }
+
+    for (const call of reply.toolCalls) {
+      // 04. Harness 护栏：校验参数 Schema、权限等级与高危人工审批
+      const decision = await harness.check(call, { step, budgetRemaining: MAX_STEPS - step });
+      if (!decision.allowed) {
+        messages.push(toolError(call.id, decision.reason));
+        continue;
+      }
+
+      // 05. 工具执行（本地函数或 MCP Server），结果写回下一轮上下文
+      const output = await executeTool(call.name, call.args, { idempotencyKey: `${taskId}:${step}:${call.id}` });
+      messages.push(toolResult(call.id, truncateForBudget(output)));
+    }
+
+    // 06. 状态持久化（检查点）与按需上下文压缩（信息层）
+    await saveCheckpoint(taskId, { step, status: "running", messages });
+    if (estimateTokens(messages) > COMPACT_THRESHOLD) compactOldTurns(messages);
+  }
+  throw new Error("Exceeded MAX_STEPS budget");
+}</code></pre>
+        </div>
+        <p style="font-size: 13.5px; color: var(--text-secondary); margin: 12px 0 0;">
+          每个独立模块的可运行 TypeScript 代码均托管在同仓 <a href="https://github.com/qufei1993/ai-agent-fullstack-roadmap/tree/main/examples" target="_blank" rel="noopener">examples/ 目录 ↗</a>，后续章节会逐一拆解每一行的边界条件。
+        </p>
+      </div>
+    </details>
+
+    <div class="callout note">
+      <div class="callout-title">推荐阅读路径：不需要先搭完完整 RAG 才能做 Agent</div>
+      全书按“尽早跑通最小 Agent”编排。先读完 <strong>模块一（LLM 工程基础）</strong> 掌握 Prompt 约束、结构化输出、Context 预算与回归评测；如果你的痛点是让模型安全调用外部系统，直接进入 <strong>模块二（Agent 核心机制）</strong>；如果你的痛点是知识库问答幻觉与检索召回，直接切入 <strong>模块三（RAG 检索与证据）</strong>。
+    </div>
+
+    <h2 id="glossary">术语速查与全书导航矩阵</h2>
+    <p class="key">
+      按“模型与信息 / Agent 运行 / 工程保障”筛选全书 12 个核心工程概念，每个词条附一句话定义、具体落地例子和直达对应章节的入口。
+    </p>
+
+    <div class="filter-bar">
+      <button class="chip-btn active" type="button" data-filter="all">全部术语 (12)</button>
+      <button class="chip-btn" type="button" data-filter="model-info">模型与信息 (6)</button>
+      <button class="chip-btn" type="button" data-filter="agent-runtime">Agent 运行 (4)</button>
+      <button class="chip-btn" type="button" data-filter="engineering">工程保障 (2)</button>
+    </div>
+
+    <div class="decision-grid" id="decisionGrid">
+      <div class="decision-card" data-tags="model-info">
+        <div>
+          <div class="gloss-top">
+            <div class="gloss-heading">
+              <span class="gloss-term">Prompt Engineering</span>
+              <span class="gloss-sub">任务约束与采样控制</span>
+            </div>
+            <span class="gloss-cat info">模型与信息</span>
+          </div>
+          <p class="gloss-def">通过明确的任务边界、采样参数和少样本示例约束单次模型输出，而不是靠反复改措辞碰运气。</p>
+          <div class="gloss-ex">例子：将 temperature 降到 0 并提供 2 条边界反例，阻止分类模型输出未定义标签。</div>
+        </div>
+        <div class="gloss-foot">
+          <span>模块一 · CH 02</span>
+          <a class="gloss-link" href="./prompt-engineering.html">进入交互章 →</a>
+        </div>
+      </div>
+
+      <div class="decision-card" data-tags="model-info">
+        <div>
+          <div class="gloss-top">
+            <div class="gloss-heading">
+              <span class="gloss-term">Structured Output</span>
+              <span class="gloss-sub">结构化输出与契约校验</span>
+            </div>
+            <span class="gloss-cat info">模型与信息</span>
+          </div>
+          <p class="gloss-def">用 JSON Schema 与运行时校验（如 Zod）把自然语言回答变成强类型接口契约，并处理校验失败后的有限重试。</p>
+          <div class="gloss-ex">例子：工单分流接口强制返回 <code>{ severity, team, reason }</code>，缺字段自动带报错重试 1 次。</div>
+        </div>
+        <div class="gloss-foot">
+          <span>模块一 · CH 03</span>
+          <a class="gloss-link" href="./structured-output.html">进入交互章 →</a>
+        </div>
+      </div>
+
+      <div class="decision-card" data-tags="model-info">
+        <div>
+          <div class="gloss-top">
+            <div class="gloss-heading">
+              <span class="gloss-term">Context Engineering</span>
+              <span class="gloss-sub">上下文预算与组织</span>
+            </div>
+            <span class="gloss-cat info">模型与信息</span>
+          </div>
+          <p class="gloss-def">围绕 Token 预算和注意力衰减规律，筛选、排序并按需加载送进模型窗口的全部信息。</p>
+          <div class="gloss-ex">例子：只给模型当前报错服务的 200 行日志，而不是把 30 个微服务的完整日志一次塞进窗口。</div>
+        </div>
+        <div class="gloss-foot">
+          <span>模块一 · CH 04</span>
+          <a class="gloss-link" href="./context-engineering.html">进入交互章 →</a>
+        </div>
+      </div>
+
+      <div class="decision-card" data-tags="model-info">
+        <div>
+          <div class="gloss-top">
+            <div class="gloss-heading">
+              <span class="gloss-term">RAG</span>
+              <span class="gloss-sub">检索增强生成与溯源</span>
+            </div>
+            <span class="gloss-cat info">模型与信息</span>
+          </div>
+          <p class="gloss-def">把外部文档分块建索引，在回答前检索相关片段作为可核验证据，解决知识时效与私有数据问题。</p>
+          <div class="gloss-ex">例子：排障前从内部 Runbook 检索《结账服务回滚手册》第 3 节，并在结论后附上文档出处。</div>
+        </div>
+        <div class="gloss-foot">
+          <span>模块三 · CH 15–19</span>
+          <a class="gloss-link" href="./document-parsing-chunking.html">从分块策略开始 →</a>
+        </div>
+      </div>
+
+      <div class="decision-card" data-tags="model-info">
+        <div>
+          <div class="gloss-top">
+            <div class="gloss-heading">
+              <span class="gloss-term">Memory</span>
+              <span class="gloss-sub">工作记忆与长期记忆</span>
+            </div>
+            <span class="gloss-cat info">模型与信息</span>
+          </div>
+          <p class="gloss-def">记录跨会话的用户偏好、实体状态与历史结论，必须设计写入时机、冲突更新和过期遗忘机制。</p>
+          <div class="gloss-ex">例子：记住“该团队回滚前必须先在 #release-ops 群发通知”，下次排障自动带入。</div>
+        </div>
+        <div class="gloss-foot">
+          <span>模块二 · CH 10</span>
+          <span class="gloss-soon">模块二 · 即将上线</span>
+        </div>
+      </div>
+
+      <div class="decision-card" data-tags="model-info">
+        <div>
+          <div class="gloss-top">
+            <div class="gloss-heading">
+              <span class="gloss-term">Context Compaction</span>
+              <span class="gloss-sub">上下文压缩</span>
+            </div>
+            <span class="gloss-cat info">模型与信息</span>
+          </div>
+          <p class="gloss-def">在长任务逼近窗口上限时，把早期冗长的工具输出和对话折叠成高密度摘要，保留关键决策依据。</p>
+          <div class="gloss-ex">例子：将前 6 轮 12,000 Tokens 的日志查询记录压缩成 300 Tokens 的“已排除项 + 已确认线索”。</div>
+        </div>
+        <div class="gloss-foot">
+          <span>模块二 · CH 10</span>
+          <span class="gloss-soon">模块二 · 即将上线</span>
+        </div>
+      </div>
+
+      <div class="decision-card" data-tags="agent-runtime">
+        <div>
+          <div class="gloss-top">
+            <div class="gloss-heading">
+              <span class="gloss-term">Tool Calling &amp; Agent Loop</span>
+              <span class="gloss-sub">工具调用与有界循环</span>
+            </div>
+            <span class="gloss-cat runtime">Agent 运行</span>
+          </div>
+          <p class="gloss-def">让模型按声明的 Schema 发起工具调用，由宿主程序执行并回传结果，在明确停止条件下多轮迭代。</p>
+          <div class="gloss-ex">例子：先调 <code>getDeployDiff</code>，看到新增了 DB 连接池改动，再自动调 <code>queryErrorLogs</code> 验证。</div>
+        </div>
+        <div class="gloss-foot">
+          <span>模块二 · CH 06</span>
+          <span class="gloss-soon">模块二 · 即将上线</span>
+        </div>
+      </div>
+
+      <div class="decision-card" data-tags="agent-runtime">
+        <div>
+          <div class="gloss-top">
+            <div class="gloss-heading">
+              <span class="gloss-term">Workflow vs. Agent</span>
+              <span class="gloss-sub">代码编排与自主循环</span>
+            </div>
+            <span class="gloss-cat runtime">Agent 运行</span>
+          </div>
+          <p class="gloss-def">决定哪些步骤写死在确定性代码流水线（Workflow）里，哪些分支留给模型动态探索（Agent）。</p>
+          <div class="gloss-ex">例子：发票 OCR → 校验 → 入账用固定 Workflow；开放式线上根因排查才交给 Agent 循环。</div>
+        </div>
+        <div class="gloss-foot">
+          <span>模块二 · CH 07</span>
+          <span class="gloss-soon">模块二 · 即将上线</span>
+        </div>
+      </div>
+
+      <div class="decision-card" data-tags="agent-runtime">
+        <div>
+          <div class="gloss-top">
+            <div class="gloss-heading">
+              <span class="gloss-term">MCP &amp; Skills</span>
+              <span class="gloss-sub">协议接入与按需能力包</span>
+            </div>
+            <span class="gloss-cat runtime">Agent 运行</span>
+          </div>
+          <p class="gloss-def"><a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">MCP ↗</a> 用统一协议把外部工具和数据源接进 Agent；Skills 把特定任务的 SOP 与脚本封装成按需加载的能力包。</p>
+          <div class="gloss-ex">例子：通过 GitHub MCP 拉取 PR Diff，再按需加载“数据库迁移审查 Skill”检查锁表风险。</div>
+        </div>
+        <div class="gloss-foot">
+          <span>模块二 · CH 13</span>
+          <span class="gloss-soon">模块二 · 即将上线</span>
+        </div>
+      </div>
+
+      <div class="decision-card" data-tags="agent-runtime">
+        <div>
+          <div class="gloss-top">
+            <div class="gloss-heading">
+              <span class="gloss-term">Checkpoint &amp; Idempotency</span>
+              <span class="gloss-sub">检查点恢复与幂等键</span>
+            </div>
+            <span class="gloss-cat runtime">Agent 运行</span>
+          </div>
+          <p class="gloss-def">持久化每一步的执行状态与操作幂等键，保证超时、断网或进程重启后能精确续跑，不重复触发副作用。</p>
+          <div class="gloss-ex">例子：Agent 在第 4 步等待人工审批时进程重启，恢复后直接从第 4 步继续，不会重复建工单。</div>
+        </div>
+        <div class="gloss-foot">
+          <span>模块二 · CH 11</span>
+          <span class="gloss-soon">模块二 · 即将上线</span>
+        </div>
+      </div>
+
+      <div class="decision-card" data-tags="engineering">
+        <div>
+          <div class="gloss-top">
+            <div class="gloss-heading">
+              <span class="gloss-term">Harness</span>
+              <span class="gloss-sub">权限、审批与执行护栏</span>
+            </div>
+            <span class="gloss-cat guard">工程保障</span>
+          </div>
+          <p class="gloss-def">用代码强约束 Agent 的权限分级、人工审批、执行沙箱与 Token/步数预算，确保模型出错时系统不失控。</p>
+          <div class="gloss-ex">例子：只读查日志自动放行；<code>kubectl rollback</code> 必须暂停并弹出人工审批确认。</div>
+        </div>
+        <div class="gloss-foot">
+          <span>模块二 · CH 09</span>
+          <span class="gloss-soon">模块二 · 即将上线</span>
+        </div>
+      </div>
+
+      <div class="decision-card" data-tags="engineering">
+        <div>
+          <div class="gloss-top">
+            <div class="gloss-heading">
+              <span class="gloss-term">Eval &amp; Tracing</span>
+              <span class="gloss-sub">回归评测与轨迹诊断</span>
+            </div>
+            <span class="gloss-cat guard">工程保障</span>
+          </div>
+          <p class="gloss-def">用固定用例集、断言规则和全链路轨迹日志量化改动收益，防止修好一个 Case 却破坏另外十个。</p>
+          <div class="gloss-ex">例子：每次修改系统 Prompt 前跑完 30 条回归测试集，通过率低于 95% 自动阻断合并。</div>
+        </div>
+        <div class="gloss-foot">
+          <span>模块一 · CH 05 / 模块三 · CH 19</span>
+          <a class="gloss-link" href="./prompt-regression.html">先看 Prompt 回归评测 →</a>
+        </div>
+      </div>
+    </div>
+
+    <p style="margin-top: 28px;">
+      有了这张全局坐标图，后续章节的定位就不再零散。下一章从整条链路的最起点出发：怎样把模糊的自然语言指令，改造成边界清晰、参数可控、可复现的 <strong>Prompt Engineering</strong> 工程规范。
+    </p>
+  </main>
+
+  <footer>
+    AI Agent Guide · 开源交互式工程指南
+  </footer>
+
+  <script>
+    // 1. Predict-hook interaction
+    (function initPredictHook() {
+      const hook = document.getElementById("predict-1");
+      if (!hook) return;
+      const feedback = hook.querySelector(".predict-feedback");
+      hook.querySelectorAll(".predict-opt").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          hook.classList.add("answered");
+          hook.querySelectorAll(".predict-opt").forEach((b) => {
+            b.classList.remove("is-right", "is-wrong");
+          });
+          const isRight = btn.dataset.answer === "right";
+          btn.classList.add(isRight ? "is-right" : "is-wrong");
+          feedback.classList.add("show");
+          feedback.innerHTML = isRight
+            ? "<strong>判断准确。</strong>LLM 只会返回一段结构化的 <code>tool_use</code> 请求（例如工具名和参数），它自己没有 Shell 或网络权限。真正执行命令的是你的业务代码，而且必须在执行前经过 Harness 鉴权。"
+            : "<strong>容易混淆的地方在这里。</strong>LLM 是无状态的文本推理服务，无法直接执行 Shell 命令，RAG 也只负责检索文档。工具调用必须由模型发出结构化意图，经由 Harness 护栏检查后，再由你的运行时执行并回传结果。";
+        });
+      });
+
+      const verifyBtn = document.getElementById("verifyStep4Btn");
+      if (verifyBtn) {
+        verifyBtn.addEventListener("click", () => {
+          window.bookJumpToLab("lab-lifecycle");
+          if (typeof window.__setArchStep === "function") {
+            window.__setArchStep(4);
+          }
+        });
+      }
+    })();
+
+    // 2. Lab 01: 2-Turn Agent Loop Lifecycle Stepper
+    (function initLifecycleLab() {
+      let currentStep = 0;
+      let harnessEnabled = true;
+      let autoTimer = null;
+
+      const steps = [
+        {
+          short: "01 拼装取证",
+          turn: "Turn 1 / 2（准备阶段）",
+          tokens: "3,200 / 16,000",
+          risk: "无写入（安全）",
+          badge: "TURN 1 · CONTEXT + RAG",
+          badgeClass: "blue",
+          title: "拼装初始 Context，并注入 RAG 证据与团队记忆",
+          summary: "宿主程序把系统 SOP、工具 Schema 白名单、从知识库召回的《结账服务排障手册》（RAG）以及值班团队偏好（Memory）拼装成首轮受控上下文。",
+          input: "用户告警 + Runbook 片段 + 团队记忆 + 3 个工具 Schema",
+          output: "受控在 3,200 Tokens 内的 Turn 1 messages[]",
+          chapterText: "深入阅读：Context Engineering 与 RAG 溯源 →",
+          chapterHref: "./context-engineering.html",
+          payloadTitle: "Step 01 · Turn 1 初始 Context 与证据注入",
+          payload: {
+            turn: 1,
+            system: "你是值班排障 Agent。只读排查自动放行；任何写入或回滚操作必须申请人工审批。",
+            rag_evidence: "runbook/checkout-500.md#L42: 结账 500 优先核对最近发布的 DB 连接池与环境变量变更。",
+            team_memory: "team:payments-oncall -> 回滚前需附带根因与审批单。",
+            user: "今天 v2.14.2 发布后结账接口开始报 500，查出根因并准备回滚方案。"
+          }
+        },
+        {
+          short: "02 首轮推理",
+          turn: "Turn 1 / 2（只读查证）",
+          tokens: "3,460 / 16,000",
+          risk: "仅只读请求",
+          badge: "TURN 1 · LLM REASONING",
+          badgeClass: "purple",
+          title: "首轮 LLM 推理：先查日志拿证据，不盲目回滚",
+          summary: "模型通读上下文后发现缺少实时报错堆栈，于是只发出一条只读的 tool_use 请求（query_error_logs）。此时没有任何命令真正执行，模型只是在输出结构化意图。",
+          input: "Turn 1 messages[] + 3 个声明工具的 Schema",
+          output: "stop_reason: tool_use + 1 条只读查询意图",
+          chapterText: "深入阅读：结构化输出与 Schema 校验 →",
+          chapterHref: "./structured-output.html",
+          payloadTitle: "Step 02 · Turn 1 模型返回只读 tool_use",
+          payload: {
+            turn: 1,
+            stop_reason: "tool_use",
+            reasoning_summary: "先拉取最近 15 分钟 checkout-api 的 500 错误日志，确认是否为 v2.14.2 引入。",
+            tool_calls: [
+              { id: "tc_01", name: "query_error_logs", args: { service: "checkout-api", minutes: 15, status: 500 } }
+            ]
+          }
+        },
+        {
+          short: "03 执行与回写",
+          turn: "Turn 1 → Turn 2（循环回写）",
+          tokens: "3,840 / 16,000",
+          risk: "只读放行（已裁剪）",
+          badge: "TURN 1 · TOOL / MCP RUNTIME",
+          badgeClass: "",
+          title: "执行只读工具、裁剪堆栈，并写回上下文进入第 2 轮",
+          summary: "Harness 放行只读工具，Tool Runtime（本地函数或 MCP Server）拉回 480 条报错后做去重裁剪，只把 380 Tokens 的关键错误签名作为 tool_result 追加进 messages[]，触发第 2 轮 LLM 调用。",
+          input: "已放行的 tc_01 参数 + 幂等键 task_902:t1:tc_01",
+          output: "去重后的根因日志（380 Tokens）→ 进入 Turn 2",
+          chapterText: "模块二 · CH 06 Tool Calling & CH 13 MCP（即将上线）",
+          chapterHref: null,
+          payloadTitle: "Step 03 · 裁剪后的 tool_result 写回 Context",
+          payload: {
+            turn: 1,
+            tool_result: {
+              call_id: "tc_01",
+              status: "ok",
+              truncated_from_lines: 480,
+              injected_tokens: 380,
+              summary: "412 次报错均指向 PoolExhaustedError: max_connections=5 (v2.14.2 误将 DB_POOL_MAX 从 50 改为 5)"
+            }
+          }
+        },
+        {
+          short: "04 二轮决策",
+          turn: "Turn 2 / 2（提出写入）",
+          tokens: "4,190 / 16,000",
+          risk: "待检高危写操作",
+          badge: "TURN 2 · LLM LOOP",
+          badgeClass: "purple",
+          title: "Turn 2 推理：拿到确凿证据后，模型提出回滚动作",
+          summary: "模型结合 Turn 1 拿回的报错日志和 Runbook，确认根因是 DB_POOL_MAX 配置回退，因此在第 2 轮发起写操作 rollback_deployment(force: true)。循环把控制权再次交回宿主代码。",
+          input: "累计 3,840 Tokens 的上下文（含 Turn 1 日志结果）",
+          output: "stop_reason: tool_use + 高危写操作 rollback_deployment",
+          chapterText: "深入阅读：引用溯源与证据校验 →",
+          chapterHref: "./citation-hallucination.html",
+          payloadTitle: "Step 04 · Turn 2 模型基于证据发起回滚意图",
+          payload: {
+            turn: 2,
+            stop_reason: "tool_use",
+            reasoning_summary: "已确认 500 源于 v2.14.2 将 DB_POOL_MAX 改为 5，发起回滚到 v2.14.1。",
+            tool_calls: [
+              { id: "tc_02", name: "rollback_deployment", args: { service: "checkout-api", target: "v2.14.1", force: true } }
+            ]
+          }
+        },
+        {
+          short: "05 护栏拦截",
+          turn: "Turn 2 / 2（安全拦截）",
+          tokens: "4,310 / 16,000",
+          risk: "已拦截 · 转人工审批",
+          badge: "TURN 2 · HARNESS GUARDRAILS",
+          badgeClass: "accent",
+          title: "Harness 拦截高危生产回滚，转交人工审批",
+          summary: "即使模型找对了根因，生产环境 force rollback 依然属于不可逆高危写入（可能与正在执行的数据库迁移冲突）。Harness 确定性规则立即阻断执行，生成审批单 #APR-419 等待值班人确认。",
+          input: "待执行 tc_02（destructive_write）+ 剩余步数预算",
+          output: "BLOCK_AND_ASK_HUMAN + 审批单 #APR-419",
+          chapterText: "模块二 · CH 09 Harness 与执行边界（即将上线）",
+          chapterHref: null,
+          payloadTitle: "Step 05 · Harness 策略判定与拦截回执",
+          payload: {
+            policy_engine: "production-guard-v2",
+            call_id: "tc_02",
+            tool: "rollback_deployment",
+            risk_tier: "destructive_write",
+            action: "BLOCK_AND_ASK_HUMAN",
+            approval_ticket: "APR-419",
+            reason: "生产回滚前需人工核对是否存在进行中的 DB Schema 迁移。"
+          },
+          dangerOverride: {
+            turn: "Turn 2 / 2（护栏已绕过！）",
+            risk: "高危！生产环境已强行变更",
+            badge: "TURN 2 · HARNESS DISABLED",
+            title: "护栏关闭：高危强制回滚直接裸奔放行",
+            summary: "关闭 Harness 后，宿主程序把模型生成的 rollback_deployment(force: true) 原封不动交给集群执行，绕过了数据库迁移兼容性检查。",
+            output: "ALLOW_UNCHECKED（无人工审批，直接改写生产！）",
+            outcomeHtml: `<div class="outcome bad" style="margin-top: 12px;"><div class="outcome-title">线上事故触发：未经审批执行了生产强行回滚</div>虽然模型找对了 DB_POOL_MAX 根因，但 <code>v2.14.2</code> 同时包含一项不可逆的字段迁移。绕过人工审批直接 force rollback 导致旧版代码与新表结构冲突，引发二次故障。</div>`,
+            payloadTitle: "Step 05 · 无护栏直通（生产事故！）",
+            payload: {
+              policy_engine: "NONE (bypassed)",
+              call_id: "tc_02",
+              tool: "rollback_deployment",
+              action: "EXECUTED_UNCHECKED",
+              deployed_version: "v2.14.1",
+              side_effect: "SCHEMA_MISMATCH_ALERT"
+            }
+          }
+        },
+        {
+          short: "06 状态与观测",
+          turn: "Turn 2 完成（等待审批）",
+          tokens: "4,620 / 16,000",
+          risk: "Checkpoint 已落盘",
+          badge: "06 · CHECKPOINT & TRACING",
+          badgeClass: "purple",
+          title: "落盘检查点、记录双轮轨迹并输出带引用报告",
+          summary: "程序把两轮完整状态、幂等键与审批单 #APR-419 持久化到 Checkpoint。即使等待审批期间容器重启，恢复后也会直接从审批节点续跑，不会重新查日志或重复建单。",
+          input: "2 轮执行轨迹 + Token/耗时指标 + 审批单状态",
+          output: "可恢复的 Checkpoint + 带来源引用的排障结论",
+          chapterText: "深入阅读：Prompt 回归评测与质量门禁 →",
+          chapterHref: "./prompt-regression.html",
+          payloadTitle: "Step 06 · 检查点与轨迹指标",
+          payload: {
+            checkpoint_id: "ckpt_task_902_turn_2",
+            status: "waiting_human_approval",
+            approval_ticket: "APR-419",
+            metrics: { turns: 2, tool_calls: 2, total_tokens: 4620, latency_ms: 3180, est_cost_usd: 0.014 },
+            final_report: "根因已定位：v2.14.2 将 DB_POOL_MAX 从 50 误改为 5（来源：query_error_logs + runbook/checkout-500.md#L42）。已创建回滚审批单 #APR-419，确认无迁移冲突后即可执行。"
+          }
+        }
+      ];
+
+      const pillsWrap = document.getElementById("stepPills");
+      const prevBtn = document.getElementById("prevStepBtn");
+      const nextBtn = document.getElementById("nextStepBtn");
+      const autoBtn = document.getElementById("autoPlayBtn");
+      const harnessOnBtn = document.getElementById("harnessOnBtn");
+      const harnessOffBtn = document.getElementById("harnessOffBtn");
+      const telTurn = document.getElementById("telTurn");
+      const telTokens = document.getElementById("telTokens");
+      const telRisk = document.getElementById("telRisk");
+
+      function stopAuto() {
+        if (autoTimer) {
+          clearInterval(autoTimer);
+          autoTimer = null;
+          autoBtn.textContent = "▶ 自动播放";
+        }
+      }
+
+      function render() {
+        const base = steps[currentStep];
+        const useDanger = !harnessEnabled && base.dangerOverride;
+        const data = useDanger ? { ...base, ...base.dangerOverride } : base;
+
+        // Update telemetry strip
+        if (telTurn) {
+          telTurn.textContent = data.turn;
+          telTurn.className = `telemetry-val ${useDanger ? "is-warn" : "is-ok"}`;
+        }
+        if (telTokens) {
+          telTokens.textContent = data.tokens;
+        }
+        if (telRisk) {
+          telRisk.textContent = data.risk;
+          telRisk.className = `telemetry-val ${useDanger ? "is-warn" : "is-ok"}`;
+        }
+
+        // Render pills
+        pillsWrap.innerHTML = steps
+          .map((s, idx) => {
+            let cls = "step-pill";
+            if (idx === currentStep) {
+              cls += useDanger ? " is-danger" : " is-active";
+            } else if (idx < currentStep) {
+              cls += " is-done";
+            }
+            return `<button class="${cls}" type="button" data-idx="${idx}">${s.short}</button>`;
+          })
+          .join("");
+
+        pillsWrap.querySelectorAll(".step-pill").forEach((b) => {
+          b.addEventListener("click", () => {
+            stopAuto();
+            currentStep = Number(b.dataset.idx);
+            render();
+          });
+        });
+
+        // Update SVG nodes & edges
+        for (let i = 0; i < 6; i++) {
+          const rect = document.getElementById(`node-rect-${i}`);
+          if (!rect) continue;
+          const isDangerNode = !harnessEnabled && i === 4 && i <= currentStep;
+          if (i === currentStep) {
+            rect.setAttribute("fill", isDangerNode ? "var(--rose-soft)" : "var(--teal-soft)");
+            rect.setAttribute("stroke", isDangerNode ? "var(--rose)" : "var(--teal)");
+            rect.setAttribute("stroke-width", "3");
+          } else if (i < currentStep) {
+            rect.setAttribute("fill", isDangerNode ? "var(--rose-soft)" : "var(--bg-elevated)");
+            rect.setAttribute("stroke", isDangerNode ? "var(--rose)" : "var(--teal)");
+            rect.setAttribute("stroke-width", "2");
+          } else {
+            rect.setAttribute("fill", "var(--bg-elevated)");
+            rect.setAttribute("stroke", "var(--border-strong)");
+            rect.setAttribute("stroke-width", "1.5");
+          }
+        }
+
+        for (let e = 0; e < 5; e++) {
+          const edge = document.getElementById(`edge-${e}`);
+          if (!edge) continue;
+          const dangerEdge = !harnessEnabled && e === 4 && e < currentStep;
+          if (e < currentStep) {
+            edge.setAttribute("stroke", dangerEdge ? "var(--rose)" : "var(--teal)");
+            edge.setAttribute("marker-end", dangerEdge ? "url(#arrowDanger)" : "url(#arrowActive)");
+          } else {
+            edge.setAttribute("stroke", "var(--border-strong)");
+            edge.setAttribute("marker-end", "url(#arrowNorm)");
+          }
+        }
+
+        const loopEdge = document.getElementById("edge-loop");
+        if (loopEdge) {
+          const loopActive = currentStep >= 3;
+          loopEdge.setAttribute("stroke", loopActive ? "var(--teal)" : "var(--border-strong)");
+          loopEdge.setAttribute("marker-end", loopActive ? "url(#arrowActive)" : "url(#arrowNorm)");
+        }
+
+        // Update detail pane
+        const badgeEl = document.getElementById("stepLayerBadge");
+        badgeEl.textContent = data.badge;
+        badgeEl.className = `layer-badge ${useDanger ? "danger" : data.badgeClass || ""}`;
+        document.getElementById("stepTitle").textContent = data.title;
+        document.getElementById("stepSummary").textContent = data.summary;
+        document.getElementById("stepInput").textContent = data.input;
+        document.getElementById("stepOutput").textContent = data.output;
+
+        const outcomeSlot = document.getElementById("stepOutcomeSlot");
+        outcomeSlot.innerHTML = data.outcomeHtml || "";
+
+        const chapterSlot = document.getElementById("stepChapterSlot");
+        if (data.chapterHref) {
+          chapterSlot.innerHTML = `<a class="layer-chapter-link" href="${data.chapterHref}">${data.chapterText}</a>`;
+        } else {
+          chapterSlot.innerHTML = `<span class="layer-chapter-soon">${data.chapterText}</span>`;
+        }
+
+        // Update payload code
+        document.getElementById("payloadTitle").textContent = data.payloadTitle;
+        document.getElementById("payloadLangLabel").textContent = `JSON · Step 0${currentStep + 1}`;
+        const codeEl = document.getElementById("stepPayloadCode");
+        codeEl.textContent = JSON.stringify(data.payload, null, 2);
+        if (typeof window.bookHighlightCode === "function") {
+          window.bookHighlightCode(codeEl.closest(".code-card"));
+        }
+
+        prevBtn.disabled = currentStep === 0;
+        nextBtn.disabled = currentStep === steps.length - 1;
+      }
+
+      document.querySelectorAll(".arch-node").forEach((node) => {
+        node.addEventListener("click", () => {
+          stopAuto();
+          currentStep = Number(node.dataset.step);
+          render();
+        });
+      });
+
+      prevBtn.addEventListener("click", () => {
+        stopAuto();
+        if (currentStep > 0) {
+          currentStep -= 1;
+          render();
+        }
+      });
+
+      nextBtn.addEventListener("click", () => {
+        stopAuto();
+        if (currentStep < steps.length - 1) {
+          currentStep += 1;
+          render();
+        }
+      });
+
+      autoBtn.addEventListener("click", () => {
+        if (autoTimer) {
+          stopAuto();
+          return;
+        }
+        if (currentStep === steps.length - 1) currentStep = 0;
+        render();
+        autoBtn.textContent = "⏸ 暂停播放";
+        autoTimer = setInterval(() => {
+          if (currentStep < steps.length - 1) {
+            currentStep += 1;
+            render();
+          } else {
+            stopAuto();
+          }
+        }, 2200);
+      });
+
+      harnessOnBtn.addEventListener("click", () => {
+        harnessEnabled = true;
+        harnessOnBtn.className = "chip-btn teal-active";
+        harnessOffBtn.className = "chip-btn";
+        render();
+      });
+
+      harnessOffBtn.addEventListener("click", () => {
+        harnessEnabled = false;
+        harnessOnBtn.className = "chip-btn";
+        harnessOffBtn.className = "chip-btn danger-active";
+        if (currentStep < 4) currentStep = 4;
+        render();
+      });
+
+      window.__setArchStep = (idx) => {
+        stopAuto();
+        currentStep = Math.max(0, Math.min(steps.length - 1, idx));
+        render();
+      };
+
+      render();
+    })();
+
+    // 3. Lab 02: 4 Confused Concept Pairs Workbench
+    (function initConfusionsLab() {
+      let activePair = "prompt-context";
+      let showMisuse = true;
+
+      const pairs = {
+        "prompt-context": {
+          scenario: "场景：客服 Agent 经常漏掉“已拆封商品不可退货”的兜底条款",
+          left: {
+            name: "Prompt（指令模板）",
+            plane: "单次规则约束",
+            owns: "定义角色、输出格式、推理步骤和行为边界。",
+            lifecycle: "随业务版本迭代，由 Prompt 回归评测把关。",
+            limit: "无法替模型过滤冗余上下文，也治不了注意力淹没。"
+          },
+          right: {
+            name: "Context（上下文窗口）",
+            plane: "完整工作内存",
+            owns: "本次调用送进模型的全部 Token：系统提示、历史对话、工具输出与检索片段。",
+            lifecycle: "每轮动态拼装、裁剪和排序，受窗口预算限制。",
+            limit: "如果底层指令本身含糊，再干净的上下文也会产出漂移。"
+          },
+          misuse: {
+            title: "混用故障：把 40 页历史工单塞进窗口，却反复改 Prompt 措辞",
+            desc: "团队不断在 Prompt 里加“务必遵守”“非常重要”，但因为中间夹了 18,000 Tokens 的无关工单记录，核心退货规则被淹没在窗口中段，违规率依然居高不下。",
+            log: "[WARN] prompt_tokens=21,480 | relevant_ratio=8.4%\n[BUG]  rule_position=middle (token #9,200) -> 模型忽略“拆封不退”条款\n[COST] 单次调用耗时 6.8s，成本翻 7 倍"
+          },
+          clean: {
+            title: "正确分工：Prompt 定边界，Context 做减法与置顶",
+            desc: "把兜底规则压缩成 6 条短约束放在系统提示头部，工具返回只保留近 3 笔订单摘要，窗口降到 2,100 Tokens 后，规则遵循率立刻拉回基线。",
+            log: "[OK]   prompt_tokens=2,140 | relevant_ratio=86.0%\n[OK]   rule_position=head -> 正确识别“已拆封”并拒退\n[PERF] 单次调用耗时 1.3s，无额外幻觉"
+          }
+        },
+        "rag-memory": {
+          scenario: "场景：企业研发助手既要查最新 API 文档，又要记住某位工程师偏好 Go 语言",
+          left: {
+            name: "RAG（外部知识检索）",
+            plane: "共享客观事实",
+            owns: "存放文档、Runbook、法规和代码库等共享只读知识，强调来源可溯源。",
+            lifecycle: "由文档管道定期切片、重建索引，所有用户共享同一份真相。",
+            limit: "不适合高频写入某个用户的临时偏好或会话状态。"
+          },
+          right: {
+            name: "Memory（长期记忆）",
+            plane: "个体可变状态",
+            owns: "存放特定用户或团队的偏好、习惯、历史结论与待办状态。",
+            lifecycle: "持续写入、覆盖更新，并需要冲突消解与过期遗忘策略。",
+            limit: "没有权威文档出处，不能拿来替代可审计的业务规章。"
+          },
+          misuse: {
+            title: "混用故障：把用户偏好和公司规章一起倒进同一个向量库",
+            desc: "员工 A 去年说过“默认用旧版 v1 鉴权”，被写进了全局知识库。今年全公司升级 v2 后，新员工 B 查鉴权文档时竟召回了员工 A 的过时偏好。",
+            log: "[WARN] vector_search top1 = user_A_note_2025 (score 0.89)\n[BUG]  员工 B 拿到了过时的 v1 鉴权代码，上线直接 401\n[ROOT] 缺少“共享事实（RAG）”与“个体状态（Memory）”的隔离"
+          },
+          clean: {
+            title: "正确分工：RAG 管带版本的共享真相，Memory 按作用域隔离",
+            desc: "API 文档走 RAG 索引并带版本号与出处；个人语言偏好存在 user_id 隔离的 Memory 表中，支持覆盖更新与过期清理，互不污染。",
+            log: "[OK]   RAG 命中 api-auth-v2.md#L18（权威来源）\n[OK]   Memory 命中 user:B -> preferred_lang=Go\n[OUT]  输出带文档引用的 v2 鉴权 Go 示例"
+          }
+        },
+        "tool-mcp": {
+          scenario: "场景：把内部 GitHub、Jira 和数据库通过 MCP 接入值班 Agent",
+          left: {
+            name: "Tool Calling（调用循环机制）",
+            plane: "Agent 控制流",
+            owns: "模型决策调用工具、宿主校验参数、分发执行、处理报错并决定何时停止。",
+            lifecycle: "属于 Agent 核心循环，决定了会不会死循环或超预算。",
+            limit: "每个外部系统都要手写适配代码时，维护成本会迅速膨胀。"
+          },
+          right: {
+            name: "MCP（工具接入协议）",
+            plane: "标准化连接层",
+            owns: "用统一协议暴露外部工具、资源与 Schema，让不同 Agent 客户端即插即用。",
+            lifecycle: "独立部署为 MCP Server，解耦工具提供方与 Agent 宿主。",
+            limit: "只解决“怎么连得上”，不替你做权限分级、重试上限和停止条件。"
+          },
+          misuse: {
+            title: "混用故障：接上 40 个 MCP 工具后直接放手让模型跑",
+            desc: "团队以为用了 MCP 就等于有了安全可控的 Agent，结果一次性把 40 个工具 Schema 灌进上下文，且没设最大步数和写权限拦截，Agent 查错库后循环调了 28 次把配额打满。",
+            log: "[WARN] loaded_mcp_tools=42 (消耗 6,800 Tokens 仅用于工具声明)\n[ERR]  step 28: loop detected on query_jira_issues\n[ROOT] MCP 解决了协议接入，但宿主漏做了按需加载、步数预算与 Harness"
+          },
+          clean: {
+            title: "正确分工：MCP 负责标准接入，宿主循环管按需暴露与边界",
+            desc: "用 MCP 统一对接 GitHub/Jira，但在宿主侧按任务意图只暴露 4 个相关工具，并在 Tool Calling 循环外层套上最大步数、超时与只读/写入分级审批。",
+            log: "[OK]   active_tools=4 (按需暴露，声明仅占 620 Tokens)\n[OK]   max_steps=8 | write_ops=require_approval\n[PERF] 3 步完成定位，零越权调用"
+          }
+        },
+        "compact-checkpoint": {
+          scenario: "场景：一个多步骤退款 Agent 在第 4 步调用退款网关后，容器因 OOM 崩溃重启",
+          left: {
+            name: "上下文压缩（Compaction）",
+            plane: "信息层 · 省 Token",
+            owns: "把超长历史对话和工具返回折叠成摘要，防止突破模型上下文上限。",
+            lifecycle: "有损压缩，只为让 LLM 在后续推理里看清重点。",
+            limit: "文本摘要不具备事务精确性，无法证明某次外部扣款到底有没有成功。"
+          },
+          right: {
+            name: "检查点恢复（Checkpoint）",
+            plane: "程序层 · 持久化执行",
+            owns: "将每一步的精确状态、工具调用 ID 与幂等键落盘，支持崩溃后精确续跑。",
+            lifecycle: "无损结构化状态机，配合幂等键防止重试时产生重复副作用。",
+            limit: "存的是完整精确状态，如果不做压缩，直接全量喂回模型仍可能超窗。"
+          },
+          misuse: {
+            title: "混用故障：进程重启后只喂给模型一段“刚才的对话摘要”继续跑",
+            desc: "容器重启后，系统把压缩摘要塞给 LLM 说“请继续完成退款”。摘要里没记下第 4 步的 refund_txn_id，模型以为还没退，又发起了一次退款，造成双倍赔付。",
+            log: "[CRASH] worker OOM at step 4 (after refund_api returned 200)\n[RETRY] resumed from text summary -> idempotency_key LOST\n[FATAL] duplicate refund executed: order #88219 refunded TWICE!"
+          },
+          clean: {
+            title: "正确分工：检查点管精确续跑，压缩只管喂给模型的视图",
+            desc: "重启后先从 Checkpoint 读取 step=4 已完成且带幂等键 <code>refund:88219:s4</code>，程序直接跳到 step=5 发送通知；喂给模型的历史视图则可以放心压缩。",
+            log: "[RECOVER] loaded checkpoint ckpt_88219_s4 (status=refund_done)\n[SKIP]    step 4 already committed with key refund:88219:s4\n[OK]      resumed cleanly at step 5 -> notify_user"
+          }
+        }
+      };
+
+      const picker = document.getElementById("pairPicker");
+      const cardsWrap = document.getElementById("pairCompareCards");
+      const scenarioTitle = document.getElementById("incidentScenarioTitle");
+      const outcomeEl = document.getElementById("incidentOutcome");
+      const logEl = document.getElementById("incidentLog");
+      const misuseBtn = document.getElementById("modeMisuseBtn");
+      const cleanBtn = document.getElementById("modeCleanBtn");
+
+      function renderPair() {
+        const p = pairs[activePair];
+        picker.querySelectorAll(".pick-card").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.pair === activePair);
+        });
+
+        cardsWrap.innerHTML = [p.left, p.right]
+          .map(
+            (item) => `
+            <div class="concept-box">
+              <div class="concept-head">
+                <span class="concept-name">${item.name}</span>
+                <span class="concept-plane">${item.plane}</span>
+              </div>
+              <div class="concept-rows">
+                <div><strong>负责什么：</strong>${item.owns}</div>
+                <div><strong>生命周期：</strong>${item.lifecycle}</div>
+                <div><strong>明确边界：</strong>${item.limit}</div>
+              </div>
+            </div>`
+          )
+          .join("");
+
+        scenarioTitle.textContent = p.scenario;
+        const view = showMisuse ? p.misuse : p.clean;
+        outcomeEl.innerHTML = `
+          <div class="outcome ${showMisuse ? "bad" : "good"}" style="margin: 0;">
+            <div class="outcome-title">${view.title}</div>
+            <div>${view.desc}</div>
+          </div>`;
+        logEl.textContent = view.log;
+
+        misuseBtn.className = showMisuse ? "chip-btn danger-active" : "chip-btn";
+        cleanBtn.className = showMisuse ? "chip-btn" : "chip-btn teal-active";
+      }
+
+      picker.querySelectorAll(".pick-card").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          activePair = btn.dataset.pair;
+          renderPair();
+        });
+      });
+
+      misuseBtn.addEventListener("click", () => {
+        showMisuse = true;
+        renderPair();
+      });
+
+      cleanBtn.addEventListener("click", () => {
+        showMisuse = false;
+        renderPair();
+      });
+
+      renderPair();
+    })();
+  </script>
+  <script src="../shared/site.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-json.min.js"></script>
+</body>
+</html>

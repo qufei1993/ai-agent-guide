@@ -1,0 +1,1808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Agent Engineering Architecture Map · AI Agent Guide</title>
+  <!-- SEO:START (auto-synced by scripts/generate-seo.mjs) -->
+  <meta name="description" content="End-to-end walkthrough of LLM, context, tools, memory, RAG, and harness collaboration with a quick glossary" />
+  <link rel="canonical" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/agent-architecture-map.html" />
+  <link rel="alternate" hreflang="zh-CN" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/agent-architecture-map.html" />
+  <link rel="alternate" hreflang="en" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/agent-architecture-map.html" />
+  <link rel="alternate" hreflang="x-default" href="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/agent-architecture-map.html" />
+  <meta property="og:type" content="article" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:locale:alternate" content="zh_CN" />
+  <meta property="og:title" content="AI Agent Engineering Architecture Map" />
+  <meta property="og:description" content="End-to-end walkthrough of LLM, context, tools, memory, RAG, and harness collaboration with a quick glossary" />
+  <meta property="og:url" content="https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/agent-architecture-map.html" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "AI Agent Engineering Architecture Map",
+    "description": "End-to-end walkthrough of LLM, context, tools, memory, RAG, and harness collaboration with a quick glossary",
+    "inLanguage": "en",
+    "url": "https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/agent-architecture-map.html",
+    "isPartOf": {
+      "@type": "Book",
+      "name": "AI Agent Guide"
+    }
+  }
+  </script>
+  <!-- SEO:END -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css" />
+  <link rel="stylesheet" href="../shared/tokens.css" />
+  <style>
+    /* Chapter-specific styles for agent-architecture-map */
+    .arch-stage {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      margin-bottom: 16px;
+      overflow-x: auto;
+    }
+
+    .arch-svg {
+      width: 100%;
+      min-width: 680px;
+      height: auto;
+      display: block;
+    }
+
+    .arch-node {
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.2s ease;
+    }
+
+    .arch-node rect {
+      transition: fill 0.2s ease, stroke 0.2s ease, stroke-width 0.2s ease;
+    }
+
+    .arch-node:hover rect {
+      stroke: var(--teal);
+    }
+
+    .step-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px 14px;
+      margin-bottom: 14px;
+    }
+
+    .step-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .step-pill {
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      color: var(--text-secondary);
+      border-radius: 999px;
+      padding: 4px 11px;
+      font-size: 12.5px;
+      font-family: var(--font-sans);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .step-pill:hover {
+      border-color: var(--border-strong);
+      color: var(--text);
+    }
+
+    .step-pill.is-done {
+      border-color: var(--teal);
+      background: var(--teal-soft);
+      color: var(--teal);
+    }
+
+    .step-pill.is-active {
+      background: var(--text);
+      color: var(--bg);
+      border-color: var(--text);
+      font-weight: 700;
+    }
+
+    .step-pill.is-danger {
+      background: var(--rose);
+      color: #fff;
+      border-color: var(--rose);
+      font-weight: 700;
+    }
+
+    .step-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .layer-meta-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .layer-meta-item {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+    }
+
+    .layer-meta-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .layer-meta-val {
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .layer-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 2px 9px;
+      border-radius: 999px;
+      background: var(--teal-soft);
+      color: var(--teal);
+    }
+
+    .layer-badge.danger {
+      background: var(--rose-soft);
+      color: var(--rose);
+    }
+
+    .layer-badge.blue {
+      background: var(--blue-soft);
+      color: var(--blue);
+    }
+
+    .layer-badge.purple {
+      background: var(--purple-soft);
+      color: var(--purple);
+    }
+
+    .layer-badge.accent {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .layer-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 8px 0 6px;
+    }
+
+    .layer-summary {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.65;
+      margin: 0;
+    }
+
+    .layer-chapter-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--teal);
+      text-decoration: none;
+    }
+
+    .layer-chapter-link:hover {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .layer-chapter-soon {
+      display: inline-flex;
+      align-items: center;
+      margin-top: 12px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--bg-elevated);
+      border: 1px dashed var(--border-strong);
+      border-radius: 999px;
+      padding: 2px 10px;
+    }
+
+    /* Lab 2: Concept Boundaries */
+    .pair-compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin: 14px 0 16px;
+    }
+
+    @media (max-width: 760px) {
+      .pair-compare { grid-template-columns: 1fr; }
+    }
+
+    .concept-box {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 15px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .concept-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .concept-name {
+      font-size: 15.5px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .concept-plane {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+
+    .concept-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+
+    .concept-rows strong {
+      color: var(--text);
+      font-weight: 650;
+    }
+
+    .incident-panel {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-elevated);
+      padding: 15px 16px;
+    }
+
+    .incident-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .incident-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .incident-log {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.55;
+      background: var(--bg-code);
+      color: #e6edf3;
+      border-radius: var(--radius-sm);
+      padding: 11px 13px;
+      margin: 10px 0 0;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+
+    /* Glossary Matrix (#decisionGrid) */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 16px 0 18px;
+    }
+
+    .decision-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      margin-top: 12px;
+    }
+
+    @media (max-width: 760px) {
+      .decision-grid { grid-template-columns: 1fr; }
+    }
+
+    .decision-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 10px;
+      transition: opacity 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+    }
+
+    .decision-card.is-match {
+      border-color: var(--teal);
+      box-shadow: 0 0 0 1px var(--teal-soft);
+    }
+
+    .decision-card.is-dim {
+      opacity: 0.28;
+    }
+
+    .gloss-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .gloss-heading {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .gloss-term {
+      font-size: 15.5px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.3;
+    }
+
+    .gloss-sub {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    /* 3-Tier Architecture Spectrum */
+    .spectrum-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin: 20px 0 24px;
+    }
+
+    @media (max-width: 820px) {
+      .spectrum-grid { grid-template-columns: 1fr; }
+    }
+
+    .spectrum-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .spectrum-card.is-focus {
+      border-color: var(--teal);
+      background: var(--teal-soft);
+    }
+
+    .spectrum-tier {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.03em;
+    }
+
+    .spectrum-card.is-focus .spectrum-tier { color: var(--teal); }
+
+    .spectrum-title {
+      font-size: 15.5px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .spectrum-desc {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    .spectrum-meta {
+      margin-top: auto;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Lab 01 Loop Telemetry */
+    .telemetry-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    @media (max-width: 640px) {
+      .telemetry-strip { grid-template-columns: 1fr; }
+    }
+
+    .telemetry-cell {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .telemetry-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .telemetry-val {
+      font-family: var(--font-mono);
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .telemetry-val.is-warn { color: var(--rose); }
+    .telemetry-val.is-ok { color: var(--teal); }
+
+    /* Responsive 4-card pair picker in Lab 02 */
+    .pair-picker {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    @media (max-width: 820px) {
+      .pair-picker { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 520px) {
+      .pair-picker { grid-template-columns: 1fr; }
+    }
+
+    .gloss-cat {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .gloss-cat.info { background: var(--blue-soft); color: var(--blue); }
+    .gloss-cat.runtime { background: var(--teal-soft); color: var(--teal); }
+    .gloss-cat.guard { background: var(--purple-soft); color: var(--purple); }
+
+    .gloss-def {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin: 0 0 8px;
+    }
+
+    .gloss-ex {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      background: var(--bg-muted);
+      border-radius: 6px;
+      padding: 7px 10px;
+      line-height: 1.5;
+    }
+
+    .gloss-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+      font-size: 12.5px;
+    }
+
+    .gloss-link {
+      font-weight: 650;
+      color: var(--teal);
+      text-decoration: none;
+    }
+
+    .gloss-link:hover {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .gloss-soon {
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .payload-code-card {
+      margin: 0;
+      min-width: 0;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .payload-code-card pre {
+      flex: 1;
+      max-height: 360px;
+      font-size: 12.5px;
+      line-height: 1.6;
+      overflow-x: auto;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .payload-code-card pre code {
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./index.html">
+        <span>AI Agent Guide</span>
+        <span class="brand-badge">Interactive</span>
+      </a>
+      <nav class="topbar-nav">
+        <a href="#section-spectrum">3-Tier Spectrum</a>
+        <a href="#lab-lifecycle">Lab 01 · 2-Turn Loop</a>
+        <a href="#lab-confusions">Lab 02 · Boundaries</a>
+        <a href="#section-minimal">Minimal Skeleton</a>
+        <a href="#glossary">Glossary Matrix</a>
+      </nav>
+      <button class="theme-btn" id="themeToggle" type="button">
+        <span id="themeIcon">☀</span>
+        <span id="themeText">Light</span>
+      </button>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-meta">
+      <span class="hero-pill">Overview · 01</span>
+      <span>Architecture &amp; Glossary</span>
+      <span>·</span>
+      <span>2 Interactive Labs + Quick Reference</span>
+    </div>
+    <h1>AI Agent Engineering Architecture Map</h1>
+    <p class="hero-lead">
+      When a production Agent loops indefinitely, fabricates a stack trace, or rolls back a service without approval, the hardest part is rarely “is the model smart enough?” It is pinpointing whether the failure lives in Context, RAG, Tool Calling, Harness, or Checkpoint recovery. Tracing one real incident across 6 layers makes every boundary unmistakable.
+    </p>
+  </section>
+
+  <section class="tldr">
+    <div class="tldr-card">
+      <div class="tldr-head">
+        <span class="tldr-kicker">30-Second TL;DR</span>
+      </div>
+      <div class="tldr-list">
+        <div class="tldr-item">
+          <span class="tldr-num">01</span>
+          <div>
+            <div class="tldr-claim">An Agent is not a “smarter model”—it is a stateful control loop wrapped around a stateless LLM. Context assembly, guardrails, tool execution, and checkpoints all run in your code.</div>
+            <button class="tldr-go" type="button" onclick="window.bookJumpToLab('lab-lifecycle')">Jump to Lab 01: Step through all 6 layers →</button>
+          </div>
+        </div>
+        <div class="tldr-item">
+          <span class="tldr-num">02</span>
+          <div>
+            <div class="tldr-claim">Many production outages come from conflating adjacent layers: storing mutable user preferences in RAG, adding MCP without Harness guardrails, or resuming crashed workers from a text summary instead of a checkpoint.</div>
+            <button class="tldr-go" type="button" onclick="window.bookJumpToLab('lab-confusions')">Jump to Lab 02: Compare 4 confused pairs →</button>
+          </div>
+        </div>
+        <div class="tldr-item">
+          <span class="tldr-num">03</span>
+          <div>
+            <div class="tldr-claim">You do not need a full RAG stack before shipping a minimal working Agent. Nail LLM constraints and a bounded loop first, then add retrieval, memory, and evals where real bottlenecks appear.</div>
+            <a class="tldr-go" href="#glossary">Jump to the Glossary &amp; Roadmap Matrix →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2 id="section-spectrum">Before You Build an Agent: The 3-Tier Architecture Spectrum</h2>
+    <p class="key">
+      The most common engineering mistake is wrapping a 20-line deterministic script in an autonomous Agent loop. As Anthropic emphasizes in <a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener">Building Effective Agents ↗</a>, <strong>start with the simplest architecture that works, and only introduce an open-ended loop when execution paths cannot be hardcoded upfront.</strong> <span class="src-tag">Primary Source · Anthropic Engineering</span>
+    </p>
+
+    <div class="spectrum-grid">
+      <div class="spectrum-card">
+        <span class="spectrum-tier">LEVEL 01 · SINGLE CALL</span>
+        <div class="spectrum-title">Single LLM + Structured Output</div>
+        <p class="spectrum-desc">Fixed input, single-turn output constrained by Prompt rules, JSON Schema validation, and optional retrieval.</p>
+        <div class="spectrum-meta"><strong>Best for:</strong> Ticket triage, field extraction, summaries.<br /><strong>Strength:</strong> Lowest latency, predictable cost, trivial to eval.</div>
+      </div>
+
+      <div class="spectrum-card">
+        <span class="spectrum-tier">LEVEL 02 · CODE PIPELINE</span>
+        <div class="spectrum-title">Deterministic Workflow</div>
+        <p class="spectrum-desc">Multi-step chaining, routing, or parallelization where every branch is explicitly controlled by application code.</p>
+        <div class="spectrum-meta"><strong>Best for:</strong> Invoice OCR → rule checks → ERP posting.<br /><strong>Strength:</strong> 100% auditable, predictable execution path.</div>
+      </div>
+
+      <div class="spectrum-card is-focus">
+        <span class="spectrum-tier">LEVEL 03 · AUTONOMOUS LOOP</span>
+        <div class="spectrum-title">Autonomous Agent Loop</div>
+        <p class="spectrum-desc">Open-ended tasks where the model dynamically chooses the next tool based on live environmental feedback.</p>
+        <div class="spectrum-meta"><strong>Best for:</strong> Unknown 500 incident triage, cross-repo bug fixes.<br /><strong>Cost:</strong> Requires Harness guardrails, checkpoints, and tracing.</div>
+      </div>
+    </div>
+
+    <h2 id="section-runtime">Anatomy of a 2-Turn Production Agent Run</h2>
+    <p class="key">
+      Suppose an on-call engineer sends one prompt to an internal ops Agent: “Checkout API started returning 500s after today’s <code>v2.14.2</code> deploy. Find the root cause and prepare a rollback plan.” This is a genuine Level 03 task: the model must inspect live logs first (Turn 1) before proposing a rollback guarded by human approval (Turn 2).
+    </p>
+    <p>
+      Inspect the payloads across both turns and the LLM’s boundary becomes obvious: it does only one thing—<strong>read the current token sequence and decide whether to answer or request a tool call</strong>. Fetching logs, enforcing permissions, executing commands, and saving checkpoints are all deterministic application code.
+    </p>
+
+    <div class="predict-hook" id="predict-1">
+      <div class="predict-q">
+        <span class="predict-badge">Quick Check</span>
+        During this checkout-500 investigation, which layer actually executes <code>kubectl logs</code> and <code>git diff</code>?
+      </div>
+      <div class="predict-opts">
+        <button class="predict-opt" type="button" data-answer="wrong">A. The LLM executes shell commands directly inside its inference container</button>
+        <button class="predict-opt" type="button" data-answer="right">B. Your Harness validates permissions, then the Tool Runtime executes and appends the text result back into Context</button>
+        <button class="predict-opt" type="button" data-answer="wrong">C. The RAG vector database triggers deployment tools automatically</button>
+      </div>
+      <div class="predict-feedback"></div>
+      <button class="predict-verify" type="button" id="verifyStep4Btn">Verify at Step 05 in Lab 01 →</button>
+    </div>
+  </main>
+
+  <!-- LAB 01: Single Agent Task Lifecycle Stepper -->
+  <section class="lab-wrap" id="lab-lifecycle">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <div class="lab-eyebrow">Lab 01 · Lifecycle Stepper</div>
+          <h3 class="lab-title">How One Agent Task Travels Through 6 Layers</h3>
+          <p class="lab-desc">Click any node in the architecture diagram or step through sequentially to inspect inputs, outputs, and live payloads. Toggle the Harness guardrail off to trigger an uncontrolled rollback.</p>
+        </div>
+        <span class="sim-tag">Simulated Trace · Single Incident</span>
+      </div>
+      <div class="lab-body">
+        <div class="lab-toolbar">
+          <div class="toolbar-group">
+            <span class="toolbar-label">Task</span>
+            <span style="font-size: 13px; color: var(--text);">“Diagnose <code>v2.14.2</code> checkout 500s and prepare a rollback plan”</span>
+          </div>
+          <div class="toolbar-group">
+            <span class="toolbar-label">Guardrail Policy</span>
+            <button class="chip-btn teal-active" id="harnessOnBtn" type="button">Harness Enabled</button>
+            <button class="chip-btn" id="harnessOffBtn" type="button">Disable Harness (Fault Drill)</button>
+          </div>
+        </div>
+
+        <div class="telemetry-strip">
+          <div class="telemetry-cell">
+            <span class="telemetry-label">Active Loop Turn</span>
+            <span class="telemetry-val is-ok" id="telTurn">Turn 1 / 2 (Read-Only Triage)</span>
+          </div>
+          <div class="telemetry-cell">
+            <span class="telemetry-label">Cumulative Context Tokens</span>
+            <span class="telemetry-val" id="telTokens">3,200 / 16,000</span>
+          </div>
+          <div class="telemetry-cell">
+            <span class="telemetry-label">Write Side-Effect State</span>
+            <span class="telemetry-val is-ok" id="telRisk">No Writes (Safe)</span>
+          </div>
+        </div>
+
+        <!-- Interactive 6-node SVG Architecture Map -->
+        <div class="arch-stage">
+          <svg class="arch-svg" viewBox="0 0 880 198" role="img" aria-label="2-Turn AI Agent 6-Layer Architecture Diagram">
+            <defs>
+              <marker id="arrowNorm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--text-muted)" />
+              </marker>
+              <marker id="arrowActive" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--teal)" />
+              </marker>
+              <marker id="arrowDanger" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--rose)" />
+              </marker>
+            </defs>
+
+            <!-- Connectors -->
+            <line id="edge-0" x1="138" y1="68" x2="156" y2="68" stroke="var(--border-strong)" stroke-width="2" marker-end="url(#arrowNorm)" />
+            <line id="edge-1" x1="282" y1="68" x2="300" y2="68" stroke="var(--border-strong)" stroke-width="2" marker-end="url(#arrowNorm)" />
+            <line id="edge-2" x1="426" y1="68" x2="444" y2="68" stroke="var(--border-strong)" stroke-width="2" marker-end="url(#arrowNorm)" />
+            <line id="edge-3" x1="570" y1="68" x2="588" y2="68" stroke="var(--border-strong)" stroke-width="2" marker-end="url(#arrowNorm)" />
+            <line id="edge-4" x1="714" y1="68" x2="732" y2="68" stroke="var(--border-strong)" stroke-width="2" marker-end="url(#arrowNorm)" />
+
+            <!-- Turn 1 -> Turn 2 Feedback loop -->
+            <path id="edge-loop" d="M 363 106 L 363 160 L 507 160 L 507 110" fill="none" stroke="var(--border-strong)" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arrowNorm)" />
+            <text x="435" y="178" text-anchor="middle" font-size="11.5" fill="var(--text-muted)" font-family="var(--font-mono)">Turn 1 tool_result appended to Context → enters Turn 2 LLM</text>
+
+            <!-- 6 Clickable Nodes -->
+            <g class="arch-node" data-step="0" transform="translate(12, 30)">
+              <rect id="node-rect-0" width="126" height="76" rx="10" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="2" />
+              <text x="63" y="25" text-anchor="middle" font-size="10.5" font-weight="700" fill="var(--text-muted)" font-family="var(--font-mono)">T1 · CONTEXT+RAG</text>
+              <text x="63" y="48" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">Context &amp; Docs</text>
+              <text x="63" y="65" text-anchor="middle" font-size="11" fill="var(--text-secondary)">Rules + Runbook</text>
+            </g>
+
+            <g class="arch-node" data-step="1" transform="translate(156, 30)">
+              <rect id="node-rect-1" width="126" height="76" rx="10" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="2" />
+              <text x="63" y="25" text-anchor="middle" font-size="10.5" font-weight="700" fill="var(--text-muted)" font-family="var(--font-mono)">T1 · LLM CORE</text>
+              <text x="63" y="48" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">Turn 1 Triage</text>
+              <text x="63" y="65" text-anchor="middle" font-size="11" fill="var(--text-secondary)">Read-only log call</text>
+            </g>
+
+            <g class="arch-node" data-step="2" transform="translate(300, 30)">
+              <rect id="node-rect-2" width="126" height="76" rx="10" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="2" />
+              <text x="63" y="25" text-anchor="middle" font-size="10.5" font-weight="700" fill="var(--text-muted)" font-family="var(--font-mono)">T1 · TOOL / MCP</text>
+              <text x="63" y="48" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">Tool Runtime</text>
+              <text x="63" y="65" text-anchor="middle" font-size="11" fill="var(--text-secondary)">Truncate &amp; append</text>
+            </g>
+
+            <g class="arch-node" data-step="3" transform="translate(444, 30)">
+              <rect id="node-rect-3" width="126" height="76" rx="10" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="2" />
+              <text x="63" y="25" text-anchor="middle" font-size="10.5" font-weight="700" fill="var(--text-muted)" font-family="var(--font-mono)">T2 · LLM LOOP</text>
+              <text x="63" y="48" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">Turn 2 Action</text>
+              <text x="63" y="65" text-anchor="middle" font-size="11" fill="var(--text-secondary)">Proposes rollback</text>
+            </g>
+
+            <g class="arch-node" data-step="4" transform="translate(588, 30)">
+              <rect id="node-rect-4" width="126" height="76" rx="10" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="2" />
+              <text x="63" y="25" text-anchor="middle" font-size="10.5" font-weight="700" fill="var(--text-muted)" font-family="var(--font-mono)">T2 · HARNESS</text>
+              <text x="63" y="48" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">Guardrails</text>
+              <text x="63" y="65" text-anchor="middle" font-size="11" fill="var(--text-secondary)">Blocks write / HITL</text>
+            </g>
+
+            <g class="arch-node" data-step="5" transform="translate(732, 30)">
+              <rect id="node-rect-5" width="136" height="76" rx="10" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="2" />
+              <text x="68" y="25" text-anchor="middle" font-size="10.5" font-weight="700" fill="var(--text-muted)" font-family="var(--font-mono)">06 · STATE / EVAL</text>
+              <text x="68" y="48" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">State &amp; Tracing</text>
+              <text x="68" y="65" text-anchor="middle" font-size="11" fill="var(--text-secondary)">Checkpoint + Metrics</text>
+            </g>
+          </svg>
+        </div>
+
+        <div class="step-bar">
+          <div class="step-pills" id="stepPills"></div>
+          <div class="step-controls">
+            <button class="btn" id="prevStepBtn" type="button">← Prev</button>
+            <button class="btn btn-primary" id="nextStepBtn" type="button">Next →</button>
+            <button class="btn" id="autoPlayBtn" type="button">▶ Auto Play</button>
+          </div>
+        </div>
+
+        <div class="split-2">
+          <div class="pane-box" id="stepDetailPane">
+            <div class="pane-head">
+              <span>Layer Responsibility</span>
+              <span class="layer-badge" id="stepLayerBadge">STEP 01 / 06</span>
+            </div>
+            <div class="layer-title" id="stepTitle"></div>
+            <p class="layer-summary" id="stepSummary"></p>
+            <div class="layer-meta-grid">
+              <div class="layer-meta-item">
+                <div class="layer-meta-label">Layer Input</div>
+                <div class="layer-meta-val" id="stepInput"></div>
+              </div>
+              <div class="layer-meta-item">
+                <div class="layer-meta-label">Layer Output</div>
+                <div class="layer-meta-val" id="stepOutput"></div>
+              </div>
+            </div>
+            <div id="stepOutcomeSlot"></div>
+            <div id="stepChapterSlot"></div>
+          </div>
+
+          <div class="pane-box">
+            <div class="pane-head">
+              <span id="payloadTitle">Live Payload X-Ray</span>
+              <span class="sim-tag" style="font-size: 11px;">Payload</span>
+            </div>
+            <div class="code-card payload-code-card">
+              <div class="code-header">
+                <span id="payloadLangLabel">JSON · Step 01</span>
+                <button class="copy-btn" type="button">Copy</button>
+              </div>
+              <pre><code class="language-json" id="stepPayloadCode"></code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2 id="section-confusions">Separate the Information Plane from the Execution Plane</h2>
+    <p class="key">
+      Most architecture confusion disappears once you split every Agent component across two orthogonal planes: one controls <strong>what the model sees</strong> (Information Plane), and the other controls <strong>what the program does and how it recovers</strong> (Execution Plane).
+    </p>
+
+    <figure class="diagram-figure">
+      <svg viewBox="0 0 860 236" role="img" aria-label="Information Plane vs Execution Control Plane">
+        <!-- Plane 1: Information Plane -->
+        <rect x="12" y="14" width="836" height="96" rx="12" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="1.5" />
+        <text x="30" y="38" font-size="12.5" font-weight="700" fill="var(--blue)" font-family="var(--font-mono)">INFORMATION PLANE (Controls what enters the model window)</text>
+
+        <rect x="30" y="50" width="148" height="46" rx="8" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="1.5" />
+        <text x="104" y="70" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">Prompt Constraints</text>
+        <text x="104" y="87" text-anchor="middle" font-size="11" fill="var(--text-muted)">Role, rules, schema</text>
+
+        <rect x="194" y="50" width="148" height="46" rx="8" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="1.5" />
+        <text x="268" y="70" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">Context Window</text>
+        <text x="268" y="87" text-anchor="middle" font-size="11" fill="var(--text-muted)">Budget, ordering, JIT</text>
+
+        <rect x="358" y="50" width="148" height="46" rx="8" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="1.5" />
+        <text x="432" y="70" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">RAG Grounding</text>
+        <text x="432" y="87" text-anchor="middle" font-size="11" fill="var(--text-muted)">Shared docs + citations</text>
+
+        <rect x="522" y="50" width="148" height="46" rx="8" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="1.5" />
+        <text x="596" y="70" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">Memory Store</text>
+        <text x="596" y="87" text-anchor="middle" font-size="11" fill="var(--text-muted)">User prefs, mutable</text>
+
+        <rect x="686" y="50" width="144" height="46" rx="8" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="1.5" />
+        <text x="758" y="70" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">Compaction</text>
+        <text x="758" y="87" text-anchor="middle" font-size="11" fill="var(--text-muted)">Shrink token history</text>
+
+        <!-- Plane 2: Execution & Control Plane -->
+        <rect x="12" y="126" width="836" height="96" rx="12" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="1.5" />
+        <text x="30" y="150" font-size="12.5" font-weight="700" fill="var(--teal)" font-family="var(--font-mono)">EXECUTION &amp; CONTROL PLANE (Controls side effects, limits &amp; recovery)</text>
+
+        <rect x="30" y="162" width="148" height="46" rx="8" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="1.5" />
+        <text x="104" y="182" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">Tool Calling</text>
+        <text x="104" y="199" text-anchor="middle" font-size="11" fill="var(--text-muted)">Dispatch &amp; stop bounds</text>
+
+        <rect x="194" y="162" width="148" height="46" rx="8" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="1.5" />
+        <text x="268" y="182" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">MCP Protocol</text>
+        <text x="268" y="199" text-anchor="middle" font-size="11" fill="var(--text-muted)">Standard tool transport</text>
+
+        <rect x="358" y="162" width="148" height="46" rx="8" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="1.5" />
+        <text x="432" y="182" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">Harness</text>
+        <text x="432" y="199" text-anchor="middle" font-size="11" fill="var(--text-muted)">Auth, HITL, sandbox</text>
+
+        <rect x="522" y="162" width="148" height="46" rx="8" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="1.5" />
+        <text x="596" y="182" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">Checkpoints</text>
+        <text x="596" y="199" text-anchor="middle" font-size="11" fill="var(--text-muted)">Resume &amp; idempotency</text>
+
+        <rect x="686" y="162" width="144" height="46" rx="8" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="1.5" />
+        <text x="758" y="182" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">Eval &amp; Tracing</text>
+        <text x="758" y="199" text-anchor="middle" font-size="11" fill="var(--text-muted)">Regression &amp; root cause</text>
+      </svg>
+      <figcaption>Figure 1: Two orthogonal planes of an AI Agent system. Information layers ensure the model sees accurate evidence; execution layers ensure the runtime cannot go rogue or duplicate side effects.</figcaption>
+    </figure>
+  </main>
+
+  <!-- LAB 02: 4 Confused Concept Pairs -->
+  <section class="lab-wrap" id="lab-confusions">
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <div class="lab-eyebrow">Lab 02 · Concept Boundaries</div>
+          <h3 class="lab-title">4 Frequently Confused Pairs: What Breaks When You Mix Them Up?</h3>
+          <p class="lab-desc">Select a pair to inspect its engineering boundary, then toggle between the Misuse Anti-Pattern and Clean Separation to inspect realistic production failure logs.</p>
+        </div>
+        <span class="sim-tag">Simulated Outage Drills</span>
+      </div>
+      <div class="lab-body">
+        <div class="pick-options pair-picker" id="pairPicker">
+          <button class="pick-card active" type="button" data-pair="prompt-context">
+            <span class="pick-kicker">PAIR 01</span>
+            <span class="pick-title">Prompt vs Context</span>
+            <span class="pick-sub">Template vs Full Window</span>
+          </button>
+          <button class="pick-card" type="button" data-pair="rag-memory">
+            <span class="pick-kicker">PAIR 02</span>
+            <span class="pick-title">RAG vs Memory</span>
+            <span class="pick-sub">Shared Facts vs User State</span>
+          </button>
+          <button class="pick-card" type="button" data-pair="tool-mcp">
+            <span class="pick-kicker">PAIR 03</span>
+            <span class="pick-title">Tool Calling vs MCP</span>
+            <span class="pick-sub">Loop Control vs Transport</span>
+          </button>
+          <button class="pick-card" type="button" data-pair="compact-checkpoint">
+            <span class="pick-kicker">PAIR 04</span>
+            <span class="pick-title">Compaction vs Checkpoint</span>
+            <span class="pick-sub">Token Budget vs Recovery</span>
+          </button>
+        </div>
+
+        <div class="pair-compare" id="pairCompareCards"></div>
+
+        <div class="incident-panel">
+          <div class="incident-head">
+            <div class="incident-title" id="incidentScenarioTitle">Production Scenario</div>
+            <div class="toolbar-group">
+              <button class="chip-btn danger-active" id="modeMisuseBtn" type="button">Misuse Anti-Pattern</button>
+              <button class="chip-btn" id="modeCleanBtn" type="button">Clean Separation</button>
+            </div>
+          </div>
+          <div id="incidentOutcome"></div>
+          <pre class="incident-log" id="incidentLog"></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="prose">
+    <h2 id="section-minimal">Strip Away the Framework: The 35-Line Minimal Agent Loop</h2>
+    <p class="key">
+      Regardless of language or orchestration framework, every production single-Agent runtime boils down to the same loop: <strong>assemble Context → call LLM → gate with Harness → execute Tool → persist Checkpoint</strong>, stopping as soon as the model finishes or hits a hard budget.
+    </p>
+
+    <details class="code-fold" open>
+      <summary>Reference Code · 6-Layer Minimal Agent Loop Skeleton (TypeScript)</summary>
+      <div class="code-fold-body">
+        <div class="code-card">
+          <div class="code-header">
+            <span>TypeScript · Minimal 6-layer collaboration skeleton</span>
+            <button class="copy-btn" type="button">Copy</button>
+          </div>
+          <pre><code class="language-typescript">async function runAgentTask(taskId: string, userGoal: string) {
+  // 01 + 02. Context Assembly: load essential rules, grounded RAG docs, and scoped memory
+  const evidence = await retrieveRunbook(userGoal);
+  const memory = await loadOnCallPreferences(taskId);
+  const messages: Message[] = buildContext({ userGoal, evidence, memory });
+
+  for (let step = 1; step <= MAX_STEPS; step++) {
+    // 03. LLM Reasoning: stateless call returning text or structured tool calls
+    const reply = await callModel({ messages, tools: declaredTools });
+    messages.push(reply.assistantMessage);
+
+    if (reply.stopReason === "end_turn") {
+      await saveCheckpoint(taskId, { step, status: "done", messages });
+      return reply.finalText;
+    }
+
+    for (const call of reply.toolCalls) {
+      // 04. Harness Guardrails: validate schema, permission tier, and human approval
+      const decision = await harness.check(call, { step, budgetRemaining: MAX_STEPS - step });
+      if (!decision.allowed) {
+        messages.push(toolError(call.id, decision.reason));
+        continue;
+      }
+
+      // 05. Tool / MCP Execution with idempotency key; truncate output to fit budget
+      const output = await executeTool(call.name, call.args, { idempotencyKey: `${taskId}:${step}:${call.id}` });
+      messages.push(toolResult(call.id, truncateForBudget(output)));
+    }
+
+    // 06. Durable Checkpoint (execution plane) + optional Compaction (information plane)
+    await saveCheckpoint(taskId, { step, status: "running", messages });
+    if (estimateTokens(messages) > COMPACT_THRESHOLD) compactOldTurns(messages);
+  }
+  throw new Error("Exceeded MAX_STEPS budget");
+}</code></pre>
+        </div>
+        <p style="font-size: 13.5px; color: var(--text-secondary); margin: 12px 0 0;">
+          Runnable standalone TypeScript scripts for individual modules live in the same repository under <a href="https://github.com/qufei1993/ai-agent-fullstack-roadmap/tree/main/examples" target="_blank" rel="noopener">examples/ ↗</a>.
+        </p>
+      </div>
+    </details>
+
+    <div class="callout note">
+      <div class="callout-title">Recommended Path: Full RAG Is Not a Prerequisite for Your First Agent</div>
+      Start with <strong>Module 1 (LLM Engineering Foundations)</strong> to master prompt boundaries, structured output, context budgets, and regression gates. From there, jump straight to <strong>Module 2 (Agent Core Mechanics)</strong> if your priority is safe tool execution, or to <strong>Module 3 (RAG Retrieval &amp; Grounding)</strong> if your primary bottleneck is knowledge-base recall and citation accuracy.
+    </div>
+
+    <h2 id="glossary">Glossary &amp; Chapter Navigator Matrix</h2>
+    <p class="key">
+      Filter 12 core engineering terms across Model &amp; Information, Agent Runtime, and Engineering Guardrails—each with a one-sentence definition, concrete example, and direct chapter link.
+    </p>
+
+    <div class="filter-bar">
+      <button class="chip-btn active" type="button" data-filter="all">All Terms (12)</button>
+      <button class="chip-btn" type="button" data-filter="model-info">Model &amp; Information (6)</button>
+      <button class="chip-btn" type="button" data-filter="agent-runtime">Agent Runtime (4)</button>
+      <button class="chip-btn" type="button" data-filter="engineering">Engineering Guardrails (2)</button>
+    </div>
+
+    <div class="decision-grid" id="decisionGrid">
+      <div class="decision-card" data-tags="model-info">
+        <div>
+          <div class="gloss-top">
+            <span class="gloss-term">Prompt Engineering</span>
+            <span class="gloss-cat info">Model &amp; Info</span>
+          </div>
+          <p class="gloss-def">Constraining single-call behavior with explicit task boundaries, sampling controls, and few-shot counterexamples instead of guessing phrasing.</p>
+          <div class="gloss-ex">Example: Set temperature to 0 with 2 edge-case examples so a ticket classifier stops inventing labels.</div>
+        </div>
+        <div class="gloss-foot">
+          <span>Module 1 · CH 02</span>
+          <a class="gloss-link" href="./prompt-engineering.html">Open Interactive Chapter →</a>
+        </div>
+      </div>
+
+      <div class="decision-card" data-tags="model-info">
+        <div>
+          <div class="gloss-top">
+            <span class="gloss-term">Structured Output</span>
+            <span class="gloss-cat info">Model &amp; Info</span>
+          </div>
+          <p class="gloss-def">Turning free-form text into a typed contract using JSON Schema, runtime validation (Zod), and bounded retries on schema or business errors.</p>
+          <div class="gloss-ex">Example: Enforce <code>{ severity, team, reason }</code> on triage output and retry once with validation feedback if a field is missing.</div>
+        </div>
+        <div class="gloss-foot">
+          <span>Module 1 · CH 03</span>
+          <a class="gloss-link" href="./structured-output.html">Open Interactive Chapter →</a>
+        </div>
+      </div>
+
+      <div class="decision-card" data-tags="model-info">
+        <div>
+          <div class="gloss-top">
+            <span class="gloss-term">Context Engineering</span>
+            <span class="gloss-cat info">Model &amp; Info</span>
+          </div>
+          <p class="gloss-def">Curating, ordering, and lazy-loading everything that enters the token window so high-signal facts are not drowned by noise.</p>
+          <div class="gloss-ex">Example: Load 200 error lines from the failing service instead of dumping logs from 30 unrelated microservices.</div>
+        </div>
+        <div class="gloss-foot">
+          <span>Module 1 · CH 04</span>
+          <a class="gloss-link" href="./context-engineering.html">Open Interactive Chapter →</a>
+        </div>
+      </div>
+
+      <div class="decision-card" data-tags="model-info">
+        <div>
+          <div class="gloss-top">
+            <span class="gloss-term">RAG (Retrieval-Augmented Generation)</span>
+            <span class="gloss-cat info">Model &amp; Info</span>
+          </div>
+          <p class="gloss-def">Chunking and indexing external documents so the model grounds answers in verifiable, source-cited evidence rather than stale weights.</p>
+          <div class="gloss-ex">Example: Retrieve section 3 of the internal Checkout Rollback Runbook and cite the exact file and line.</div>
+        </div>
+        <div class="gloss-foot">
+          <span>Module 3 · CH 15–19</span>
+          <a class="gloss-link" href="./document-parsing-chunking.html">Start with Chunking →</a>
+        </div>
+      </div>
+
+      <div class="decision-card" data-tags="model-info">
+        <div>
+          <div class="gloss-top">
+            <span class="gloss-term">Memory (Working &amp; Long-Term)</span>
+            <span class="gloss-cat info">Model &amp; Info</span>
+          </div>
+          <p class="gloss-def">Persisting user- or team-scoped preferences and evolving state across sessions with explicit write, update, and expiration rules.</p>
+          <div class="gloss-ex">Example: Remember that the payments team requires posting a notice in #release-ops before any rollback.</div>
+        </div>
+        <div class="gloss-foot">
+          <span>Module 2 · CH 10</span>
+          <span class="gloss-soon">Module 2 · Upcoming</span>
+        </div>
+      </div>
+
+      <div class="decision-card" data-tags="model-info">
+        <div>
+          <div class="gloss-top">
+            <span class="gloss-term">Context Compaction</span>
+            <span class="gloss-cat info">Model &amp; Info</span>
+          </div>
+          <p class="gloss-def">Folding verbose earlier turns and tool outputs into compact summaries when a long run approaches the context window limit.</p>
+          <div class="gloss-ex">Example: Compress 6 turns of raw log dumps (12,000 tokens) into a 300-token list of ruled-out causes and confirmed clues.</div>
+        </div>
+        <div class="gloss-foot">
+          <span>Module 2 · CH 10</span>
+          <span class="gloss-soon">Module 2 · Upcoming</span>
+        </div>
+      </div>
+
+      <div class="decision-card" data-tags="agent-runtime">
+        <div>
+          <div class="gloss-top">
+            <span class="gloss-term">Tool Calling &amp; Agent Loop</span>
+            <span class="gloss-cat runtime">Agent Runtime</span>
+          </div>
+          <p class="gloss-def">Declaring tool schemas, letting the model request calls, executing them in host code, and feeding results back until a stop condition fires.</p>
+          <div class="gloss-ex">Example: Call <code>getDeployDiff</code>, spot a DB pool change, then call <code>queryErrorLogs</code> to confirm saturation.</div>
+        </div>
+        <div class="gloss-foot">
+          <span>Module 2 · CH 06</span>
+          <span class="gloss-soon">Module 2 · Upcoming</span>
+        </div>
+      </div>
+
+      <div class="decision-card" data-tags="agent-runtime">
+        <div>
+          <div class="gloss-top">
+            <span class="gloss-term">Workflow vs. Agent</span>
+            <span class="gloss-cat runtime">Agent Runtime</span>
+          </div>
+          <p class="gloss-def">Deciding which steps belong in a deterministic code pipeline (Workflow) and which open-ended branches justify a model-driven loop (Agent).</p>
+          <div class="gloss-ex">Example: Keep invoice OCR → validation → posting as a fixed Workflow; use an Agent loop for open-ended incident triage.</div>
+        </div>
+        <div class="gloss-foot">
+          <span>Module 2 · CH 07</span>
+          <span class="gloss-soon">Module 2 · Upcoming</span>
+        </div>
+      </div>
+
+      <div class="decision-card" data-tags="agent-runtime">
+        <div>
+          <div class="gloss-top">
+            <span class="gloss-term">MCP &amp; Skills</span>
+            <span class="gloss-cat runtime">Agent Runtime</span>
+          </div>
+          <p class="gloss-def"><a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">MCP ↗</a> standardizes how Agents connect to external tool servers; Skills package task-specific SOPs and scripts for on-demand loading.</p>
+          <div class="gloss-ex">Example: Connect to GitHub via MCP to fetch PR diffs, then load a “DB Migration Review Skill” only when SQL files change.</div>
+        </div>
+        <div class="gloss-foot">
+          <span>Module 2 · CH 13</span>
+          <span class="gloss-soon">Module 2 · Upcoming</span>
+        </div>
+      </div>
+
+      <div class="decision-card" data-tags="agent-runtime">
+        <div>
+          <div class="gloss-top">
+            <span class="gloss-term">Checkpoints &amp; Idempotency</span>
+            <span class="gloss-cat runtime">Agent Runtime</span>
+          </div>
+          <p class="gloss-def">Persisting durable step state and idempotency keys so timeouts, disconnects, or crashes resume cleanly without duplicating side effects.</p>
+          <div class="gloss-ex">Example: Worker restarts while awaiting approval at step 4 and resumes at step 4 without creating a second incident ticket.</div>
+        </div>
+        <div class="gloss-foot">
+          <span>Module 2 · CH 11</span>
+          <span class="gloss-soon">Module 2 · Upcoming</span>
+        </div>
+      </div>
+
+      <div class="decision-card" data-tags="engineering">
+        <div>
+          <div class="gloss-top">
+            <span class="gloss-term">Harness (Execution Guardrails)</span>
+            <span class="gloss-cat guard">Guardrails</span>
+          </div>
+          <p class="gloss-def">Enforcing permission tiers, human-in-the-loop approval, sandboxing, and step/token budgets in code so model mistakes stay contained.</p>
+          <div class="gloss-ex">Example: Auto-allow read-only log queries; block <code>kubectl rollback</code> until an on-call engineer clicks Approve.</div>
+        </div>
+        <div class="gloss-foot">
+          <span>Module 2 · CH 09</span>
+          <span class="gloss-soon">Module 2 · Upcoming</span>
+        </div>
+      </div>
+
+      <div class="decision-card" data-tags="engineering">
+        <div>
+          <div class="gloss-top">
+            <span class="gloss-term">Eval &amp; Trajectory Tracing</span>
+            <span class="gloss-cat guard">Guardrails</span>
+          </div>
+          <p class="gloss-def">Measuring pass rates, constraint adherence, cost, and latency against fixed test suites so fixing one bug does not silently break ten others.</p>
+          <div class="gloss-ex">Example: Run 30 regression cases before merging any system prompt change and block CI if pass rate drops below 95%.</div>
+        </div>
+        <div class="gloss-foot">
+          <span>Module 1 · CH 05 / Module 3 · CH 19</span>
+          <a class="gloss-link" href="./prompt-regression.html">Open Prompt Regression →</a>
+        </div>
+      </div>
+    </div>
+
+    <p style="margin-top: 28px;">
+      With the 6 layers and term boundaries mapped out, the next chapter starts at the very front of the pipeline: turning vague natural-language instructions into constrained, reproducible <strong>Prompt Engineering</strong> contracts.
+    </p>
+  </main>
+
+  <footer>
+    AI Agent Guide · Open-Source Interactive Engineering Guide
+  </footer>
+
+  <script>
+    // 1. Predict-hook interaction
+    (function initPredictHook() {
+      const hook = document.getElementById("predict-1");
+      if (!hook) return;
+      const feedback = hook.querySelector(".predict-feedback");
+      hook.querySelectorAll(".predict-opt").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          hook.classList.add("answered");
+          hook.querySelectorAll(".predict-opt").forEach((b) => {
+            b.classList.remove("is-right", "is-wrong");
+          });
+          const isRight = btn.dataset.answer === "right";
+          btn.classList.add(isRight ? "is-right" : "is-wrong");
+          feedback.classList.add("show");
+          feedback.innerHTML = isRight
+            ? "<strong>Spot on.</strong> The LLM only emits a structured <code>tool_use</code> request (name + arguments). It has no shell or cluster access—your host runtime validates the request through the Harness, runs the tool, and writes the result back into Context."
+            : "<strong>Common misconception.</strong> An LLM is a stateless text inference service with no shell access, and RAG only retrieves documents. Tools run inside your host runtime after the Harness authorizes the model's structured <code>tool_use</code> request.";
+        });
+      });
+
+      const verifyBtn = document.getElementById("verifyStep4Btn");
+      if (verifyBtn) {
+        verifyBtn.addEventListener("click", () => {
+          window.bookJumpToLab("lab-lifecycle");
+          if (typeof window.__setArchStep === "function") {
+            window.__setArchStep(4);
+          }
+        });
+      }
+    })();
+
+    // 2. Lab 01: 2-Turn Agent Loop Lifecycle Stepper
+    (function initLifecycleLab() {
+      let currentStep = 0;
+      let harnessEnabled = true;
+      let autoTimer = null;
+
+      const steps = [
+        {
+          short: "01 Context+RAG",
+          turn: "Turn 1 / 2 (Setup)",
+          tokens: "3,200 / 16,000",
+          risk: "No Writes (Safe)",
+          badge: "TURN 1 · CONTEXT + RAG",
+          badgeClass: "blue",
+          title: "Assemble Initial Context with Grounded RAG & Memory",
+          summary: "Host code packs system SOP rules, declared tool schemas, the Checkout 500 Runbook retrieved via RAG, and on-call team preferences from Memory into a bounded Turn 1 payload.",
+          input: "Incident alert + cited runbook snippet + team memory + 3 tool schemas",
+          output: "Turn 1 messages[] bounded to 3,200 tokens",
+          chapterText: "Deep Dive: Context Engineering →",
+          chapterHref: "./context-engineering.html",
+          payloadTitle: "Step 01 · Turn 1 Context & Evidence Injection",
+          payload: {
+            turn: 1,
+            system: "You are an on-call triage Agent. Auto-run read-only diagnostics; require human approval for any write or rollback.",
+            rag_evidence: "runbook/checkout-500.md#L42: Checkout 500 spikes usually stem from DB pool exhaustion or deploy env diffs.",
+            team_memory: "team:payments-oncall -> Always include root cause and open an approval ticket before rollback.",
+            user: "Checkout API started returning 500s after today's v2.14.2 deploy. Find the root cause and prepare a rollback plan."
+          }
+        },
+        {
+          short: "02 Turn 1 LLM",
+          turn: "Turn 1 / 2 (Read-Only Triage)",
+          tokens: "3,460 / 16,000",
+          risk: "Read-Only Request",
+          badge: "TURN 1 · LLM REASONING",
+          badgeClass: "purple",
+          title: "Turn 1 Reasoning: Inspect Live Logs First, Never Guess",
+          summary: "Seeing no live stack traces yet, the model emits a single read-only tool_use intent (query_error_logs) instead of jumping straight to a rollback. Zero commands have executed yet.",
+          input: "Turn 1 messages[] + 3 declared tool schemas",
+          output: "stop_reason: tool_use + 1 read-only log query",
+          chapterText: "Deep Dive: Structured Output & Schema Validation →",
+          chapterHref: "./structured-output.html",
+          payloadTitle: "Step 02 · Turn 1 Read-Only tool_use Response",
+          payload: {
+            turn: 1,
+            stop_reason: "tool_use",
+            reasoning_summary: "Inspect the last 15 minutes of checkout-api 500 logs to verify whether v2.14.2 introduced the regression.",
+            tool_calls: [
+              { id: "tc_01", name: "query_error_logs", args: { service: "checkout-api", minutes: 15, status: 500 } }
+            ]
+          }
+        },
+        {
+          short: "03 Tool & Loop",
+          turn: "Turn 1 → Turn 2 (Loop Back)",
+          tokens: "3,840 / 16,000",
+          risk: "Read-Only Allowed",
+          badge: "TURN 1 · TOOL / MCP RUNTIME",
+          badgeClass: "",
+          title: "Run Read-Only Tool, Truncate Output & Feed Turn 2",
+          summary: "The Harness auto-allows read-only lookup. Tool Runtime (local or MCP Server) fetches 480 error lines, deduplicates them into a 380-token signature, and appends tool_result to messages[] to start Turn 2.",
+          input: "Authorized tc_01 args + idempotencyKey task_902:t1:tc_01",
+          output: "Deduplicated root-cause trace (380 tokens) → enters Turn 2",
+          chapterText: "Module 2 · CH 06 Tool Calling & CH 13 MCP (Upcoming)",
+          chapterHref: null,
+          payloadTitle: "Step 03 · Truncated tool_result Appended to Context",
+          payload: {
+            turn: 1,
+            tool_result: {
+              call_id: "tc_01",
+              status: "ok",
+              truncated_from_lines: 480,
+              injected_tokens: 380,
+              summary: "412 errors match PoolExhaustedError: max_connections=5 (v2.14.2 changed DB_POOL_MAX from 50 to 5)"
+            }
+          }
+        },
+        {
+          short: "04 Turn 2 LLM",
+          turn: "Turn 2 / 2 (Proposes Write)",
+          tokens: "4,190 / 16,000",
+          risk: "Pending Destructive Write",
+          badge: "TURN 2 · LLM LOOP",
+          badgeClass: "purple",
+          title: "Turn 2 Reasoning: Evidence Confirmed, Model Proposes Rollback",
+          summary: "With concrete log evidence confirming the DB_POOL_MAX regression, the model now proposes rollback_deployment(force: true) in Turn 2 and hands control back to host code.",
+          input: "Cumulative 3,840-token context including Turn 1 logs",
+          output: "stop_reason: tool_use + destructive rollback_deployment",
+          chapterText: "Deep Dive: Citations & Evidence Verification →",
+          chapterHref: "./citation-hallucination.html",
+          payloadTitle: "Step 04 · Turn 2 Evidence-Backed Rollback Request",
+          payload: {
+            turn: 2,
+            stop_reason: "tool_use",
+            reasoning_summary: "Confirmed v2.14.2 dropped DB_POOL_MAX from 50 to 5. Proposing rollback to v2.14.1.",
+            tool_calls: [
+              { id: "tc_02", name: "rollback_deployment", args: { service: "checkout-api", target: "v2.14.1", force: true } }
+            ]
+          }
+        },
+        {
+          short: "05 Harness",
+          turn: "Turn 2 / 2 (Blocked Safely)",
+          tokens: "4,310 / 16,000",
+          risk: "Blocked · Awaiting HITL",
+          badge: "TURN 2 · HARNESS GUARDRAILS",
+          badgeClass: "accent",
+          title: "Harness Blocks Production Write & Opens Approval Ticket",
+          summary: "Even when the model diagnoses the root cause accurately, a forced production rollback can clash with in-flight DB migrations. The deterministic Harness blocks execution and opens ticket #APR-419 for human approval.",
+          input: "Pending tc_02 (destructive_write) + remaining step budget",
+          output: "BLOCK_AND_ASK_HUMAN + approval ticket #APR-419",
+          chapterText: "Module 2 · CH 09 Harness & Execution Guardrails (Upcoming)",
+          chapterHref: null,
+          payloadTitle: "Step 05 · Harness Policy Gate & Block Receipt",
+          payload: {
+            policy_engine: "production-guard-v2",
+            call_id: "tc_02",
+            tool: "rollback_deployment",
+            risk_tier: "destructive_write",
+            action: "BLOCK_AND_ASK_HUMAN",
+            approval_ticket: "APR-419",
+            reason: "Production rollback requires human verification of in-flight DB schema migrations."
+          },
+          dangerOverride: {
+            turn: "Turn 2 / 2 (Guardrail Bypassed!)",
+            risk: "CRITICAL · Prod Mutated Unchecked",
+            badge: "TURN 2 · HARNESS DISABLED",
+            title: "Harness Disabled: Destructive Rollback Passes Unchecked",
+            summary: "With Harness disabled, host code forwards rollback_deployment(force: true) straight to production—skipping schema-migration safety checks.",
+            output: "ALLOW_UNCHECKED (prod mutated without human sign-off!)",
+            outcomeHtml: `<div class="outcome bad" style="margin-top: 12px;"><div class="outcome-title">Production Outage Triggered: Unapproved Forced Rollback</div>Even though the model found the DB_POOL_MAX bug, <code>v2.14.2</code> also shipped an irreversible DB column migration. Rolling back code without human review broke schema compatibility across checkout pods.</div>`,
+            payloadTitle: "Step 05 · Bypassed Guardrail (Production Incident!)",
+            payload: {
+              policy_engine: "NONE (bypassed)",
+              call_id: "tc_02",
+              tool: "rollback_deployment",
+              action: "EXECUTED_UNCHECKED",
+              deployed_version: "v2.14.1",
+              side_effect: "SCHEMA_MISMATCH_ALERT"
+            }
+          }
+        },
+        {
+          short: "06 State / Eval",
+          turn: "Turn 2 Complete (Paused)",
+          tokens: "4,620 / 16,000",
+          risk: "Checkpoint Persisted",
+          badge: "06 · CHECKPOINT & TRACING",
+          badgeClass: "purple",
+          title: "Persist Checkpoint, Log 2-Turn Trace & Deliver Cited Report",
+          summary: "Host code persists the full 2-turn state, idempotency keys, and approval ticket #APR-419 to durable storage. If the worker restarts while waiting for approval, it resumes cleanly without re-querying logs or duplicating tickets.",
+          input: "2-turn trajectory + token/latency metrics + approval ticket",
+          output: "Durable Checkpoint + source-cited incident report",
+          chapterText: "Deep Dive: Prompt Regression & Evaluation Gates →",
+          chapterHref: "./prompt-regression.html",
+          payloadTitle: "Step 06 · Durable Checkpoint & Trace Metrics",
+          payload: {
+            checkpoint_id: "ckpt_task_902_turn_2",
+            status: "waiting_human_approval",
+            approval_ticket: "APR-419",
+            metrics: { turns: 2, tool_calls: 2, total_tokens: 4620, latency_ms: 3180, est_cost_usd: 0.014 },
+            final_report: "Root cause confirmed: v2.14.2 lowered DB_POOL_MAX from 50 to 5 (sources: query_error_logs + runbook/checkout-500.md#L42). Rollback ticket #APR-419 is ready once migration safety is confirmed."
+          }
+        }
+      ];
+
+      const pillsWrap = document.getElementById("stepPills");
+      const prevBtn = document.getElementById("prevStepBtn");
+      const nextBtn = document.getElementById("nextStepBtn");
+      const autoBtn = document.getElementById("autoPlayBtn");
+      const harnessOnBtn = document.getElementById("harnessOnBtn");
+      const harnessOffBtn = document.getElementById("harnessOffBtn");
+      const telTurn = document.getElementById("telTurn");
+      const telTokens = document.getElementById("telTokens");
+      const telRisk = document.getElementById("telRisk");
+
+      function stopAuto() {
+        if (autoTimer) {
+          clearInterval(autoTimer);
+          autoTimer = null;
+          autoBtn.textContent = "▶ Auto Play";
+        }
+      }
+
+      function render() {
+        const base = steps[currentStep];
+        const useDanger = !harnessEnabled && base.dangerOverride;
+        const data = useDanger ? { ...base, ...base.dangerOverride } : base;
+
+        if (telTurn) {
+          telTurn.textContent = data.turn;
+          telTurn.className = `telemetry-val ${useDanger ? "is-warn" : "is-ok"}`;
+        }
+        if (telTokens) {
+          telTokens.textContent = data.tokens;
+        }
+        if (telRisk) {
+          telRisk.textContent = data.risk;
+          telRisk.className = `telemetry-val ${useDanger ? "is-warn" : "is-ok"}`;
+        }
+
+        pillsWrap.innerHTML = steps
+          .map((s, idx) => {
+            let cls = "step-pill";
+            if (idx === currentStep) {
+              cls += useDanger ? " is-danger" : " is-active";
+            } else if (idx < currentStep) {
+              cls += " is-done";
+            }
+            return `<button class="${cls}" type="button" data-idx="${idx}">${s.short}</button>`;
+          })
+          .join("");
+
+        pillsWrap.querySelectorAll(".step-pill").forEach((b) => {
+          b.addEventListener("click", () => {
+            stopAuto();
+            currentStep = Number(b.dataset.idx);
+            render();
+          });
+        });
+
+        for (let i = 0; i < 6; i++) {
+          const rect = document.getElementById(`node-rect-${i}`);
+          if (!rect) continue;
+          const isDangerNode = !harnessEnabled && i === 4 && i <= currentStep;
+          if (i === currentStep) {
+            rect.setAttribute("fill", isDangerNode ? "var(--rose-soft)" : "var(--teal-soft)");
+            rect.setAttribute("stroke", isDangerNode ? "var(--rose)" : "var(--teal)");
+            rect.setAttribute("stroke-width", "3");
+          } else if (i < currentStep) {
+            rect.setAttribute("fill", isDangerNode ? "var(--rose-soft)" : "var(--bg-elevated)");
+            rect.setAttribute("stroke", isDangerNode ? "var(--rose)" : "var(--teal)");
+            rect.setAttribute("stroke-width", "2");
+          } else {
+            rect.setAttribute("fill", "var(--bg-elevated)");
+            rect.setAttribute("stroke", "var(--border-strong)");
+            rect.setAttribute("stroke-width", "1.5");
+          }
+        }
+
+        for (let e = 0; e < 5; e++) {
+          const edge = document.getElementById(`edge-${e}`);
+          if (!edge) continue;
+          const dangerEdge = !harnessEnabled && e === 4 && e < currentStep;
+          if (e < currentStep) {
+            edge.setAttribute("stroke", dangerEdge ? "var(--rose)" : "var(--teal)");
+            edge.setAttribute("marker-end", dangerEdge ? "url(#arrowDanger)" : "url(#arrowActive)");
+          } else {
+            edge.setAttribute("stroke", "var(--border-strong)");
+            edge.setAttribute("marker-end", "url(#arrowNorm)");
+          }
+        }
+
+        const loopEdge = document.getElementById("edge-loop");
+        if (loopEdge) {
+          const loopActive = currentStep >= 3;
+          loopEdge.setAttribute("stroke", loopActive ? "var(--teal)" : "var(--border-strong)");
+          loopEdge.setAttribute("marker-end", loopActive ? "url(#arrowActive)" : "url(#arrowNorm)");
+        }
+
+        const badgeEl = document.getElementById("stepLayerBadge");
+        badgeEl.textContent = data.badge;
+        badgeEl.className = `layer-badge ${useDanger ? "danger" : data.badgeClass || ""}`;
+        document.getElementById("stepTitle").textContent = data.title;
+        document.getElementById("stepSummary").textContent = data.summary;
+        document.getElementById("stepInput").textContent = data.input;
+        document.getElementById("stepOutput").textContent = data.output;
+
+        const outcomeSlot = document.getElementById("stepOutcomeSlot");
+        outcomeSlot.innerHTML = data.outcomeHtml || "";
+
+        const chapterSlot = document.getElementById("stepChapterSlot");
+        if (data.chapterHref) {
+          chapterSlot.innerHTML = `<a class="layer-chapter-link" href="${data.chapterHref}">${data.chapterText}</a>`;
+        } else {
+          chapterSlot.innerHTML = `<span class="layer-chapter-soon">${data.chapterText}</span>`;
+        }
+
+        document.getElementById("payloadTitle").textContent = data.payloadTitle;
+        document.getElementById("payloadLangLabel").textContent = `JSON · Step 0${currentStep + 1}`;
+        const codeEl = document.getElementById("stepPayloadCode");
+        codeEl.textContent = JSON.stringify(data.payload, null, 2);
+        if (typeof window.bookHighlightCode === "function") {
+          window.bookHighlightCode(codeEl.closest(".code-card"));
+        }
+
+        prevBtn.disabled = currentStep === 0;
+        nextBtn.disabled = currentStep === steps.length - 1;
+      }
+
+      document.querySelectorAll(".arch-node").forEach((node) => {
+        node.addEventListener("click", () => {
+          stopAuto();
+          currentStep = Number(node.dataset.step);
+          render();
+        });
+      });
+
+      prevBtn.addEventListener("click", () => {
+        stopAuto();
+        if (currentStep > 0) {
+          currentStep -= 1;
+          render();
+        }
+      });
+
+      nextBtn.addEventListener("click", () => {
+        stopAuto();
+        if (currentStep < steps.length - 1) {
+          currentStep += 1;
+          render();
+        }
+      });
+
+      autoBtn.addEventListener("click", () => {
+        if (autoTimer) {
+          stopAuto();
+          return;
+        }
+        if (currentStep === steps.length - 1) currentStep = 0;
+        render();
+        autoBtn.textContent = "⏸ Pause";
+        autoTimer = setInterval(() => {
+          if (currentStep < steps.length - 1) {
+            currentStep += 1;
+            render();
+          } else {
+            stopAuto();
+          }
+        }, 2200);
+      });
+
+      harnessOnBtn.addEventListener("click", () => {
+        harnessEnabled = true;
+        harnessOnBtn.className = "chip-btn teal-active";
+        harnessOffBtn.className = "chip-btn";
+        render();
+      });
+
+      harnessOffBtn.addEventListener("click", () => {
+        harnessEnabled = false;
+        harnessOnBtn.className = "chip-btn";
+        harnessOffBtn.className = "chip-btn danger-active";
+        if (currentStep < 4) currentStep = 4;
+        render();
+      });
+
+      window.__setArchStep = (idx) => {
+        stopAuto();
+        currentStep = Math.max(0, Math.min(steps.length - 1, idx));
+        render();
+      };
+
+      render();
+    })();
+
+    // 3. Lab 02: 4 Confused Concept Pairs Workbench
+    (function initConfusionsLab() {
+      let activePair = "prompt-context";
+      let showMisuse = true;
+
+      const pairs = {
+        "prompt-context": {
+          scenario: "Scenario: A support Agent keeps ignoring the 'opened items are non-refundable' policy",
+          left: {
+            name: "Prompt (Instruction Template)",
+            plane: "Rule Specification",
+            owns: "Defines role, output format, reasoning rules, and refusal boundaries.",
+            lifecycle: "Versioned like source code and gated by Prompt Regression evals.",
+            limit: "Cannot filter noisy payloads or cure attention decay on its own."
+          },
+          right: {
+            name: "Context (Full Token Window)",
+            plane: "Working Memory",
+            owns: "Every token sent in the API call: system rules, history, tool outputs, and retrieved docs.",
+            lifecycle: "Dynamically assembled, ordered, and pruned on every turn within a token budget.",
+            limit: "Clean context still drifts if the underlying prompt rules are ambiguous."
+          },
+          misuse: {
+            title: "Outage: Stuffing 40 pages of ticket history while rewriting prompt wording",
+            desc: "Engineers keep adding 'VERY IMPORTANT' to the prompt, but 18,000 tokens of unrelated ticket chatter bury the refund rule in the middle of the window.",
+            log: "[WARN] prompt_tokens=21,480 | relevant_ratio=8.4%\n[BUG]  rule_position=middle (token #9,200) -> opened-item clause ignored\n[COST] latency 6.8s, 7x token spend"
+          },
+          clean: {
+            title: "Clean Separation: Prompt sets boundaries, Context cuts noise and pins rules",
+            desc: "Pin 6 concise policy rules at the head of the system message and load only the last 3 order summaries—dropping the window to 2,100 tokens and restoring compliance.",
+            log: "[OK]   prompt_tokens=2,140 | relevant_ratio=86.0%\n[OK]   rule_position=head -> correctly denies refund for opened item\n[PERF] latency 1.3s, zero policy violations"
+          }
+        },
+        "rag-memory": {
+          scenario: "Scenario: An engineering assistant must cite current API docs while remembering each dev's preferred language",
+          left: {
+            name: "RAG (External Knowledge)",
+            plane: "Shared Source of Truth",
+            owns: "Versioned docs, runbooks, policies, and codebases with verifiable citations.",
+            lifecycle: "Indexed by ingestion pipelines; all users query the same authoritative truth.",
+            limit: "Poor fit for high-frequency mutable user preferences or session state."
+          },
+          right: {
+            name: "Memory (Scoped State)",
+            plane: "Mutable User/Team State",
+            owns: "Individual or team preferences, habits, and evolving conclusions across sessions.",
+            lifecycle: "Continuously written, overwritten, conflict-resolved, and expired.",
+            limit: "Lacks authoritative citations; must never replace auditable company policies."
+          },
+          misuse: {
+            title: "Outage: Dumping personal preferences and company docs into one shared vector store",
+            desc: "Dev A noted last year 'default to legacy v1 auth', which landed in the shared KB. After migrating to v2, Dev B asks for auth docs and retrieves Dev A's stale preference.",
+            log: "[WARN] vector_search top1 = dev_A_note_2025 (score 0.89)\n[BUG]  Dev B shipped legacy v1 auth code -> production 401\n[ROOT] No isolation between shared facts (RAG) and user state (Memory)"
+          },
+          clean: {
+            title: "Clean Separation: Versioned RAG for truth, scoped Memory for preferences",
+            desc: "API specs live in a versioned RAG index with source links; language preference lives in a user-scoped Memory table with overwrite & TTL support.",
+            log: "[OK]   RAG hit api-auth-v2.md#L18 (authoritative source)\n[OK]   Memory hit user:dev_B -> preferred_lang=Go\n[OUT]  Returns cited v2 auth snippet in Go"
+          }
+        },
+        "tool-mcp": {
+          scenario: "Scenario: Connecting internal GitHub, Jira, and DB servers to an on-call Agent via MCP",
+          left: {
+            name: "Tool Calling (Agent Loop)",
+            plane: "Host Control Flow",
+            owns: "Model tool selection, argument validation, dispatch, error handling, and stopping bounds.",
+            lifecycle: "Lives in your Agent loop; decides whether a run converges or loops forever.",
+            limit: "Hand-writing custom connectors for every external SaaS tool scales poorly."
+          },
+          right: {
+            name: "MCP (Integration Protocol)",
+            plane: "Standardized Transport",
+            owns: "Uniform discovery and invocation protocol for external tool and resource servers.",
+            lifecycle: "Deployed as independent MCP Servers decoupled from the Agent host.",
+            limit: "Solves connectivity—does not provide risk tiers, step budgets, or stop conditions."
+          },
+          misuse: {
+            title: "Outage: Attaching 40 MCP tools directly with no step cap or write guardrails",
+            desc: "Assuming MCP alone makes an Agent production-ready, the team injects 42 tool schemas into every turn with no step cap; the Agent loops 28 times querying the wrong Jira board.",
+            log: "[WARN] loaded_mcp_tools=42 (6,800 tokens spent on tool schemas alone)\n[ERR]  step 28: loop detected on query_jira_issues\n[ROOT] MCP solved transport, but host omitted lazy tool loading & Harness"
+          },
+          clean: {
+            title: "Clean Separation: MCP for connectivity, Host Loop for scoping & guardrails",
+            desc: "Use MCP to connect GitHub/Jira cleanly, expose only the 4 task-relevant tools per run, and wrap the Tool Calling loop in max-step budgets and approval tiers.",
+            log: "[OK]   active_tools=4 (scoped on demand, 620 tokens)\n[OK]   max_steps=8 | write_ops=require_approval\n[PERF] Root cause found in 3 steps, zero unauthorized writes"
+          }
+        },
+        "compact-checkpoint": {
+          scenario: "Scenario: A multi-step refund Agent OOM-crashes right after calling the payment gateway at step 4",
+          left: {
+            name: "Context Compaction",
+            plane: "Information Plane · Tokens",
+            owns: "Summarizes verbose earlier turns so the LLM stays within its context window.",
+            lifecycle: "Lossy compression designed purely for model readability.",
+            limit: "A prose summary is not transactional—it cannot prove whether a charge succeeded."
+          },
+          right: {
+            name: "Checkpoint Recovery",
+            plane: "Execution Plane · Durability",
+            owns: "Persists exact step state, tool call IDs, and idempotency keys to survive crashes.",
+            lifecycle: "Lossless state machine enabling exact resume without duplicating side effects.",
+            limit: "Stores full state; feeding raw history back to the LLM still needs compaction."
+          },
+          misuse: {
+            title: "Outage: Resuming a crashed worker from a compacted text summary",
+            desc: "After the container restarts, the system feeds the LLM a conversation summary saying 'continue the refund'. Without the step-4 idempotency key, the model issues a second refund.",
+            log: "[CRASH] worker OOM at step 4 (after refund_api returned 200)\n[RETRY] resumed from text summary -> idempotency_key LOST\n[FATAL] duplicate refund executed: order #88219 refunded TWICE!"
+          },
+          clean: {
+            title: "Clean Separation: Checkpoints govern exact resume; Compaction trims model view",
+            desc: "On restart, the runtime loads Checkpoint step=4 (already committed with key <code>refund:88219:s4</code>) and jumps straight to step 5 notification while keeping the LLM view compact.",
+            log: "[RECOVER] loaded checkpoint ckpt_88219_s4 (status=refund_done)\n[SKIP]    step 4 already committed with key refund:88219:s4\n[OK]      resumed cleanly at step 5 -> notify_user"
+          }
+        }
+      };
+
+      const picker = document.getElementById("pairPicker");
+      const cardsWrap = document.getElementById("pairCompareCards");
+      const scenarioTitle = document.getElementById("incidentScenarioTitle");
+      const outcomeEl = document.getElementById("incidentOutcome");
+      const logEl = document.getElementById("incidentLog");
+      const misuseBtn = document.getElementById("modeMisuseBtn");
+      const cleanBtn = document.getElementById("modeCleanBtn");
+
+      function renderPair() {
+        const p = pairs[activePair];
+        picker.querySelectorAll(".pick-card").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.pair === activePair);
+        });
+
+        cardsWrap.innerHTML = [p.left, p.right]
+          .map(
+            (item) => `
+            <div class="concept-box">
+              <div class="concept-head">
+                <span class="concept-name">${item.name}</span>
+                <span class="concept-plane">${item.plane}</span>
+              </div>
+              <div class="concept-rows">
+                <div><strong>Owns:</strong> ${item.owns}</div>
+                <div><strong>Lifecycle:</strong> ${item.lifecycle}</div>
+                <div><strong>Boundary:</strong> ${item.limit}</div>
+              </div>
+            </div>`
+          )
+          .join("");
+
+        scenarioTitle.textContent = p.scenario;
+        const view = showMisuse ? p.misuse : p.clean;
+        outcomeEl.innerHTML = `
+          <div class="outcome ${showMisuse ? "bad" : "good"}" style="margin: 0;">
+            <div class="outcome-title">${view.title}</div>
+            <div>${view.desc}</div>
+          </div>`;
+        logEl.textContent = view.log;
+
+        misuseBtn.className = showMisuse ? "chip-btn danger-active" : "chip-btn";
+        cleanBtn.className = showMisuse ? "chip-btn" : "chip-btn teal-active";
+      }
+
+      picker.querySelectorAll(".pick-card").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          activePair = btn.dataset.pair;
+          renderPair();
+        });
+      });
+
+      misuseBtn.addEventListener("click", () => {
+        showMisuse = true;
+        renderPair();
+      });
+
+      cleanBtn.addEventListener("click", () => {
+        showMisuse = false;
+        renderPair();
+      });
+
+      renderPair();
+    })();
+  </script>
+  <script src="../shared/site.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-json.min.js"></script>
+</body>
+</html>

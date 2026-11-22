@@ -12,7 +12,7 @@
 
 ```mermaid
 flowchart LR
-  O["导览<br/>工程全景与术语"] --> M1["模块一 · 已完成 (4/4)<br/>LLM 工程基础"]
+  O["导览 · 已完成 (1/1)<br/>工程全景与术语"] --> M1["模块一 · 已完成 (4/4)<br/>LLM 工程基础"]
   M1 --> M2["模块二 · 建设中 (0/9)<br/>Agent 核心机制"]
   M1 --> M3["模块三 · 已完成 (5/5)<br/>RAG 检索与证据"]
   M2 --> E["可靠的 AI 系统<br/>评测 · 边界 · 证据溯源"]
@@ -21,15 +21,15 @@ flowchart LR
 
 > **编排原则**：尽早跑通最小 Agent，完整 RAG 并非理解工具调用、执行循环与边界控制的前置条件；安全、评测、可观测性与成本控制贯穿每个模块。
 
-## 内容大纲（共 19 篇 · 已双语上线 9 篇）
+## 内容大纲（共 19 篇 · 已双语上线 10 篇）
 
 全站章节状态与双语信息由 [`docs/chapters.json`](docs/chapters.json) 统一维护。
 
 ### 导览 · 全局坐标与术语
 
-| 序号 | 章节 | 核心内容 | 状态 |
+| 序号 | 章节 | 核心内容 | 在线阅读 |
 | --- | --- | --- | --- |
-| 1 | AI Agent 工程全景图 | 通过一次完整任务说明 LLM、上下文、工具、记忆、RAG 与 Harness 的协作关系，并提供易混概念术语速查。 | 待上线 |
+| 1 | **AI Agent 工程全景图** | 通过一次完整任务说明 LLM、上下文、工具、记忆、RAG 与 Harness 的协作关系，并提供易混概念术语速查。 | [中文](https://qufei1993.github.io/ai-agent-fullstack-roadmap/zh/agent-architecture-map.html) · [EN](https://qufei1993.github.io/ai-agent-fullstack-roadmap/en/agent-architecture-map.html) |
 
 ### 模块一 · LLM 工程基础
 
